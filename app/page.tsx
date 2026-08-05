@@ -1,15 +1,21 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Task } from '@/types/todo';
 import { Sidebar } from '@/components/Sidebar';
 import { TaskList } from '@/components/TaskList';
 import { CalendarView } from '@/components/CalendarView';
 import { TaskDetails } from '@/components/TaskDetails';
 import { CommandInput } from '@/components/CommandInput';
-import { StatusBar } from '@/components/StatusBar';
+import { StatusBar, SyncStatus } from '@/components/StatusBar';
 import { LoginScreen } from '@/components/LoginScreen';
 import { updateRawDates, parseRawToStructured } from '@/utils/todoParser';
+
+interface PendingMutation {
+  type: 'CREATE' | 'UPDATE' | 'DELETE';
+  id: string;
+  data?: any;
+}
 
 export default function UtilitarianTodoPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -24,6 +30,96 @@ export default function UtilitarianTodoPage() {
   const [isLightMode, setIsLightMode] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
+  // Sync & Offline State
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('synced');
+  const [pendingQueue, setPendingQueue] = useState<PendingMutation[]>([]);
+
+  // Load pending queue from localStorage on client
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('todo_next_pending_queue');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setPendingQueue(parsed);
+      }
+    } catch {}
+  }, []);
+
+  // Persist pending queue to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('todo_next_pending_queue', JSON.stringify(pendingQueue));
+    } catch {}
+  }, [pendingQueue]);
+
+  // Flush Pending Sync Queue to DB backend
+  const flushSyncQueue = useCallback(async () => {
+    if (pendingQueue.length === 0) {
+      setSyncStatus('synced');
+      return;
+    }
+
+    setSyncStatus('syncing');
+    const remaining: PendingMutation[] = [];
+
+    for (const item of pendingQueue) {
+      try {
+        if (item.type === 'CREATE') {
+          const res = await fetch('/api/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(item.data),
+          });
+          if (!res.ok) remaining.push(item);
+        } else if (item.type === 'UPDATE') {
+          const res = await fetch(`/api/tasks/${item.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(item.data),
+          });
+          if (!res.ok) remaining.push(item);
+        } else if (item.type === 'DELETE') {
+          const res = await fetch(`/api/tasks/${item.id}`, {
+            method: 'DELETE',
+          });
+          if (!res.ok) remaining.push(item);
+        }
+      } catch (err) {
+        remaining.push(item);
+      }
+    }
+
+    setPendingQueue(remaining);
+    if (remaining.length === 0) {
+      setSyncStatus('synced');
+    } else {
+      setSyncStatus(navigator.onLine ? 'unsaved' : 'offline');
+    }
+  }, [pendingQueue]);
+
+  // Check Online/Offline Network Status
+  useEffect(() => {
+    const handleOnline = () => {
+      if (pendingQueue.length > 0) {
+        flushSyncQueue();
+      } else {
+        setSyncStatus('synced');
+      }
+    };
+
+    const handleOffline = () => {
+      setSyncStatus(pendingQueue.length > 0 ? 'offline' : 'synced');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [pendingQueue.length, flushSyncQueue]);
+
   // Check Auth & Fetch Tasks on Mount
   const fetchTasksAndAuth = async () => {
     try {
@@ -33,15 +129,27 @@ export default function UtilitarianTodoPage() {
       setAuthenticated(Boolean(authData.authenticated));
 
       if (authData.authenticated || !authData.authRequired) {
-        const tasksRes = await fetch('/api/tasks');
-        if (tasksRes.ok) {
-          const tasksData = await tasksRes.json();
-          if (Array.isArray(tasksData)) {
-            setTasks(tasksData);
-            if (tasksData.length > 0) {
-              setSelectedTask(tasksData[0]);
+        try {
+          const tasksRes = await fetch('/api/tasks');
+          if (tasksRes.ok) {
+            const tasksData = await tasksRes.json();
+            if (Array.isArray(tasksData)) {
+              setTasks(tasksData);
+              localStorage.setItem('todo_next_cached_tasks', JSON.stringify(tasksData));
+              if (tasksData.length > 0) {
+                setSelectedTask(tasksData[0]);
+              }
             }
           }
+        } catch {
+          // Offline fallback: load from cached localStorage
+          const cached = localStorage.getItem('todo_next_cached_tasks');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            setTasks(parsed);
+            if (parsed.length > 0) setSelectedTask(parsed[0]);
+          }
+          setSyncStatus('offline');
         }
       }
     } catch (err) {
@@ -74,6 +182,11 @@ export default function UtilitarianTodoPage() {
     return result;
   }, [tasks, commandQuery, activeFilter]);
 
+  const queueMutation = (mutation: PendingMutation) => {
+    setPendingQueue(prev => [...prev, mutation]);
+    setSyncStatus(navigator.onLine ? 'unsaved' : 'offline');
+  };
+
   const handleToggleTask = async (id: string) => {
     const taskToUpdate = tasks.find(t => t.id === id);
     if (!taskToUpdate) return;
@@ -92,32 +205,60 @@ export default function UtilitarianTodoPage() {
     const updates = { completed: isNowCompleted, status: (isNowCompleted ? 'completed' : 'open') as 'open' | 'completed', raw: newRaw };
 
     // Optimistic UI update
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+    setTasks(prev => {
+      const updated = prev.map(t => t.id === id ? { ...t, ...updates } : t);
+      localStorage.setItem('todo_next_cached_tasks', JSON.stringify(updated));
+      return updated;
+    });
     if (selectedTask?.id === id) {
       setSelectedTask(prev => prev ? { ...prev, ...updates } : null);
     }
 
-    // Backend update
-    await fetch(`/api/tasks/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates),
-    });
+    // Backend update or queue
+    setSyncStatus('syncing');
+    try {
+      const res = await fetch(`/api/tasks/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok && pendingQueue.length === 0) {
+        setSyncStatus('synced');
+      } else {
+        queueMutation({ type: 'UPDATE', id, data: updates });
+      }
+    } catch {
+      queueMutation({ type: 'UPDATE', id, data: updates });
+    }
   };
 
   const handleUpdateTask = async (id: string, updates: Partial<Task>) => {
     // Optimistic UI update
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+    setTasks(prev => {
+      const updated = prev.map(t => t.id === id ? { ...t, ...updates } : t);
+      localStorage.setItem('todo_next_cached_tasks', JSON.stringify(updated));
+      return updated;
+    });
     if (selectedTask?.id === id) {
       setSelectedTask(prev => prev ? { ...prev, ...updates } : null);
     }
 
-    // Backend update
-    await fetch(`/api/tasks/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates),
-    });
+    // Backend update or queue
+    setSyncStatus('syncing');
+    try {
+      const res = await fetch(`/api/tasks/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok && pendingQueue.length === 0) {
+        setSyncStatus('synced');
+      } else {
+        queueMutation({ type: 'UPDATE', id, data: updates });
+      }
+    } catch {
+      queueMutation({ type: 'UPDATE', id, data: updates });
+    }
   };
 
   const handleMoveTask = async (taskId: string, targetDate: string, targetTime?: string) => {
@@ -135,17 +276,31 @@ export default function UtilitarianTodoPage() {
     };
 
     // Optimistic UI update
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
+    setTasks(prev => {
+      const updated = prev.map(t => t.id === taskId ? { ...t, ...updates } : t);
+      localStorage.setItem('todo_next_cached_tasks', JSON.stringify(updated));
+      return updated;
+    });
     if (selectedTask?.id === taskId) {
       setSelectedTask(prev => prev ? { ...prev, ...updates } : null);
     }
 
-    // Backend update
-    await fetch(`/api/tasks/${taskId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates),
-    });
+    // Backend update or queue
+    setSyncStatus('syncing');
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok && pendingQueue.length === 0) {
+        setSyncStatus('synced');
+      } else {
+        queueMutation({ type: 'UPDATE', id: taskId, data: updates });
+      }
+    } catch {
+      queueMutation({ type: 'UPDATE', id: taskId, data: updates });
+    }
   };
 
   const handleCreateTaskAtDate = (dateISO: string, timeStr?: string) => {
@@ -155,15 +310,29 @@ export default function UtilitarianTodoPage() {
 
   const handleDeleteTask = async (id: string) => {
     // Optimistic UI update
-    setTasks(prev => prev.filter(t => t.id !== id));
+    setTasks(prev => {
+      const updated = prev.filter(t => t.id !== id);
+      localStorage.setItem('todo_next_cached_tasks', JSON.stringify(updated));
+      return updated;
+    });
     if (selectedTask?.id === id) {
       setSelectedTask(null);
     }
 
-    // Backend update
-    await fetch(`/api/tasks/${id}`, {
-      method: 'DELETE',
-    });
+    // Backend update or queue
+    setSyncStatus('syncing');
+    try {
+      const res = await fetch(`/api/tasks/${id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok && pendingQueue.length === 0) {
+        setSyncStatus('synced');
+      } else {
+        queueMutation({ type: 'DELETE', id });
+      }
+    } catch {
+      queueMutation({ type: 'DELETE', id });
+    }
   };
 
   const handleCommandSubmit = async (val: string) => {
@@ -190,16 +359,30 @@ export default function UtilitarianTodoPage() {
       };
 
       // Optimistic UI update
-      setTasks(prev => [newTask, ...prev]);
+      setTasks(prev => {
+        const updated = [newTask, ...prev];
+        localStorage.setItem('todo_next_cached_tasks', JSON.stringify(updated));
+        return updated;
+      });
       setSelectedTask(newTask);
       setCommandQuery('');
 
-      // Backend insertion
-      await fetch('/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTask),
-      });
+      // Backend insertion or queue
+      setSyncStatus('syncing');
+      try {
+        const res = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newTask),
+        });
+        if (res.ok && pendingQueue.length === 0) {
+          setSyncStatus('synced');
+        } else {
+          queueMutation({ type: 'CREATE', id: newTask.id, data: newTask });
+        }
+      } catch {
+        queueMutation({ type: 'CREATE', id: newTask.id, data: newTask });
+      }
     }
   };
 
@@ -289,6 +472,9 @@ export default function UtilitarianTodoPage() {
         onToggleTheme={() => setIsLightMode(!isLightMode)}
         authRequired={authRequired}
         onLogout={handleLogout}
+        syncStatus={syncStatus}
+        pendingCount={pendingQueue.length}
+        onForceSync={flushSyncQueue}
       />
     </div>
   );
