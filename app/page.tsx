@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Task } from '@/types/todo';
 import { Sidebar } from '@/components/Sidebar';
 import { TaskList } from '@/components/TaskList';
+import { CalendarView } from '@/components/CalendarView';
 import { TaskDetails } from '@/components/TaskDetails';
 import { CommandInput } from '@/components/CommandInput';
 import { StatusBar } from '@/components/StatusBar';
@@ -15,6 +16,7 @@ export default function UtilitarianTodoPage() {
   const [authRequired, setAuthRequired] = useState(false);
   const [authenticated, setAuthenticated] = useState(true);
 
+  const [activeView, setActiveView] = useState<'list' | 'calendar'>('list');
   const [commandQuery, setCommandQuery] = useState('');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeFilter, setActiveFilter] = useState('');
@@ -192,6 +194,8 @@ export default function UtilitarianTodoPage() {
         onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
         activeFilter={activeFilter}
         isLight={isLightMode}
+        activeView={activeView}
+        onChangeView={setActiveView}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -203,14 +207,26 @@ export default function UtilitarianTodoPage() {
           isOpenMobile={isMobileSidebarOpen}
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
         />
-        <TaskList
-          tasks={filteredTasks}
-          selectedTaskId={selectedTask?.id}
-          onSelectTask={setSelectedTask}
-          onToggleTask={handleToggleTask}
-          onDeleteTask={handleDeleteTask}
-          isLight={isLightMode}
-        />
+
+        {activeView === 'list' ? (
+          <TaskList
+            tasks={filteredTasks}
+            selectedTaskId={selectedTask?.id}
+            onSelectTask={setSelectedTask}
+            onToggleTask={handleToggleTask}
+            onDeleteTask={handleDeleteTask}
+            isLight={isLightMode}
+          />
+        ) : (
+          <CalendarView
+            tasks={filteredTasks}
+            selectedTaskId={selectedTask?.id}
+            onSelectTask={setSelectedTask}
+            onToggleTask={handleToggleTask}
+            isLight={isLightMode}
+          />
+        )}
+
         <div className={`fixed inset-0 z-30 transition-transform duration-200 ease-in-out transform ${selectedTask ? 'translate-x-0' : 'translate-x-full'} lg:relative lg:translate-x-0 lg:z-10`}>
           <TaskDetails
             task={selectedTask}

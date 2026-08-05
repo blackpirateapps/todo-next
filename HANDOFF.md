@@ -1,9 +1,14 @@
 # AI Handoff Document - Todo-Next (todo.txt & Turso DB)
 
 ## 📌 Project Overview
-`todo-next` is a lightweight, terminal-styled task manager heavily influenced by the **`todo.txt` format** and **Unix philosophy**. It provides a fast, minimalist interface with keyboard navigation, syntax highlighting for projects (`+project`), contexts (`@context`), priorities (`(A)`, `(B)`), due dates (`due:YYYY-MM-DD`), and dual theme support (Dark/Light mode).
+`todo-next` is a lightweight, terminal-styled task manager heavily influenced by the **`todo.txt` format** and **Unix philosophy**. It provides a fast, minimalist interface with keyboard navigation, syntax highlighting for projects (`+project`), contexts (`@context`), priorities (`(A)`, `(B)`), due dates (`due:YYYY-MM-DD`), dual theme support (Dark/Light mode), and full **List & Calendar views**.
 
-Recently updated with **Password Authentication**, **Mobile Responsiveness**, **Editable Creation & Due Dates**, modular components, and backend persistence powered by **Turso DB** (`@libsql/client`).
+Recently updated with:
+- **Interactive Calendar View** (Monthly & Weekly grids, Due Date vs Created Date mode)
+- **Password Authentication** (`APP_PASSWORD`)
+- **Mobile Responsiveness** (Sidebar drawer, full-screen inspector, touch sizing)
+- **Editable Creation & Due Dates**
+- **Turso DB Persistence** (`@libsql/client`)
 
 ---
 
@@ -20,9 +25,10 @@ Recently updated with **Password Authentication**, **Mobile Responsiveness**, **
 │   │           └── route.ts          # PATCH (update task fields/subtasks/comments), DELETE (remove task)
 │   ├── globals.css                   # Tailwind v4 directives & font configurations
 │   ├── layout.tsx                    # Main HTML layout wrapper
-│   └── page.tsx                      # Main container managing auth state, mobile drawers & API sync
+│   └── page.tsx                      # Main container managing view mode, auth state, mobile drawers & API sync
 ├── components/
-│   ├── CommandInput.tsx              # Terminal prompt (> input, :add command & mobile filter drawer toggle)
+│   ├── CalendarView.tsx              # Monthly & Weekly calendar grid plotting tasks by Due or Creation date
+│   ├── CommandInput.tsx              # Terminal prompt (> input, :add command & List/Calendar view switcher)
 │   ├── FormattedText.tsx             # todo.txt syntax highlighter (+proj, @ctx, (A), due:YYYY-MM-DD)
 │   ├── LoginScreen.tsx               # Retro terminal-styled login screen for password protection
 │   ├── Sidebar.tsx                   # Filter sidebar listing unique +projects and @contexts (with mobile drawer)
@@ -35,10 +41,21 @@ Recently updated with **Password Authentication**, **Mobile Responsiveness**, **
 ├── types/
 │   └── todo.ts                       # TypeScript interfaces for Task, Subtask, and Comment
 ├── utils/
+│   ├── dateUtils.ts                  # Calendar date grid generators (getMonthDays, getWeekDays, ISO format)
 │   └── todoParser.ts                 # Parsing & updating raw todo.txt text with creationDate & due:YYYY-MM-DD
 ├── .env.example                      # Example environment variables (APP_PASSWORD, Turso DB)
 └── HANDOFF.md                        # AI Handoff Documentation (this document)
 ```
+
+---
+
+## 📅 Calendar View (`CalendarView.tsx`)
+- **View Modes**: Toggle between **Month** view (42-day calendar grid) and **Week** view (7-day expanded column grid).
+- **Date Source Switcher**:
+  - `[Due Date]`: Plot tasks by `due:YYYY-MM-DD` tag.
+  - `[Created Date]`: Plot tasks by task creation date (`task.creationDate`).
+- **Interactive Tasks**: Tasks render as interactive chips on their respective day cells with status toggles (`[ ]` / `[x]`), syntax highlighting, and click-to-inspect.
+- **Date Navigation**: Previous `[<]`, Next `[>]`, and `[Today]` jump buttons.
 
 ---
 
@@ -51,30 +68,4 @@ Authentication is controlled by the `APP_PASSWORD` environment variable.
 ---
 
 ## 🗄 Database & Persistence Layer (Turso DB)
-
-Persistence is handled by `@libsql/client`, which supports both local LibSQL SQLite files and cloud-hosted Turso DB clusters.
-
-### Environment Setup (`.env.local`)
-```env
-APP_PASSWORD=your_secret_password
-TURSO_DATABASE_URL=libsql://your-database-name-org.turso.io
-TURSO_AUTH_TOKEN=your-turso-auth-token
-```
-
-> **Fallback Mode:** If `TURSO_DATABASE_URL` is omitted, `lib/db.ts` automatically falls back to a local SQLite database file (`file:todo.db`), ensuring out-of-the-box local operation without external dependencies.
-
----
-
-## 📅 Date & Due Date Support (`due:YYYY-MM-DD`)
-
-- **Creation Date**: Editable directly in the Inspector (`TaskDetails.tsx`). Updating it modifies the leading `YYYY-MM-DD` date in the task's `raw` string.
-- **Due Date**: Native `todo.txt` tag support (`due:YYYY-MM-DD`). Editable or clearable in the Inspector. Syncs dynamically with `raw` text and receives dedicated badge highlighting in `FormattedText.tsx`.
-
----
-
-## 📱 Mobile Responsiveness
-
-- **Header / Prompt**: Scaled text and padding to prevent auto-zoom on mobile inputs.
-- **Mobile Filter Drawer**: Added `[Filters]` button on small screens to open a slide-over drawer for `+projects` and `@contexts`.
-- **Inspector Drawer**: Full-screen overlay with `[← Back]` button for mobile viewports.
-- **Touch-Friendly Controls**: Increased touch targets for checkboxes, delete buttons, and list rows.
+Persistence is handled by `@libsql/client`, supporting both local SQLite files (`file:todo.db`) and cloud-hosted Turso DB clusters (`TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`).

@@ -7,6 +7,8 @@ interface CommandInputProps {
   onToggleMobileSidebar: () => void;
   activeFilter: string;
   isLight: boolean;
+  activeView: 'list' | 'calendar';
+  onChangeView: (view: 'list' | 'calendar') => void;
 }
 
 export const CommandInput: React.FC<CommandInputProps> = ({
@@ -15,7 +17,9 @@ export const CommandInput: React.FC<CommandInputProps> = ({
   onCommandSubmit,
   onToggleMobileSidebar,
   activeFilter,
-  isLight
+  isLight,
+  activeView,
+  onChangeView
 }) => {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -24,7 +28,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({
   };
 
   return (
-    <div className={`flex-shrink-0 border-b p-2 flex items-center gap-2 ${isLight ? 'bg-gray-100 border-gray-300' : 'bg-gray-950 border-gray-800'}`}>
+    <div className={`flex-shrink-0 border-b p-2 flex flex-wrap items-center gap-2 ${isLight ? 'bg-gray-100 border-gray-300' : 'bg-gray-950 border-gray-800'}`}>
       <button
         onClick={onToggleMobileSidebar}
         className={`md:hidden px-2 py-1 text-xs font-bold border rounded transition-colors whitespace-nowrap ${
@@ -36,14 +40,38 @@ export const CommandInput: React.FC<CommandInputProps> = ({
         [{activeFilter ? activeFilter : 'Filters'}]
       </button>
 
+      {/* View Switcher: List vs Calendar */}
+      <div className="flex border text-xs font-mono select-none">
+        <button
+          onClick={() => onChangeView('list')}
+          className={`px-2 py-0.5 font-bold ${
+            activeView === 'list'
+              ? (isLight ? 'bg-gray-300 text-gray-900' : 'bg-gray-800 text-white')
+              : (isLight ? 'hover:bg-gray-200 text-gray-600' : 'hover:bg-gray-800 text-gray-400')
+          }`}
+        >
+          [List]
+        </button>
+        <button
+          onClick={() => onChangeView('calendar')}
+          className={`px-2 py-0.5 font-bold border-l ${isLight ? 'border-gray-300' : 'border-gray-800'} ${
+            activeView === 'calendar'
+              ? (isLight ? 'bg-cyan-200 text-cyan-900' : 'bg-cyan-950 text-cyan-300')
+              : (isLight ? 'hover:bg-gray-200 text-gray-600' : 'hover:bg-gray-800 text-gray-400')
+          }`}
+        >
+          [Calendar]
+        </button>
+      </div>
+
       <span className={`font-bold select-none ${isLight ? 'text-green-600' : 'text-green-500'}`}>&gt;</span>
       <input
         type="text"
         value={commandQuery}
         onChange={(e) => setCommandQuery(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Filter... or :add (A) New task +proj @ctx"
-        className={`w-full bg-transparent outline-none text-xs sm:text-sm ${isLight ? 'text-green-700 placeholder-gray-400' : 'text-green-400 placeholder-gray-700'}`}
+        placeholder="Filter... or :add (A) New task +proj @ctx due:YYYY-MM-DD"
+        className={`flex-1 min-w-[160px] bg-transparent outline-none text-xs sm:text-sm ${isLight ? 'text-green-700 placeholder-gray-400' : 'text-green-400 placeholder-gray-700'}`}
         autoFocus
       />
     </div>
