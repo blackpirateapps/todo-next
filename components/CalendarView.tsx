@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Task } from '@/types/todo';
 import { FormattedText } from './FormattedText';
+import { SubtaskProgressBar } from './SubtaskProgressBar';
 import { formatDateISO, getMonthDays, getWeekDays, MONTH_NAMES, WEEKDAY_NAMES } from '@/utils/dateUtils';
 import { parseDatesFromRaw } from '@/utils/todoParser';
 
@@ -274,7 +275,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, dayISO, currentTime)}
                   onClick={(e) => {
-                    // Only trigger if clicking cell background directly
                     if (e.target === e.currentTarget || (e.target as HTMLElement).getAttribute('data-cell-bg') === 'true') {
                       onCreateTaskAtDate(dayISO, currentTime);
                     }
@@ -354,6 +354,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
                             <div className="flex-1 min-w-0 leading-tight">
                               <FormattedText text={task.raw} isCompleted={task.completed} isLight={isLight} />
+                              {task.subtasks && task.subtasks.length > 0 && (
+                                <div className="mt-1">
+                                  <SubtaskProgressBar subtasks={task.subtasks} isLight={isLight} compact showText={false} />
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -425,7 +430,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 return (
                   <div key={dayIdx} className="border-r flex flex-col border-gray-200 dark:border-gray-900">
                     {hours.map((hourStr) => {
-                      // Filter tasks that match this hour (e.g. time:14:00 matches "14:00")
                       const matchingTasks = dayTasks.filter(t => {
                         const parsed = parseDatesFromRaw(t.raw);
                         if (parsed.time) {
@@ -433,7 +437,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                           const cellHour = hourStr.split(':')[0].padStart(2, '0');
                           return taskHour === cellHour;
                         }
-                        // Default all-day tasks without explicit time to 09:00 slot
                         if (hourStr === '09:00' && !parsed.time) return true;
                         return false;
                       });
@@ -512,6 +515,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
                                     <div className="flex-1 min-w-0 leading-tight">
                                       <FormattedText text={task.raw} isCompleted={task.completed} isLight={isLight} />
+                                      {task.subtasks && task.subtasks.length > 0 && (
+                                        <div className="mt-0.5">
+                                          <SubtaskProgressBar subtasks={task.subtasks} isLight={isLight} compact showText={false} />
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Task, Subtask, Comment } from '@/types/todo';
 import { updateRawDates, parseRawToStructured, buildRawFromStructured } from '@/utils/todoParser';
 import { FormattedText } from './FormattedText';
+import { SubtaskProgressBar } from './SubtaskProgressBar';
 
 interface TaskDetailsProps {
   task: Task | null;
@@ -308,8 +309,6 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
     const updatedComments = task.comments.filter((_, i) => i !== index);
     onUpdateTask(task.id, { comments: updatedComments });
   };
-
-  const completedSubtasksCount = task.subtasks.filter(s => s.completed).length;
 
   return (
     <div className={`w-full lg:w-80 h-full flex-shrink-0 border-l flex flex-col overflow-y-auto ${isLight ? 'border-gray-300 bg-gray-50' : 'border-gray-800 bg-gray-950'}`}>
@@ -637,14 +636,20 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
           )}
         </div>
 
-        {/* Editable Subtasks */}
+        {/* Editable Subtasks & Progress Bar */}
         <div>
-          <div className={`font-bold uppercase border-b mb-1 flex justify-between ${isLight ? 'text-gray-500 border-gray-300' : 'text-gray-500 border-gray-800'}`}>
+          <div className={`font-bold uppercase border-b mb-1 flex justify-between items-center ${isLight ? 'text-gray-500 border-gray-300' : 'text-gray-500 border-gray-800'}`}>
             <span>Subtasks</span>
             <span className={isLight ? 'text-gray-400' : 'text-gray-600'}>
-              [{completedSubtasksCount}/{task.subtasks.length}]
+              [{task.subtasks.filter(s => s.completed).length}/{task.subtasks.length}]
             </span>
           </div>
+
+          {task.subtasks.length > 0 && (
+            <div className="my-2">
+              <SubtaskProgressBar subtasks={task.subtasks} isLight={isLight} />
+            </div>
+          )}
 
           <ul className="space-y-2 mb-2">
             {task.subtasks.map(st => (

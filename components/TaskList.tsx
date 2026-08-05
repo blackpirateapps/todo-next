@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Task } from '@/types/todo';
 import { FormattedText } from './FormattedText';
+import { SubtaskProgressBar } from './SubtaskProgressBar';
 
 export type SortField = 'creationDate' | 'dueDate' | 'title' | 'priority';
 export type SortOrder = 'asc' | 'desc';
@@ -136,7 +137,6 @@ export const TaskList: React.FC<TaskListProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           <span className={isLight ? 'text-gray-500 font-bold' : 'text-gray-500 font-bold'}>Filter:</span>
 
-          {/* Status Filter */}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
@@ -149,7 +149,6 @@ export const TaskList: React.FC<TaskListProps> = ({
             <option value="completed">Completed</option>
           </select>
 
-          {/* Priority Filter */}
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value as PriorityFilter)}
@@ -164,7 +163,6 @@ export const TaskList: React.FC<TaskListProps> = ({
             <option value="none">None</option>
           </select>
 
-          {/* Month / Year Period Filter */}
           <select
             value={periodFilter}
             onChange={(e) => setPeriodFilter(e.target.value)}
@@ -194,6 +192,7 @@ export const TaskList: React.FC<TaskListProps> = ({
           <tbody>
             {processedTasks.map((task) => {
               const isSelected = selectedTaskId === task.id;
+              const hasSubtasks = task.subtasks && task.subtasks.length > 0;
 
               let rowClass = `border-b transition-colors select-none `;
               if (isLight) {
@@ -220,7 +219,12 @@ export const TaskList: React.FC<TaskListProps> = ({
                     {task.priority || '-'}
                   </td>
                   <td className="py-2.5 px-2 text-xs sm:text-sm overflow-hidden break-words max-w-xs sm:max-w-md lg:max-w-xl">
-                    <FormattedText text={task.raw} isCompleted={task.completed} isLight={isLight} />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <FormattedText text={task.raw} isCompleted={task.completed} isLight={isLight} />
+                      {hasSubtasks && (
+                        <SubtaskProgressBar subtasks={task.subtasks} isLight={isLight} compact showText />
+                      )}
+                    </div>
                   </td>
                   <td
                     className={`w-12 text-center py-2.5 border-l ${isLight ? 'border-gray-200' : 'border-gray-800/50'}`}
