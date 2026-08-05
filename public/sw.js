@@ -1,9 +1,13 @@
-const CACHE_NAME = 'todo-next-v1';
+const CACHE_NAME = 'todo-next-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
-  '/icon.jpg',
-  '/favicon.ico'
+  '/favicon.ico',
+  '/apple-touch-icon.png',
+  '/apple-touch-icon-precomposed.png',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/icon.jpg'
 ];
 
 self.addEventListener('install', (event) => {

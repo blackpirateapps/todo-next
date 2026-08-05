@@ -4,6 +4,10 @@
 `todo-next` (Title: **Todo Next**) is a lightweight, terminal-styled task manager heavily influenced by the **`todo.txt` format** and **Unix philosophy**. It provides a fast, minimalist interface with keyboard navigation, syntax highlighting for projects (`+project`), contexts (`@context`), priorities (`(A)`, `(B)`), due dates (`due:YYYY-MM-DD`), dual theme support (Dark/Light mode), and full **List & Calendar views**.
 
 Recently updated with:
+- **Fixed Vercel 404 Logging & Asset Caching**:
+  - Generated missing icon assets: `favicon.ico`, `apple-touch-icon.png`, `apple-touch-icon-precomposed.png`, `icon-192.png`, and `icon-512.png`.
+  - Updated `app/layout.tsx` metadata and head links (`/favicon.ico`, `/apple-touch-icon.png`).
+  - Updated `public/sw.js` (v2) to cache all icon assets, preventing service worker installation 404 failures.
 - **Subtask Progress Bar Component (`SubtaskProgressBar.tsx`)**:
   - Automatically displays a visual progress bar (`[2/4] 50%`) for any task with subtasks across **List View**, **Calendar View**, and **Inspector Drawer**.
 - **First-Class Task Templates System**:
@@ -18,7 +22,6 @@ Recently updated with:
 - **Interactive Syntax Guide (`[?] Syntax`)**: Cheat sheet (`SyntaxGuideModal.tsx`) detailing `todo.txt` syntax rules.
 - **Project Title & Branding**: App title set to **Todo Next** across metadata, manifest, and PWA icons.
 - **Full PWA & Offline Support**: Web App Manifest (`manifest.json`), custom icons, Service Worker (`sw.js`), `localStorage` caching, and real-time sync status indicator (`[Synced ✓]`, `[Syncing...]`, `[Unsaved (N)]`, `[Offline - N pending]`).
-- **Drag & Drop Task Rescheduling**: Native HTML5 Drag and Drop for Desktop and Touch gesture tracking for Mobile.
 
 ---
 
@@ -40,7 +43,7 @@ Recently updated with:
 │   ├── LoginScreen.tsx
 │   ├── Sidebar.tsx
 │   ├── StatusBar.tsx
-│   ├── SubtaskProgressBar.tsx        # Visual subtask progress bar component
+│   ├── SubtaskProgressBar.tsx
 │   ├── SyntaxGuideModal.tsx
 │   ├── TaskDetails.tsx
 │   ├── TaskList.tsx
@@ -49,9 +52,13 @@ Recently updated with:
 │   ├── auth.ts
 │   └── db.ts
 ├── public/
+│   ├── apple-touch-icon.png
+│   ├── favicon.ico
+│   ├── icon-192.png
+│   ├── icon-512.png
+│   ├── icon.jpg
 │   ├── manifest.json
-│   ├── sw.js
-│   └── icon.jpg
+│   └── sw.js
 ├── types/
 │   └── todo.ts
 ├── utils/
