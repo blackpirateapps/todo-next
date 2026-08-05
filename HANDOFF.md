@@ -4,11 +4,13 @@
 `todo-next` is a lightweight, terminal-styled task manager heavily influenced by the **`todo.txt` format** and **Unix philosophy**. It provides a fast, minimalist interface with keyboard navigation, syntax highlighting for projects (`+project`), contexts (`@context`), priorities (`(A)`, `(B)`), due dates (`due:YYYY-MM-DD`), dual theme support (Dark/Light mode), and full **List & Calendar views**.
 
 Recently updated with:
-- **Interactive Calendar View** (Monthly & Weekly grids, Due Date vs Created Date mode)
-- **Password Authentication** (`APP_PASSWORD`)
-- **Mobile Responsiveness** (Sidebar drawer, full-screen inspector, touch sizing)
-- **Editable Creation & Due Dates**
-- **Turso DB Persistence** (`@libsql/client`)
+- **Drag & Drop Task Rescheduling**: Native HTML5 Drag and Drop for Desktop and Touch gesture tracking for Mobile.
+- **Weekly 24-Hour View with Y-Axis Time Slots**: Hourly time slots (`00:00` to `23:00`) plotted on the Y-axis.
+- **Click-to-Create Tasks**: Clicking empty calendar slots pre-fills the command prompt with specific date (`due:YYYY-MM-DD`) and time (`time:HH:MM`).
+- **Interactive Calendar View** (Monthly & Weekly grids, Due Date vs Created Date mode).
+- **Password Authentication** (`APP_PASSWORD`).
+- **Mobile Responsiveness** (Sidebar drawer, full-screen inspector, touch sizing).
+- **Turso DB Persistence** (`@libsql/client`).
 
 ---
 
@@ -25,9 +27,9 @@ Recently updated with:
 │   │           └── route.ts          # PATCH (update task fields/subtasks/comments), DELETE (remove task)
 │   ├── globals.css                   # Tailwind v4 directives & font configurations
 │   ├── layout.tsx                    # Main HTML layout wrapper
-│   └── page.tsx                      # Main container managing view mode, auth state, mobile drawers & API sync
+│   └── page.tsx                      # Main container managing view mode, drag-and-drop & API sync
 ├── components/
-│   ├── CalendarView.tsx              # Monthly & Weekly calendar grid plotting tasks by Due or Creation date
+│   ├── CalendarView.tsx              # Monthly & 24-hour Weekly calendar grid with Drag & Drop (Desktop & Mobile)
 │   ├── CommandInput.tsx              # Terminal prompt (> input, :add command & List/Calendar view switcher)
 │   ├── FormattedText.tsx             # todo.txt syntax highlighter (+proj, @ctx, (A), due:YYYY-MM-DD)
 │   ├── LoginScreen.tsx               # Retro terminal-styled login screen for password protection
@@ -42,30 +44,17 @@ Recently updated with:
 │   └── todo.ts                       # TypeScript interfaces for Task, Subtask, and Comment
 ├── utils/
 │   ├── dateUtils.ts                  # Calendar date grid generators (getMonthDays, getWeekDays, ISO format)
-│   └── todoParser.ts                 # Parsing & updating raw todo.txt text with creationDate & due:YYYY-MM-DD
+│   └── todoParser.ts                 # Parsing & updating raw todo.txt text with creationDate, due:YYYY-MM-DD & time:HH:MM
 ├── .env.example                      # Example environment variables (APP_PASSWORD, Turso DB)
 └── HANDOFF.md                        # AI Handoff Documentation (this document)
 ```
 
 ---
 
-## 📅 Calendar View (`CalendarView.tsx`)
-- **View Modes**: Toggle between **Month** view (42-day calendar grid) and **Week** view (7-day expanded column grid).
-- **Date Source Switcher**:
-  - `[Due Date]`: Plot tasks by `due:YYYY-MM-DD` tag.
-  - `[Created Date]`: Plot tasks by task creation date (`task.creationDate`).
-- **Interactive Tasks**: Tasks render as interactive chips on their respective day cells with status toggles (`[ ]` / `[x]`), syntax highlighting, and click-to-inspect.
-- **Date Navigation**: Previous `[<]`, Next `[>]`, and `[Today]` jump buttons.
+## 🖐 Drag & Drop & Click-to-Create
 
----
-
-## 🔒 Password Protection (`APP_PASSWORD`)
-Authentication is controlled by the `APP_PASSWORD` environment variable.
-
-- **Enabled:** If `APP_PASSWORD` is set in `.env.local` or environment, the app displays `LoginScreen` and protects `/api/tasks` endpoints with HTTP-only session cookies.
-- **Disabled:** If `APP_PASSWORD` is omitted or empty, authentication is bypassed automatically.
-
----
-
-## 🗄 Database & Persistence Layer (Turso DB)
-Persistence is handled by `@libsql/client`, supporting both local SQLite files (`file:todo.db`) and cloud-hosted Turso DB clusters (`TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`).
+- **Desktop & Mobile Drag & Drop**: Drag any task card onto a new date cell (in Month View) or specific time slot cell (in Week View) to automatically reschedule the task. Dragging updates `raw` text (`due:YYYY-MM-DD` and `time:HH:MM`) and persists immediately to Turso DB.
+- **24-Hour Week View Y-Axis**: Weekly View displays hours `00:00` through `23:00` along the Y-axis. Tasks with `time:HH:MM` or due dates align automatically to their hour slot.
+- **Click-to-Create**:
+  - In **Month View**: Clicking an empty space in a date cell pre-fills the prompt with `:add (A) New task due:YYYY-MM-DD time:HH:MM `.
+  - In **Week View**: Clicking an hourly slot pre-fills the prompt with `:add (A) New task due:YYYY-MM-DD time:HH:MM ` for that exact hour slot.

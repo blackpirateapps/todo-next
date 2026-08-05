@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Task } from '@/types/todo';
 import { FormattedText } from './FormattedText';
 import { formatDateISO, getMonthDays, getWeekDays, MONTH_NAMES, WEEKDAY_NAMES } from '@/utils/dateUtils';
+import { parseDatesFromRaw } from '@/utils/todoParser';
 
 interface CalendarViewProps {
   tasks: Task[];
   selectedTaskId?: string;
   onSelectTask: (task: Task) => void;
   onToggleTask: (id: string) => void;
+  onMoveTask: (taskId: string, targetDate: string, targetTime?: string) => void;
+  onCreateTaskAtDate: (dateISO: string, timeStr?: string) => void;
   isLight: boolean;
 }
 
@@ -16,11 +19,18 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   selectedTaskId,
   onSelectTask,
   onToggleTask,
+  onMoveTask,
+  onCreateTaskAtDate,
   isLight
 }) => {
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
   const [dateField, setDateField] = useState<'due' | 'creation'>('due');
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
+
+  // Drag & Drop State
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [touchDragPos, setTouchDragPos] = useState<{ x: number; y: number } | null>(null);
+  const touchTaskRef = useRef<{ taskId: string; initialX: number; initialY: number } | null>(null);
 
   const todayISO = formatDateISO(new Date());
 
@@ -51,11 +61,85 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     : getWeekDays(currentDate);
 
   // Group tasks by target date string (YYYY-MM-DD)
-  const tasksByDate = useMemoMap(tasks, dateField);
+  const tasksByDate = new Map<string, Task[]>();
+  tasks.forEach(task => {
+    const targetDate = dateField === 'due' ? task.dueDate : task.creationDate;
+    if (targetDate) {
+      const existing = tasksByDate.get(targetDate) || [];
+      tasksByDate.set(targetDate, [...existing, task]);
+    }
+  });
 
-  // Header Title
+  // Desktop Drag & Drop Handlers
+  const handleDragStart = (e: React.DragEvent, taskId: string) => {
+    e.dataTransfer.setData('text/plain', taskId);
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggingTaskId(taskId);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, targetDate: string, targetTime?: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const taskId = e.dataTransfer.getData('text/plain') || draggingTaskId;
+    if (taskId) {
+      onMoveTask(taskId, targetDate, targetTime);
+    }
+    setDraggingTaskId(null);
+  };
+
+  // Mobile Touch Drag & Drop Handlers
+  const handleTouchStart = (e: React.TouchEvent, taskId: string) => {
+    const touch = e.touches[0];
+    touchTaskRef.current = { taskId, initialX: touch.clientX, initialY: touch.clientY };
+    setDraggingTaskId(taskId);
+    setTouchDragPos({ x: touch.clientX, y: touch.clientY });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchTaskRef.current) return;
+    const touch = e.touches[0];
+    setTouchDragPos({ x: touch.clientX, y: touch.clientY });
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchTaskRef.current || !touchDragPos) {
+      setDraggingTaskId(null);
+      setTouchDragPos(null);
+      touchTaskRef.current = null;
+      return;
+    }
+
+    const taskId = touchTaskRef.current.taskId;
+    const touch = e.changedTouches[0];
+    const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+    const dropTarget = targetEl?.closest('[data-date]') as HTMLElement | null;
+
+    if (dropTarget) {
+      const targetDate = dropTarget.getAttribute('data-date');
+      const targetTime = dropTarget.getAttribute('data-time') || undefined;
+      if (targetDate) {
+        onMoveTask(taskId, targetDate, targetTime);
+      }
+    }
+
+    setDraggingTaskId(null);
+    setTouchDragPos(null);
+    touchTaskRef.current = null;
+  };
+
+  // Current month & year label
   const monthName = MONTH_NAMES[currentDate.getMonth()];
   const year = currentDate.getFullYear();
+
+  // Generate 24 Hours array for Weekly View (00:00 to 23:00)
+  const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0') + ':00');
+
+  const draggedTaskObj = tasks.find(t => t.id === draggingTaskId);
 
   return (
     <div className={`flex-1 flex flex-col h-full overflow-hidden ${isLight ? 'bg-white text-gray-900' : 'bg-black text-gray-200'}`}>
@@ -90,11 +174,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           {/* Date Source Selector */}
           <div className="flex items-center gap-1">
             <span className={isLight ? 'text-gray-500' : 'text-gray-500'}>Date:</span>
-            <div className="flex border font-mono">
+            <div className="flex border font-mono text-[11px]">
               <button
                 onClick={() => setDateField('due')}
                 className={`px-2 py-0.5 ${
@@ -119,7 +203,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           </div>
 
           {/* Month / Week Selector */}
-          <div className="flex border font-mono">
+          <div className="flex border font-mono text-[11px]">
             <button
               onClick={() => setViewMode('month')}
               className={`px-2 py-0.5 ${
@@ -144,111 +228,306 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         </div>
       </div>
 
-      {/* Weekday Header */}
-      <div className={`grid grid-cols-7 border-b text-center font-bold uppercase text-[11px] py-1 select-none ${
-        isLight ? 'bg-gray-200 border-gray-300 text-gray-600' : 'bg-gray-900 border-gray-800 text-gray-500'
-      }`}>
-        {WEEKDAY_NAMES.map(day => (
-          <div key={day}>{day}</div>
-        ))}
-      </div>
+      {/* Floating Touch Drag Badge for Mobile */}
+      {touchDragPos && draggedTaskObj && (
+        <div
+          className={`fixed z-50 pointer-events-none p-2 border rounded shadow-2xl text-xs font-mono max-w-[200px] truncate ${
+            isLight ? 'bg-cyan-100 border-cyan-400 text-black' : 'bg-cyan-950 border-cyan-500 text-white'
+          }`}
+          style={{
+            left: touchDragPos.x - 50,
+            top: touchDragPos.y - 40,
+          }}
+        >
+          [Dragging] {draggedTaskObj.raw}
+        </div>
+      )}
 
-      {/* Calendar Days Grid */}
-      <div className={`flex-1 grid grid-cols-7 overflow-y-auto ${
-        viewMode === 'month' ? 'grid-rows-6 auto-rows-fr' : 'grid-rows-1'
-      }`}>
-        {calendarDays.map((dayDate, index) => {
-          const dayISO = formatDateISO(dayDate);
-          const isToday = dayISO === todayISO;
-          const isCurrentMonth = dayDate.getMonth() === currentDate.getMonth();
-          const dayTasks = tasksByDate.get(dayISO) || [];
+      {/* VIEW MODE 1: MONTH VIEW */}
+      {viewMode === 'month' && (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Weekday Header */}
+          <div className={`grid grid-cols-7 border-b text-center font-bold uppercase text-[11px] py-1 select-none ${
+            isLight ? 'bg-gray-200 border-gray-300 text-gray-600' : 'bg-gray-900 border-gray-800 text-gray-500'
+          }`}>
+            {WEEKDAY_NAMES.map(day => (
+              <div key={day}>{day}</div>
+            ))}
+          </div>
 
-          return (
-            <div
-              key={index}
-              className={`border-r border-b p-1 flex flex-col min-h-[90px] transition-colors ${
-                isLight
-                  ? `border-gray-200 ${isCurrentMonth ? 'bg-white' : 'bg-gray-50 text-gray-400'}`
-                  : `border-gray-900 ${isCurrentMonth ? 'bg-black' : 'bg-gray-950 text-gray-600'}`
-              }`}
-            >
-              {/* Day Number Header */}
-              <div className="flex justify-between items-center mb-1 select-none">
-                <span
-                  className={`text-xs font-mono px-1 rounded font-bold ${
-                    isToday
-                      ? (isLight ? 'bg-green-600 text-white' : 'bg-green-500 text-black')
-                      : (isCurrentMonth ? (isLight ? 'text-gray-700' : 'text-gray-300') : (isLight ? 'text-gray-400' : 'text-gray-600'))
+          {/* Month Days Grid */}
+          <div className="flex-1 grid grid-cols-7 grid-rows-6 auto-rows-fr overflow-y-auto">
+            {calendarDays.map((dayDate, index) => {
+              const dayISO = formatDateISO(dayDate);
+              const isToday = dayISO === todayISO;
+              const isCurrentMonth = dayDate.getMonth() === currentDate.getMonth();
+              const dayTasks = tasksByDate.get(dayISO) || [];
+
+              const now = new Date();
+              const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+              return (
+                <div
+                  key={index}
+                  data-date={dayISO}
+                  data-time={currentTime}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, dayISO, currentTime)}
+                  onClick={(e) => {
+                    // Only trigger if clicking cell background directly
+                    if (e.target === e.currentTarget || (e.target as HTMLElement).getAttribute('data-cell-bg') === 'true') {
+                      onCreateTaskAtDate(dayISO, currentTime);
+                    }
+                  }}
+                  className={`border-r border-b p-1 flex flex-col min-h-[90px] transition-colors relative group ${
+                    isLight
+                      ? `border-gray-200 ${isCurrentMonth ? 'bg-white hover:bg-gray-50' : 'bg-gray-50/50 text-gray-400'}`
+                      : `border-gray-900 ${isCurrentMonth ? 'bg-black hover:bg-gray-950' : 'bg-gray-950/50 text-gray-600'}`
                   }`}
                 >
-                  {dayDate.getDate()}
-                </span>
-                {dayTasks.length > 0 && (
-                  <span className={`text-[10px] font-mono opacity-60 ${isLight ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {dayTasks.length} {dayTasks.length === 1 ? 'task' : 'tasks'}
-                  </span>
-                )}
-              </div>
+                  <div data-cell-bg="true" className="absolute inset-0 z-0" />
 
-              {/* Task Items inside Day Cell */}
-              <div className="flex-1 overflow-y-auto space-y-1 pr-0.5">
-                {dayTasks.map(task => {
-                  const isSelected = selectedTaskId === task.id;
-
-                  return (
-                    <div
-                      key={task.id}
-                      onClick={() => onSelectTask(task)}
-                      className={`p-1 border rounded text-[11px] font-mono cursor-pointer transition-all ${
-                        isLight
-                          ? (isSelected
-                              ? 'bg-cyan-100 border-cyan-400 text-black shadow-xs'
-                              : 'bg-gray-100 hover:bg-gray-200 border-gray-300 text-gray-800')
-                          : (isSelected
-                              ? 'bg-cyan-950 border-cyan-600 text-white shadow-xs'
-                              : 'bg-gray-900 hover:bg-gray-800 border-gray-800 text-gray-200')
+                  {/* Day Number Header */}
+                  <div className="flex justify-between items-center mb-1 select-none relative z-10">
+                    <span
+                      className={`text-xs font-mono px-1 rounded font-bold ${
+                        isToday
+                          ? (isLight ? 'bg-green-600 text-white' : 'bg-green-500 text-black')
+                          : (isCurrentMonth ? (isLight ? 'text-gray-700' : 'text-gray-300') : (isLight ? 'text-gray-400' : 'text-gray-600'))
                       }`}
                     >
-                      <div className="flex items-start gap-1">
-                        <button
+                      {dayDate.getDate()}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCreateTaskAtDate(dayISO, currentTime);
+                      }}
+                      className="text-[10px] opacity-0 group-hover:opacity-100 hover:text-green-500 font-mono"
+                    >
+                      [+]
+                    </button>
+                  </div>
+
+                  {/* Task Items in Day Cell */}
+                  <div className="flex-1 overflow-y-auto space-y-1 relative z-10">
+                    {dayTasks.map(task => {
+                      const isSelected = selectedTaskId === task.id;
+                      const isBeingDragged = draggingTaskId === task.id;
+
+                      return (
+                        <div
+                          key={task.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, task.id)}
+                          onTouchStart={(e) => handleTouchStart(e, task.id)}
+                          onTouchMove={handleTouchMove}
+                          onTouchEnd={handleTouchEnd}
                           onClick={(e) => {
                             e.stopPropagation();
-                            onToggleTask(task.id);
+                            onSelectTask(task);
                           }}
-                          className={`mt-0.5 focus:outline-none font-mono ${
-                            isLight ? 'text-gray-500 hover:text-gray-900' : 'text-gray-400 hover:text-white'
+                          className={`p-1 border rounded text-[11px] font-mono cursor-grab active:cursor-grabbing transition-all ${
+                            isBeingDragged ? 'opacity-40 scale-95' : ''
+                          } ${
+                            isLight
+                              ? (isSelected
+                                  ? 'bg-cyan-100 border-cyan-400 text-black shadow-xs'
+                                  : 'bg-gray-100 hover:bg-gray-200 border-gray-300 text-gray-800')
+                              : (isSelected
+                                  ? 'bg-cyan-950 border-cyan-600 text-white shadow-xs'
+                                  : 'bg-gray-900 hover:bg-gray-800 border-gray-800 text-gray-200')
                           }`}
                         >
-                          {task.completed ? '[x]' : '[ ]'}
-                        </button>
+                          <div className="flex items-start gap-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleTask(task.id);
+                              }}
+                              className={`mt-0.5 focus:outline-none font-mono ${
+                                isLight ? 'text-gray-500 hover:text-gray-900' : 'text-gray-400 hover:text-white'
+                              }`}
+                            >
+                              {task.completed ? '[x]' : '[ ]'}
+                            </button>
 
-                        <div className="flex-1 min-w-0 leading-tight">
-                          <FormattedText text={task.raw} isCompleted={task.completed} isLight={isLight} />
+                            <div className="flex-1 min-w-0 leading-tight">
+                              <FormattedText text={task.raw} isCompleted={task.completed} isLight={isLight} />
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* VIEW MODE 2: WEEK VIEW WITH Y-AXIS TIME SLOTS */}
+      {viewMode === 'week' && (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Weekday Header with Dates */}
+          <div className="flex border-b text-xs select-none">
+            <div className={`w-14 sm:w-16 flex-shrink-0 text-center font-bold py-1 border-r ${
+              isLight ? 'bg-gray-200 border-gray-300 text-gray-600' : 'bg-gray-900 border-gray-800 text-gray-500'
+            }`}>
+              Time
             </div>
-          );
-        })}
-      </div>
+            <div className="flex-1 grid grid-cols-7">
+              {calendarDays.map((dayDate, idx) => {
+                const dayISO = formatDateISO(dayDate);
+                const isToday = dayISO === todayISO;
+                return (
+                  <div
+                    key={idx}
+                    className={`text-center py-1 border-r font-mono text-[11px] ${
+                      isLight
+                        ? `border-gray-200 ${isToday ? 'bg-green-100 text-green-900 font-bold' : 'bg-gray-100 text-gray-700'}`
+                        : `border-gray-800 ${isToday ? 'bg-green-950 text-green-300 font-bold' : 'bg-gray-900 text-gray-400'}`
+                    }`}
+                  >
+                    <div>{WEEKDAY_NAMES[dayDate.getDay()]}</div>
+                    <div className="text-[10px] opacity-75">{dayDate.getMonth() + 1}/{dayDate.getDate()}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 24-Hour Scrollable Time Slots */}
+          <div className="flex-1 overflow-y-auto flex">
+            {/* Y-Axis Hourly Time Labels */}
+            <div className={`w-14 sm:w-16 flex-shrink-0 border-r select-none ${
+              isLight ? 'bg-gray-50 border-gray-300 text-gray-500' : 'bg-gray-950 border-gray-800 text-gray-500'
+            }`}>
+              {hours.map((hourStr) => (
+                <div
+                  key={hourStr}
+                  className={`h-16 border-b text-[10px] sm:text-xs font-mono flex items-center justify-center ${
+                    isLight ? 'border-gray-200' : 'border-gray-900'
+                  }`}
+                >
+                  {hourStr}
+                </div>
+              ))}
+            </div>
+
+            {/* 7 Days Grid with Hourly Slots */}
+            <div className="flex-1 grid grid-cols-7 relative">
+              {calendarDays.map((dayDate, dayIdx) => {
+                const dayISO = formatDateISO(dayDate);
+                const dayTasks = tasksByDate.get(dayISO) || [];
+
+                return (
+                  <div key={dayIdx} className="border-r flex flex-col border-gray-200 dark:border-gray-900">
+                    {hours.map((hourStr) => {
+                      // Filter tasks that match this hour (e.g. time:14:00 matches "14:00")
+                      const matchingTasks = dayTasks.filter(t => {
+                        const parsed = parseDatesFromRaw(t.raw);
+                        if (parsed.time) {
+                          const taskHour = parsed.time.split(':')[0].padStart(2, '0');
+                          const cellHour = hourStr.split(':')[0].padStart(2, '0');
+                          return taskHour === cellHour;
+                        }
+                        // Default all-day tasks without explicit time to 09:00 slot
+                        if (hourStr === '09:00' && !parsed.time) return true;
+                        return false;
+                      });
+
+                      return (
+                        <div
+                          key={hourStr}
+                          data-date={dayISO}
+                          data-time={hourStr}
+                          onDragOver={handleDragOver}
+                          onDrop={(e) => handleDrop(e, dayISO, hourStr)}
+                          onClick={(e) => {
+                            if (e.target === e.currentTarget || (e.target as HTMLElement).getAttribute('data-slot') === 'true') {
+                              onCreateTaskAtDate(dayISO, hourStr);
+                            }
+                          }}
+                          className={`h-16 border-b p-0.5 flex flex-col transition-colors relative group ${
+                            isLight
+                              ? 'border-gray-200 hover:bg-gray-100/60'
+                              : 'border-gray-900 hover:bg-gray-800/40'
+                          }`}
+                        >
+                          <div data-slot="true" className="absolute inset-0 z-0" />
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onCreateTaskAtDate(dayISO, hourStr);
+                            }}
+                            className="absolute top-0.5 right-0.5 text-[9px] opacity-0 group-hover:opacity-100 hover:text-green-500 font-mono z-10"
+                          >
+                            [+]
+                          </button>
+
+                          <div className="flex-1 overflow-y-auto space-y-0.5 relative z-10">
+                            {matchingTasks.map(task => {
+                              const isSelected = selectedTaskId === task.id;
+                              const isBeingDragged = draggingTaskId === task.id;
+
+                              return (
+                                <div
+                                  key={task.id}
+                                  draggable
+                                  onDragStart={(e) => handleDragStart(e, task.id)}
+                                  onTouchStart={(e) => handleTouchStart(e, task.id)}
+                                  onTouchMove={handleTouchMove}
+                                  onTouchEnd={handleTouchEnd}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSelectTask(task);
+                                  }}
+                                  className={`p-1 border rounded text-[10px] sm:text-[11px] font-mono cursor-grab active:cursor-grabbing transition-all ${
+                                    isBeingDragged ? 'opacity-40 scale-95' : ''
+                                  } ${
+                                    isLight
+                                      ? (isSelected
+                                          ? 'bg-cyan-100 border-cyan-400 text-black shadow-xs'
+                                          : 'bg-gray-100 hover:bg-gray-200 border-gray-300 text-gray-800')
+                                      : (isSelected
+                                          ? 'bg-cyan-950 border-cyan-600 text-white shadow-xs'
+                                          : 'bg-gray-900 hover:bg-gray-800 border-gray-800 text-gray-200')
+                                  }`}
+                                >
+                                  <div className="flex items-start gap-1">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onToggleTask(task.id);
+                                      }}
+                                      className={`mt-0.5 focus:outline-none font-mono ${
+                                        isLight ? 'text-gray-500 hover:text-gray-900' : 'text-gray-400 hover:text-white'
+                                      }`}
+                                    >
+                                      {task.completed ? '[x]' : '[ ]'}
+                                    </button>
+
+                                    <div className="flex-1 min-w-0 leading-tight">
+                                      <FormattedText text={task.raw} isCompleted={task.completed} isLight={isLight} />
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-
-// Helper hook/function to map tasks by date string (YYYY-MM-DD)
-function useMemoMap(tasks: Task[], dateField: 'due' | 'creation'): Map<string, Task[]> {
-  const map = new Map<string, Task[]>();
-
-  tasks.forEach(task => {
-    const targetDate = dateField === 'due' ? task.dueDate : task.creationDate;
-    if (targetDate) {
-      const existing = map.get(targetDate) || [];
-      map.set(targetDate, [...existing, task]);
-    }
-  });
-
-  return map;
-}

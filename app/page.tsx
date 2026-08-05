@@ -9,6 +9,7 @@ import { TaskDetails } from '@/components/TaskDetails';
 import { CommandInput } from '@/components/CommandInput';
 import { StatusBar } from '@/components/StatusBar';
 import { LoginScreen } from '@/components/LoginScreen';
+import { updateRawDates, parseDatesFromRaw } from '@/utils/todoParser';
 
 export default function UtilitarianTodoPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -119,6 +120,39 @@ export default function UtilitarianTodoPage() {
     });
   };
 
+  const handleMoveTask = async (taskId: string, targetDate: string, targetTime?: string) => {
+    const taskToMove = tasks.find(t => t.id === taskId);
+    if (!taskToMove) return;
+
+    // Update raw string with new due date and optional time tag
+    const newRaw = updateRawDates(taskToMove.raw, taskToMove.creationDate, targetDate, targetTime || null);
+    const parsed = parseDatesFromRaw(newRaw, taskToMove.creationDate);
+
+    const updates: Partial<Task> = {
+      raw: newRaw,
+      dueDate: parsed.dueDate,
+      creationDate: parsed.creationDate,
+    };
+
+    // Optimistic UI update
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
+    if (selectedTask?.id === taskId) {
+      setSelectedTask(prev => prev ? { ...prev, ...updates } : null);
+    }
+
+    // Backend update
+    await fetch(`/api/tasks/${taskId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+  };
+
+  const handleCreateTaskAtDate = (dateISO: string, timeStr?: string) => {
+    const timeTag = timeStr ? ` time:${timeStr}` : '';
+    setCommandQuery(`:add (A) New task due:${dateISO}${timeTag} `);
+  };
+
   const handleDeleteTask = async (id: string) => {
     // Optimistic UI update
     setTasks(prev => prev.filter(t => t.id !== id));
@@ -136,12 +170,15 @@ export default function UtilitarianTodoPage() {
     const trimmed = val.trim();
     if (trimmed.startsWith(':add ')) {
       const newTaskRaw = trimmed.replace(':add ', '');
+      const parsed = parseDatesFromRaw(newTaskRaw);
+
       const newTask: Task = {
         id: `t${Date.now()}`,
         raw: newTaskRaw,
         completed: false,
         priority: newTaskRaw.match(/^\([A-Z]\)/) ? newTaskRaw[1] : null,
-        creationDate: new Date().toISOString().split('T')[0],
+        creationDate: parsed.creationDate,
+        dueDate: parsed.dueDate,
         description: '',
         subtasks: [],
         comments: []
@@ -223,6 +260,8 @@ export default function UtilitarianTodoPage() {
             selectedTaskId={selectedTask?.id}
             onSelectTask={setSelectedTask}
             onToggleTask={handleToggleTask}
+            onMoveTask={handleMoveTask}
+            onCreateTaskAtDate={handleCreateTaskAtDate}
             isLight={isLightMode}
           />
         )}
