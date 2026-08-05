@@ -12,7 +12,17 @@ export async function GET() {
     const tasks = await getAllTasks();
     return NextResponse.json(tasks);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed to fetch tasks' }, { status: 500 });
+    console.error('[GET /api/tasks Error]:', {
+      message: error?.message,
+      stack: error?.stack,
+      cause: error?.cause,
+      hasTursoUrl: Boolean(process.env.TURSO_DATABASE_URL),
+      isVercel: Boolean(process.env.VERCEL)
+    });
+    return NextResponse.json(
+      { error: error?.message || 'Failed to fetch tasks', debug: process.env.NODE_ENV !== 'production' ? error?.stack : undefined },
+      { status: 500 }
+    );
   }
 }
 
@@ -22,10 +32,24 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body: Task = await request.json();
+    const body: Task = await request.json().catch(() => null);
+    if (!body || !body.raw) {
+      return NextResponse.json({ error: 'Invalid task payload' }, { status: 400 });
+    }
+
     const newTask = await insertTask(body);
     return NextResponse.json(newTask, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed to create task' }, { status: 500 });
+    console.error('[POST /api/tasks Error]:', {
+      message: error?.message,
+      stack: error?.stack,
+      cause: error?.cause,
+      hasTursoUrl: Boolean(process.env.TURSO_DATABASE_URL),
+      isVercel: Boolean(process.env.VERCEL)
+    });
+    return NextResponse.json(
+      { error: error?.message || 'Failed to create task', debug: process.env.NODE_ENV !== 'production' ? error?.stack : undefined },
+      { status: 500 }
+    );
   }
 }

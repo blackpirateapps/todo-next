@@ -12,7 +12,17 @@ export async function GET() {
     const templates = await getAllTemplates();
     return NextResponse.json(templates);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed to fetch templates' }, { status: 500 });
+    console.error('[GET /api/templates Error]:', {
+      message: error?.message,
+      stack: error?.stack,
+      cause: error?.cause,
+      hasTursoUrl: Boolean(process.env.TURSO_DATABASE_URL),
+      isVercel: Boolean(process.env.VERCEL)
+    });
+    return NextResponse.json(
+      { error: error?.message || 'Failed to fetch templates', debug: process.env.NODE_ENV !== 'production' ? error?.stack : undefined },
+      { status: 500 }
+    );
   }
 }
 
@@ -22,10 +32,24 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body: Template = await request.json();
+    const body: Template = await request.json().catch(() => null);
+    if (!body || !body.name || !body.rawTemplate) {
+      return NextResponse.json({ error: 'Invalid template payload' }, { status: 400 });
+    }
+
     const newTemplate = await insertTemplate(body);
     return NextResponse.json(newTemplate, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed to create template' }, { status: 500 });
+    console.error('[POST /api/templates Error]:', {
+      message: error?.message,
+      stack: error?.stack,
+      cause: error?.cause,
+      hasTursoUrl: Boolean(process.env.TURSO_DATABASE_URL),
+      isVercel: Boolean(process.env.VERCEL)
+    });
+    return NextResponse.json(
+      { error: error?.message || 'Failed to create template', debug: process.env.NODE_ENV !== 'production' ? error?.stack : undefined },
+      { status: 500 }
+    );
   }
 }

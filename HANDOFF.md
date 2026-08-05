@@ -4,13 +4,14 @@
 `todo-next` (Title: **Todo Next**) is a lightweight, terminal-styled task manager heavily influenced by the **`todo.txt` format** and **Unix philosophy**. It provides a fast, minimalist interface with keyboard navigation, syntax highlighting for projects (`+project`), contexts (`@context`), priorities (`(A)`, `(B)`), due dates (`due:YYYY-MM-DD`), dual theme support (Dark/Light mode), and full **List & Calendar views**.
 
 Recently updated with:
+- **Serverless Vercel 500 Error Prevention & Health Diagnostics**:
+  - Fixed read-only filesystem crash on Vercel when `TURSO_DATABASE_URL` is omitted by defaulting to `file:/tmp/todo.db` in serverless environments (`process.env.VERCEL`).
+  - Added comprehensive `console.error()` logging with stack traces, request context, and environment status across all API routes (`/api/tasks`, `/api/templates`, `/api/auth`).
+  - Added diagnostic endpoint `GET /api/health` returning database connection status and serverless environment variables.
 - **Universal Deletion Confirmation Modal (`ConfirmModal.tsx`)**:
-  - Every deletion action across the entire app prompts the user for confirmation before executing:
-    - Task deletions in `TaskList.tsx`.
-    - Template deletions in `TemplateModal.tsx`.
-    - Subtask, comment, project tag (`+proj`), and context tag (`@ctx`) deletions in `TaskDetails.tsx`.
+  - Confirmation prompts before deleting tasks, templates, subtasks, comments, project tags (`+proj`), or context tags (`@ctx`).
 - **Fixed Vercel 404 Logging & Asset Caching**:
-  - Generated missing icon assets: `favicon.ico`, `apple-touch-icon.png`, `apple-touch-icon-precomposed.png`, `icon-192.png`, and `icon-512.png`.
+  - Icons generated: `favicon.ico`, `apple-touch-icon.png`, `apple-touch-icon-precomposed.png`, `icon-192.png`, and `icon-512.png`.
 - **Subtask Progress Bar Component (`SubtaskProgressBar.tsx`)**:
   - Displays a visual progress bar (`[2/4] 50%`) for tasks with subtasks across **List View**, **Calendar View**, and **Inspector Drawer**.
 - **First-Class Task Templates System**:
@@ -25,6 +26,7 @@ Recently updated with:
 ├── app/
 │   ├── api/
 │   │   ├── auth/route.ts
+│   │   ├── health/route.ts           # Diagnostic endpoint for DB & Vercel serverless health
 │   │   ├── tasks/route.ts & [id]/route.ts
 │   │   └── templates/route.ts, [id]/route.ts, [id]/instantiate/route.ts
 │   ├── globals.css
@@ -33,7 +35,7 @@ Recently updated with:
 ├── components/
 │   ├── CalendarView.tsx
 │   ├── CommandInput.tsx
-│   ├── ConfirmModal.tsx              # Universal deletion confirmation dialog
+│   ├── ConfirmModal.tsx
 │   ├── FormattedText.tsx
 │   ├── LoginScreen.tsx
 │   ├── Sidebar.tsx
@@ -45,7 +47,7 @@ Recently updated with:
 │   └── TemplateModal.tsx
 ├── lib/
 │   ├── auth.ts
-│   └── db.ts
+│   └── db.ts                         # Turso DB / LibSQL client with /tmp/todo.db serverless fallback
 ├── public/
 │   ├── apple-touch-icon.png
 │   ├── favicon.ico

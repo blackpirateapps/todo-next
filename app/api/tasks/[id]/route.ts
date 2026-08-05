@@ -12,14 +12,28 @@ export async function PATCH(
 
   try {
     const { id } = await params;
-    const updates = await request.json();
+    const updates = await request.json().catch(() => null);
+    if (!updates) {
+      return NextResponse.json({ error: 'Invalid updates payload' }, { status: 400 });
+    }
+
     const updatedTask = await updateTaskInDb(id, updates);
     if (!updatedTask) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
     return NextResponse.json(updatedTask);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed to update task' }, { status: 500 });
+    console.error('[PATCH /api/tasks/[id] Error]:', {
+      message: error?.message,
+      stack: error?.stack,
+      cause: error?.cause,
+      hasTursoUrl: Boolean(process.env.TURSO_DATABASE_URL),
+      isVercel: Boolean(process.env.VERCEL)
+    });
+    return NextResponse.json(
+      { error: error?.message || 'Failed to update task', debug: process.env.NODE_ENV !== 'production' ? error?.stack : undefined },
+      { status: 500 }
+    );
   }
 }
 
@@ -36,6 +50,16 @@ export async function DELETE(
     await deleteTaskFromDb(id);
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed to delete task' }, { status: 500 });
+    console.error('[DELETE /api/tasks/[id] Error]:', {
+      message: error?.message,
+      stack: error?.stack,
+      cause: error?.cause,
+      hasTursoUrl: Boolean(process.env.TURSO_DATABASE_URL),
+      isVercel: Boolean(process.env.VERCEL)
+    });
+    return NextResponse.json(
+      { error: error?.message || 'Failed to delete task', debug: process.env.NODE_ENV !== 'production' ? error?.stack : undefined },
+      { status: 500 }
+    );
   }
 }

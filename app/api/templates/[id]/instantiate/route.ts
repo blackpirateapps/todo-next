@@ -22,6 +22,16 @@ export async function POST(
 
     return NextResponse.json(newTask, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed to instantiate task from template' }, { status: 500 });
+    console.error('[POST /api/templates/[id]/instantiate Error]:', {
+      message: error?.message,
+      stack: error?.stack,
+      cause: error?.cause,
+      hasTursoUrl: Boolean(process.env.TURSO_DATABASE_URL),
+      isVercel: Boolean(process.env.VERCEL)
+    });
+    return NextResponse.json(
+      { error: error?.message || 'Failed to instantiate task from template', debug: process.env.NODE_ENV !== 'production' ? error?.stack : undefined },
+      { status: 500 }
+    );
   }
 }

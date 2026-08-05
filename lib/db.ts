@@ -3,8 +3,24 @@ import { Task, Subtask, Comment, Template, TemplateSubtask } from '@/types/todo'
 import { parseRawToStructured, buildRawFromStructured } from '@/utils/todoParser';
 import { instantiateTaskFromTemplate } from '@/utils/templateEngine';
 
-const url = process.env.TURSO_DATABASE_URL || 'file:todo.db';
+const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+let url = process.env.TURSO_DATABASE_URL;
+
+if (!url) {
+  if (isVercel) {
+    url = 'file:/tmp/todo.db';
+  } else {
+    url = 'file:todo.db';
+  }
+}
+
 const authToken = process.env.TURSO_AUTH_TOKEN;
+
+console.log('[DB Init] Configured database client:', {
+  url,
+  hasAuthToken: Boolean(authToken),
+  isVercel
+});
 
 export const db = createClient({
   url,
@@ -92,111 +108,12 @@ let isInitialized = false;
 export async function initDb() {
   if (isInitialized) return;
 
-  await db.execute('PRAGMA foreign_keys = ON;');
+  try {
+    await db.execute('PRAGMA foreign_keys = ON;');
 
-  // Create Relational Tasks Tables
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS tasks (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'open',
-      priority TEXT,
-      creation_date TEXT NOT NULL,
-      completion_date TEXT,
-      due_date TEXT,
-      due_time TEXT,
-      description TEXT DEFAULT ''
-    );
-  `);
-
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS task_projects (
-      id TEXT PRIMARY KEY,
-      task_id TEXT NOT NULL,
-      project TEXT NOT NULL,
-      FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
-    );
-  `);
-
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS task_contexts (
-      id TEXT PRIMARY KEY,
-      task_id TEXT NOT NULL,
-      context TEXT NOT NULL,
-      FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
-    );
-  `);
-
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS subtasks (
-      id TEXT PRIMARY KEY,
-      task_id TEXT NOT NULL,
-      title TEXT NOT NULL,
-      completed INTEGER NOT NULL DEFAULT 0,
-      FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
-    );
-  `);
-
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS comments (
-      id TEXT PRIMARY KEY,
-      task_id TEXT NOT NULL,
-      author TEXT NOT NULL,
-      timestamp TEXT NOT NULL,
-      text TEXT NOT NULL,
-      FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
-    );
-  `);
-
-  // Create Relational Templates Tables
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS templates (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      raw_template TEXT NOT NULL,
-      description TEXT DEFAULT '',
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-  `);
-
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS template_projects (
-      id TEXT PRIMARY KEY,
-      template_id TEXT NOT NULL,
-      project TEXT NOT NULL,
-      FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE CASCADE
-    );
-  `);
-
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS template_contexts (
-      id TEXT PRIMARY KEY,
-      template_id TEXT NOT NULL,
-      context TEXT NOT NULL,
-      FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE CASCADE
-    );
-  `);
-
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS template_subtasks (
-      id TEXT PRIMARY KEY,
-      template_id TEXT NOT NULL,
-      title TEXT NOT NULL,
-      position INTEGER NOT NULL DEFAULT 0,
-      FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE CASCADE
-    );
-  `);
-
-  // --- AUTOMATIC TASKS SCHEMA MIGRATION ---
-  const tableInfo = await db.execute("PRAGMA table_info(tasks)");
-  const hasRawColumn = tableInfo.rows.some(row => row.name === 'raw');
-
-  if (hasRawColumn) {
-    const legacyTasksRes = await db.execute('SELECT * FROM tasks');
-    
+    // Create Relational Tasks Tables
     await db.execute(`
-      CREATE TABLE tasks_normalized (
+      CREATE TABLE IF NOT EXISTS tasks (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'open',
@@ -209,160 +126,269 @@ export async function initDb() {
       );
     `);
 
-    for (const legacy of legacyTasksRes.rows) {
-      const rawStr = String(legacy.raw || '');
-      const parsed = parseRawToStructured(rawStr, String(legacy.creation_date || ''));
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS task_projects (
+        id TEXT PRIMARY KEY,
+        task_id TEXT NOT NULL,
+        project TEXT NOT NULL,
+        FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+      );
+    `);
 
-      const normArgs: InValue[] = [
-        String(legacy.id),
-        parsed.title,
-        legacy.completed ? 'completed' : 'open',
-        parsed.priority ? String(parsed.priority) : null,
-        parsed.creationDate,
-        parsed.completionDate || (legacy.completion_date ? String(legacy.completion_date) : null),
-        parsed.dueDate ? String(parsed.dueDate) : null,
-        parsed.dueTime ? String(parsed.dueTime) : null,
-        String(legacy.description || '')
-      ];
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS task_contexts (
+        id TEXT PRIMARY KEY,
+        task_id TEXT NOT NULL,
+        context TEXT NOT NULL,
+        FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+      );
+    `);
 
-      await db.execute({
-        sql: `INSERT INTO tasks_normalized (id, title, status, priority, creation_date, completion_date, due_date, due_time, description)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: normArgs
-      });
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS subtasks (
+        id TEXT PRIMARY KEY,
+        task_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        completed INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+      );
+    `);
 
-      for (const p of parsed.projects) {
-        await db.execute({
-          sql: 'INSERT INTO task_projects (id, task_id, project) VALUES (?, ?, ?)',
-          args: [`tp-${legacy.id}-${p}`, String(legacy.id), p]
-        });
-      }
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS comments (
+        id TEXT PRIMARY KEY,
+        task_id TEXT NOT NULL,
+        author TEXT NOT NULL,
+        timestamp TEXT NOT NULL,
+        text TEXT NOT NULL,
+        FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+      );
+    `);
 
-      for (const c of parsed.contexts) {
-        await db.execute({
-          sql: 'INSERT INTO task_contexts (id, task_id, context) VALUES (?, ?, ?)',
-          args: [`tc-${legacy.id}-${c}`, String(legacy.id), c]
-        });
-      }
+    // Create Relational Templates Tables
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS templates (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        raw_template TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
 
-      try {
-        const subtasksJson = JSON.parse(legacy.subtasks as string || '[]');
-        for (const st of subtasksJson) {
-          await db.execute({
-            sql: 'INSERT INTO subtasks (id, task_id, title, completed) VALUES (?, ?, ?, ?)',
-            args: [st.id || `st-${Date.now()}`, String(legacy.id), st.raw || st.title || '', st.completed ? 1 : 0]
-          });
-        }
-      } catch {}
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS template_projects (
+        id TEXT PRIMARY KEY,
+        template_id TEXT NOT NULL,
+        project TEXT NOT NULL,
+        FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE CASCADE
+      );
+    `);
 
-      try {
-        const commentsJson = JSON.parse(legacy.comments as string || '[]');
-        for (const cm of commentsJson) {
-          await db.execute({
-            sql: 'INSERT INTO comments (id, task_id, author, timestamp, text) VALUES (?, ?, ?, ?, ?)',
-            args: [cm.id || `cm-${Date.now()}`, String(legacy.id), cm.author || 'user', cm.timestamp || new Date().toISOString(), cm.text || '']
-          });
-        }
-      } catch {}
-    }
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS template_contexts (
+        id TEXT PRIMARY KEY,
+        template_id TEXT NOT NULL,
+        context TEXT NOT NULL,
+        FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE CASCADE
+      );
+    `);
 
-    await db.execute('DROP TABLE tasks;');
-    await db.execute('ALTER TABLE tasks_normalized RENAME TO tasks;');
-  }
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS template_subtasks (
+        id TEXT PRIMARY KEY,
+        template_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        position INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE CASCADE
+      );
+    `);
 
-  // Initial Seed for Tasks
-  const countRes = await db.execute('SELECT COUNT(*) as count FROM tasks');
-  const count = Number(countRes.rows[0]?.count ?? 0);
+    // --- AUTOMATIC TASKS SCHEMA MIGRATION ---
+    const tableInfo = await db.execute("PRAGMA table_info(tasks)");
+    const hasRawColumn = tableInfo.rows.some(row => row.name === 'raw');
 
-  if (count === 0) {
-    for (const initTask of initialTasksData) {
-      const parsed = parseRawToStructured(initTask.raw);
+    if (hasRawColumn) {
+      const legacyTasksRes = await db.execute('SELECT * FROM tasks');
+      
+      await db.execute(`
+        CREATE TABLE tasks_normalized (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'open',
+          priority TEXT,
+          creation_date TEXT NOT NULL,
+          completion_date TEXT,
+          due_date TEXT,
+          due_time TEXT,
+          description TEXT DEFAULT ''
+        );
+      `);
 
-      await db.execute({
-        sql: `INSERT INTO tasks (id, title, status, priority, creation_date, completion_date, due_date, due_time, description)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: [
-          initTask.id,
+      for (const legacy of legacyTasksRes.rows) {
+        const rawStr = String(legacy.raw || '');
+        const parsed = parseRawToStructured(rawStr, String(legacy.creation_date || ''));
+
+        const normArgs: InValue[] = [
+          String(legacy.id),
           parsed.title,
-          parsed.completed ? 'completed' : 'open',
+          legacy.completed ? 'completed' : 'open',
           parsed.priority ? String(parsed.priority) : null,
           parsed.creationDate,
-          parsed.completionDate || null,
-          parsed.dueDate || null,
-          parsed.dueTime || null,
-          initTask.description || ''
-        ]
-      });
+          parsed.completionDate || (legacy.completion_date ? String(legacy.completion_date) : null),
+          parsed.dueDate ? String(parsed.dueDate) : null,
+          parsed.dueTime ? String(parsed.dueTime) : null,
+          String(legacy.description || '')
+        ];
 
-      for (const p of parsed.projects) {
         await db.execute({
-          sql: 'INSERT INTO task_projects (id, task_id, project) VALUES (?, ?, ?)',
-          args: [`tp-${initTask.id}-${p}`, initTask.id, p]
+          sql: `INSERT INTO tasks_normalized (id, title, status, priority, creation_date, completion_date, due_date, due_time, description)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          args: normArgs
         });
+
+        for (const p of parsed.projects) {
+          await db.execute({
+            sql: 'INSERT INTO task_projects (id, task_id, project) VALUES (?, ?, ?)',
+            args: [`tp-${legacy.id}-${p}`, String(legacy.id), p]
+          });
+        }
+
+        for (const c of parsed.contexts) {
+          await db.execute({
+            sql: 'INSERT INTO task_contexts (id, task_id, context) VALUES (?, ?, ?)',
+            args: [`tc-${legacy.id}-${c}`, String(legacy.id), c]
+          });
+        }
+
+        try {
+          const subtasksJson = JSON.parse(legacy.subtasks as string || '[]');
+          for (const st of subtasksJson) {
+            await db.execute({
+              sql: 'INSERT INTO subtasks (id, task_id, title, completed) VALUES (?, ?, ?, ?)',
+              args: [st.id || `st-${Date.now()}`, String(legacy.id), st.raw || st.title || '', st.completed ? 1 : 0]
+            });
+          }
+        } catch {}
+
+        try {
+          const commentsJson = JSON.parse(legacy.comments as string || '[]');
+          for (const cm of commentsJson) {
+            await db.execute({
+              sql: 'INSERT INTO comments (id, task_id, author, timestamp, text) VALUES (?, ?, ?, ?, ?)',
+              args: [cm.id || `cm-${Date.now()}`, String(legacy.id), cm.author || 'user', cm.timestamp || new Date().toISOString(), cm.text || '']
+            });
+          }
+        } catch {}
       }
 
-      for (const c of parsed.contexts) {
-        await db.execute({
-          sql: 'INSERT INTO task_contexts (id, task_id, context) VALUES (?, ?, ?)',
-          args: [`tc-${initTask.id}-${c}`, initTask.id, c]
-        });
-      }
+      await db.execute('DROP TABLE tasks;');
+      await db.execute('ALTER TABLE tasks_normalized RENAME TO tasks;');
+    }
 
-      for (const st of initTask.subtasks) {
-        await db.execute({
-          sql: 'INSERT INTO subtasks (id, task_id, title, completed) VALUES (?, ?, ?, ?)',
-          args: [st.id, initTask.id, st.raw, st.completed ? 1 : 0]
-        });
-      }
+    // Initial Seed for Tasks
+    const countRes = await db.execute('SELECT COUNT(*) as count FROM tasks');
+    const count = Number(countRes.rows[0]?.count ?? 0);
 
-      for (const cm of initTask.comments) {
+    if (count === 0) {
+      for (const initTask of initialTasksData) {
+        const parsed = parseRawToStructured(initTask.raw);
+
         await db.execute({
-          sql: 'INSERT INTO comments (id, task_id, author, timestamp, text) VALUES (?, ?, ?, ?, ?)',
-          args: [cm.id, initTask.id, cm.author, cm.timestamp, cm.text]
+          sql: `INSERT INTO tasks (id, title, status, priority, creation_date, completion_date, due_date, due_time, description)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          args: [
+            initTask.id,
+            parsed.title,
+            parsed.completed ? 'completed' : 'open',
+            parsed.priority ? String(parsed.priority) : null,
+            parsed.creationDate,
+            parsed.completionDate || null,
+            parsed.dueDate || null,
+            parsed.dueTime || null,
+            initTask.description || ''
+          ]
         });
+
+        for (const p of parsed.projects) {
+          await db.execute({
+            sql: 'INSERT INTO task_projects (id, task_id, project) VALUES (?, ?, ?)',
+            args: [`tp-${initTask.id}-${p}`, initTask.id, p]
+          });
+        }
+
+        for (const c of parsed.contexts) {
+          await db.execute({
+            sql: 'INSERT INTO task_contexts (id, task_id, context) VALUES (?, ?, ?)',
+            args: [`tc-${initTask.id}-${c}`, initTask.id, c]
+          });
+        }
+
+        for (const st of initTask.subtasks) {
+          await db.execute({
+            sql: 'INSERT INTO subtasks (id, task_id, title, completed) VALUES (?, ?, ?, ?)',
+            args: [st.id, initTask.id, st.raw, st.completed ? 1 : 0]
+          });
+        }
+
+        for (const cm of initTask.comments) {
+          await db.execute({
+            sql: 'INSERT INTO comments (id, task_id, author, timestamp, text) VALUES (?, ?, ?, ?, ?)',
+            args: [cm.id, initTask.id, cm.author, cm.timestamp, cm.text]
+          });
+        }
       }
     }
-  }
 
-  // Initial Seed for Templates
-  const tmplCountRes = await db.execute('SELECT COUNT(*) as count FROM templates');
-  const tmplCount = Number(tmplCountRes.rows[0]?.count ?? 0);
+    // Initial Seed for Templates
+    const tmplCountRes = await db.execute('SELECT COUNT(*) as count FROM templates');
+    const tmplCount = Number(tmplCountRes.rows[0]?.count ?? 0);
 
-  if (tmplCount === 0) {
-    const nowStr = new Date().toISOString();
-    for (const t of starterTemplatesData) {
-      const parsed = parseRawToStructured(t.rawTemplate);
+    if (tmplCount === 0) {
+      const nowStr = new Date().toISOString();
+      for (const t of starterTemplatesData) {
+        const parsed = parseRawToStructured(t.rawTemplate);
 
-      await db.execute({
-        sql: `INSERT INTO templates (id, name, raw_template, description, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?)`,
-        args: [t.id, t.name, t.rawTemplate, t.description, nowStr, nowStr]
-      });
-
-      for (const p of parsed.projects) {
         await db.execute({
-          sql: 'INSERT INTO template_projects (id, template_id, project) VALUES (?, ?, ?)',
-          args: [`tmplp-${t.id}-${p}`, t.id, p]
+          sql: `INSERT INTO templates (id, name, raw_template, description, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)`,
+          args: [t.id, t.name, t.rawTemplate, t.description, nowStr, nowStr]
         });
-      }
 
-      for (const c of parsed.contexts) {
-        await db.execute({
-          sql: 'INSERT INTO template_contexts (id, template_id, context) VALUES (?, ?, ?)',
-          args: [`tmplc-${t.id}-${c}`, t.id, c]
-        });
-      }
+        for (const p of parsed.projects) {
+          await db.execute({
+            sql: 'INSERT INTO template_projects (id, template_id, project) VALUES (?, ?, ?)',
+            args: [`tmplp-${t.id}-${p}`, t.id, p]
+          });
+        }
 
-      for (let i = 0; i < t.subtasks.length; i++) {
-        await db.execute({
-          sql: 'INSERT INTO template_subtasks (id, template_id, title, position) VALUES (?, ?, ?, ?)',
-          args: [`tmpls-${t.id}-${i}`, t.id, t.subtasks[i], i]
-        });
+        for (const c of parsed.contexts) {
+          await db.execute({
+            sql: 'INSERT INTO template_contexts (id, template_id, context) VALUES (?, ?, ?)',
+            args: [`tmplc-${t.id}-${c}`, t.id, c]
+          });
+        }
+
+        for (let i = 0; i < t.subtasks.length; i++) {
+          await db.execute({
+            sql: 'INSERT INTO template_subtasks (id, template_id, title, position) VALUES (?, ?, ?, ?)',
+            args: [`tmpls-${t.id}-${i}`, t.id, t.subtasks[i], i]
+          });
+        }
       }
     }
-  }
 
-  isInitialized = true;
+    isInitialized = true;
+  } catch (err: any) {
+    console.error('[DB Init Failed]:', {
+      message: err?.message,
+      stack: err?.stack,
+      cause: err?.cause,
+      url
+    });
+    throw err;
+  }
 }
 
 // --- TASK CRUD OPERATIONS ---
