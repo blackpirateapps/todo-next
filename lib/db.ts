@@ -1,6 +1,7 @@
 import { createClient, InValue } from '@libsql/client';
-import { Task, Subtask, Comment } from '@/types/todo';
+import { Task, Subtask, Comment, Template, TemplateSubtask } from '@/types/todo';
 import { parseRawToStructured, buildRawFromStructured } from '@/utils/todoParser';
+import { instantiateTaskFromTemplate } from '@/utils/templateEngine';
 
 const url = process.env.TURSO_DATABASE_URL || 'file:todo.db';
 const authToken = process.env.TURSO_AUTH_TOKEN;
@@ -62,6 +63,30 @@ const initialTasksData = [
   }
 ];
 
+const starterTemplatesData = [
+  {
+    id: 'tmpl-1',
+    name: 'Sprint Release Checklist',
+    rawTemplate: '(A) Deploy release v1.0 +infra @ops due:{due:+2d} {time:10:00}',
+    description: 'Checklist for deploying a production release candidate.',
+    subtasks: ['Run unit tests & E2E suite', 'Tag git release candidate', 'Apply database migrations', 'Monitor metrics on dashboard']
+  },
+  {
+    id: 'tmpl-2',
+    name: 'Weekly Code Review',
+    rawTemplate: '(B) Conduct weekly team code review +dev @review due:{due:+5d}',
+    description: 'Weekly team peer review workflow.',
+    subtasks: ['Check open pull requests', 'Audit dependencies for security updates', 'Post feedback comments']
+  },
+  {
+    id: 'tmpl-3',
+    name: 'Inbox Zero & Daily Prep',
+    rawTemplate: '(C) Morning prep and inbox zero @personal',
+    description: 'Daily morning organization routine.',
+    subtasks: ['Review priority A tasks', 'Clear unread emails & messages', 'Set daily goal focus']
+  }
+];
+
 let isInitialized = false;
 
 export async function initDb() {
@@ -69,7 +94,7 @@ export async function initDb() {
 
   await db.execute('PRAGMA foreign_keys = ON;');
 
-  // Create Relational Normalized Tables
+  // Create Relational Tasks Tables
   await db.execute(`
     CREATE TABLE IF NOT EXISTS tasks (
       id TEXT PRIMARY KEY,
@@ -123,16 +148,53 @@ export async function initDb() {
     );
   `);
 
-  // --- AUTOMATIC SCHEMA MIGRATION ---
-  // Check if legacy 'tasks' table columns (e.g. 'raw') exist in database schema
+  // Create Relational Templates Tables
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS templates (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      raw_template TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS template_projects (
+      id TEXT PRIMARY KEY,
+      template_id TEXT NOT NULL,
+      project TEXT NOT NULL,
+      FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE CASCADE
+    );
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS template_contexts (
+      id TEXT PRIMARY KEY,
+      template_id TEXT NOT NULL,
+      context TEXT NOT NULL,
+      FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE CASCADE
+    );
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS template_subtasks (
+      id TEXT PRIMARY KEY,
+      template_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      position INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE CASCADE
+    );
+  `);
+
+  // --- AUTOMATIC TASKS SCHEMA MIGRATION ---
   const tableInfo = await db.execute("PRAGMA table_info(tasks)");
   const hasRawColumn = tableInfo.rows.some(row => row.name === 'raw');
 
   if (hasRawColumn) {
-    console.log('[DB Migration] Migrating legacy raw tasks schema to normalized relational tables...');
     const legacyTasksRes = await db.execute('SELECT * FROM tasks');
     
-    // Create temp table for migration
     await db.execute(`
       CREATE TABLE tasks_normalized (
         id TEXT PRIMARY KEY,
@@ -169,7 +231,6 @@ export async function initDb() {
         args: normArgs
       });
 
-      // Migrate projects
       for (const p of parsed.projects) {
         await db.execute({
           sql: 'INSERT INTO task_projects (id, task_id, project) VALUES (?, ?, ?)',
@@ -177,7 +238,6 @@ export async function initDb() {
         });
       }
 
-      // Migrate contexts
       for (const c of parsed.contexts) {
         await db.execute({
           sql: 'INSERT INTO task_contexts (id, task_id, context) VALUES (?, ?, ?)',
@@ -185,7 +245,6 @@ export async function initDb() {
         });
       }
 
-      // Migrate JSON subtasks if present
       try {
         const subtasksJson = JSON.parse(legacy.subtasks as string || '[]');
         for (const st of subtasksJson) {
@@ -196,7 +255,6 @@ export async function initDb() {
         }
       } catch {}
 
-      // Migrate JSON comments if present
       try {
         const commentsJson = JSON.parse(legacy.comments as string || '[]');
         for (const cm of commentsJson) {
@@ -208,13 +266,11 @@ export async function initDb() {
       } catch {}
     }
 
-    // Drop legacy table and rename tasks_normalized -> tasks
     await db.execute('DROP TABLE tasks;');
     await db.execute('ALTER TABLE tasks_normalized RENAME TO tasks;');
-    console.log('[DB Migration] Schema migration completed successfully.');
   }
 
-  // Initial Seed if tasks table is empty
+  // Initial Seed for Tasks
   const countRes = await db.execute('SELECT COUNT(*) as count FROM tasks');
   const count = Number(countRes.rows[0]?.count ?? 0);
 
@@ -268,8 +324,48 @@ export async function initDb() {
     }
   }
 
+  // Initial Seed for Templates
+  const tmplCountRes = await db.execute('SELECT COUNT(*) as count FROM templates');
+  const tmplCount = Number(tmplCountRes.rows[0]?.count ?? 0);
+
+  if (tmplCount === 0) {
+    const nowStr = new Date().toISOString();
+    for (const t of starterTemplatesData) {
+      const parsed = parseRawToStructured(t.rawTemplate);
+
+      await db.execute({
+        sql: `INSERT INTO templates (id, name, raw_template, description, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?)`,
+        args: [t.id, t.name, t.rawTemplate, t.description, nowStr, nowStr]
+      });
+
+      for (const p of parsed.projects) {
+        await db.execute({
+          sql: 'INSERT INTO template_projects (id, template_id, project) VALUES (?, ?, ?)',
+          args: [`tmplp-${t.id}-${p}`, t.id, p]
+        });
+      }
+
+      for (const c of parsed.contexts) {
+        await db.execute({
+          sql: 'INSERT INTO template_contexts (id, template_id, context) VALUES (?, ?, ?)',
+          args: [`tmplc-${t.id}-${c}`, t.id, c]
+        });
+      }
+
+      for (let i = 0; i < t.subtasks.length; i++) {
+        await db.execute({
+          sql: 'INSERT INTO template_subtasks (id, template_id, title, position) VALUES (?, ?, ?, ?)',
+          args: [`tmpls-${t.id}-${i}`, t.id, t.subtasks[i], i]
+        });
+      }
+    }
+  }
+
   isInitialized = true;
 }
+
+// --- TASK CRUD OPERATIONS ---
 
 export async function getAllTasks(): Promise<Task[]> {
   await initDb();
@@ -279,7 +375,6 @@ export async function getAllTasks(): Promise<Task[]> {
   const subtasksRes = await db.execute('SELECT * FROM subtasks');
   const commentsRes = await db.execute('SELECT * FROM comments');
 
-  // Map projects by task_id
   const projectsMap = new Map<string, string[]>();
   projectsRes.rows.forEach(row => {
     const tid = String(row.task_id);
@@ -287,7 +382,6 @@ export async function getAllTasks(): Promise<Task[]> {
     projectsMap.set(tid, [...list, String(row.project)]);
   });
 
-  // Map contexts by task_id
   const contextsMap = new Map<string, string[]>();
   contextsRes.rows.forEach(row => {
     const tid = String(row.task_id);
@@ -295,7 +389,6 @@ export async function getAllTasks(): Promise<Task[]> {
     contextsMap.set(tid, [...list, String(row.context)]);
   });
 
-  // Map subtasks by task_id
   const subtasksMap = new Map<string, Subtask[]>();
   subtasksRes.rows.forEach(row => {
     const tid = String(row.task_id);
@@ -310,7 +403,6 @@ export async function getAllTasks(): Promise<Task[]> {
     subtasksMap.set(tid, [...list, st]);
   });
 
-  // Map comments by task_id
   const commentsMap = new Map<string, Comment[]>();
   commentsRes.rows.forEach(row => {
     const tid = String(row.task_id);
@@ -403,7 +495,6 @@ export async function insertTask(task: Task): Promise<Task> {
     ]
   });
 
-  // Save projects
   const projects = Array.from(new Set([...(task.projects || []), ...parsed.projects]));
   for (const p of projects) {
     await db.execute({
@@ -412,7 +503,6 @@ export async function insertTask(task: Task): Promise<Task> {
     });
   }
 
-  // Save contexts
   const contexts = Array.from(new Set([...(task.contexts || []), ...parsed.contexts]));
   for (const c of contexts) {
     await db.execute({
@@ -421,7 +511,6 @@ export async function insertTask(task: Task): Promise<Task> {
     });
   }
 
-  // Save subtasks
   for (const st of (task.subtasks || [])) {
     await db.execute({
       sql: 'INSERT INTO subtasks (id, task_id, title, completed) VALUES (?, ?, ?, ?)',
@@ -429,7 +518,6 @@ export async function insertTask(task: Task): Promise<Task> {
     });
   }
 
-  // Save comments
   for (const cm of (task.comments || [])) {
     await db.execute({
       sql: 'INSERT INTO comments (id, task_id, author, timestamp, text) VALUES (?, ?, ?, ?, ?)',
@@ -524,14 +612,12 @@ export async function updateTaskInDb(id: string, updates: Partial<Task>): Promis
     id
   ];
 
-  // Update tasks table
   await db.execute({
     sql: `UPDATE tasks SET title = ?, status = ?, priority = ?, creation_date = ?, completion_date = ?, due_date = ?, due_time = ?, description = ?
           WHERE id = ?`,
     args: updateArgs
   });
 
-  // Update projects if provided or if raw changed
   let newProjects = updates.projects;
   if (parsed && !newProjects) newProjects = parsed.projects;
   if (newProjects !== undefined) {
@@ -547,7 +633,6 @@ export async function updateTaskInDb(id: string, updates: Partial<Task>): Promis
     newProjects = prRes.rows.map(r => String(r.project));
   }
 
-  // Update contexts if provided or if raw changed
   let newContexts = updates.contexts;
   if (parsed && !newContexts) newContexts = parsed.contexts;
   if (newContexts !== undefined) {
@@ -563,7 +648,6 @@ export async function updateTaskInDb(id: string, updates: Partial<Task>): Promis
     newContexts = cxRes.rows.map(r => String(r.context));
   }
 
-  // Update subtasks if provided
   if (updates.subtasks !== undefined) {
     await db.execute({ sql: 'DELETE FROM subtasks WHERE task_id = ?', args: [id] });
     for (const st of updates.subtasks) {
@@ -574,7 +658,6 @@ export async function updateTaskInDb(id: string, updates: Partial<Task>): Promis
     }
   }
 
-  // Update comments if provided
   if (updates.comments !== undefined) {
     await db.execute({ sql: 'DELETE FROM comments WHERE task_id = ?', args: [id] });
     for (const cm of updates.comments) {
@@ -585,7 +668,6 @@ export async function updateTaskInDb(id: string, updates: Partial<Task>): Promis
     }
   }
 
-  // Fetch updated subtasks & comments
   const subRes = await db.execute({ sql: 'SELECT * FROM subtasks WHERE task_id = ?', args: [id] });
   const comRes = await db.execute({ sql: 'SELECT * FROM comments WHERE task_id = ?', args: [id] });
 
@@ -640,4 +722,206 @@ export async function deleteTaskFromDb(id: string): Promise<boolean> {
   await initDb();
   await db.execute({ sql: 'DELETE FROM tasks WHERE id = ?', args: [id] });
   return true;
+}
+
+// --- TEMPLATE CRUD OPERATIONS ---
+
+export async function getAllTemplates(): Promise<Template[]> {
+  await initDb();
+  const tmplRes = await db.execute('SELECT * FROM templates ORDER BY created_at DESC');
+  const projRes = await db.execute('SELECT * FROM template_projects');
+  const ctxRes = await db.execute('SELECT * FROM template_contexts');
+  const subRes = await db.execute('SELECT * FROM template_subtasks ORDER BY position ASC');
+
+  const projMap = new Map<string, string[]>();
+  projRes.rows.forEach(r => {
+    const tid = String(r.template_id);
+    const list = projMap.get(tid) || [];
+    projMap.set(tid, [...list, String(r.project)]);
+  });
+
+  const ctxMap = new Map<string, string[]>();
+  ctxRes.rows.forEach(r => {
+    const tid = String(r.template_id);
+    const list = ctxMap.get(tid) || [];
+    ctxMap.set(tid, [...list, String(r.context)]);
+  });
+
+  const subMap = new Map<string, TemplateSubtask[]>();
+  subRes.rows.forEach(r => {
+    const tid = String(r.template_id);
+    const list = subMap.get(tid) || [];
+    const st: TemplateSubtask = {
+      id: String(r.id),
+      templateId: tid,
+      title: String(r.title),
+      position: Number(r.position)
+    };
+    subMap.set(tid, [...list, st]);
+  });
+
+  return tmplRes.rows.map(r => {
+    const id = String(r.id);
+    const rawTemplate = String(r.raw_template);
+    const parsed = parseRawToStructured(rawTemplate);
+
+    const projects = Array.from(new Set([...(projMap.get(id) || []), ...parsed.projects]));
+    const contexts = Array.from(new Set([...(ctxMap.get(id) || []), ...parsed.contexts]));
+
+    return {
+      id,
+      name: String(r.name),
+      rawTemplate,
+      description: String(r.description || ''),
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at),
+      projects,
+      contexts,
+      subtasks: subMap.get(id) || []
+    };
+  });
+}
+
+export async function insertTemplate(template: Template): Promise<Template> {
+  await initDb();
+  const now = new Date().toISOString();
+  const parsed = parseRawToStructured(template.rawTemplate);
+
+  await db.execute({
+    sql: `INSERT INTO templates (id, name, raw_template, description, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?)`,
+    args: [
+      template.id,
+      template.name,
+      template.rawTemplate,
+      template.description || '',
+      template.createdAt || now,
+      template.updatedAt || now
+    ]
+  });
+
+  const projects = Array.from(new Set([...(template.projects || []), ...parsed.projects]));
+  for (const p of projects) {
+    await db.execute({
+      sql: 'INSERT INTO template_projects (id, template_id, project) VALUES (?, ?, ?)',
+      args: [`tmplp-${template.id}-${p}`, template.id, p]
+    });
+  }
+
+  const contexts = Array.from(new Set([...(template.contexts || []), ...parsed.contexts]));
+  for (const c of contexts) {
+    await db.execute({
+      sql: 'INSERT INTO template_contexts (id, template_id, context) VALUES (?, ?, ?)',
+      args: [`tmplc-${template.id}-${c}`, template.id, c]
+    });
+  }
+
+  for (let i = 0; i < (template.subtasks || []).length; i++) {
+    const st = template.subtasks[i];
+    await db.execute({
+      sql: 'INSERT INTO template_subtasks (id, template_id, title, position) VALUES (?, ?, ?, ?)',
+      args: [st.id || `tmpls-${template.id}-${i}`, template.id, st.title, i]
+    });
+  }
+
+  return {
+    ...template,
+    projects,
+    contexts,
+    createdAt: template.createdAt || now,
+    updatedAt: template.updatedAt || now
+  };
+}
+
+export async function updateTemplateInDb(id: string, updates: Partial<Template>): Promise<Template | null> {
+  await initDb();
+  const now = new Date().toISOString();
+
+  const existingRes = await db.execute({ sql: 'SELECT * FROM templates WHERE id = ?', args: [id] });
+  if (existingRes.rows.length === 0) return null;
+  const existing = existingRes.rows[0];
+
+  const name = updates.name !== undefined ? updates.name : String(existing.name);
+  const rawTemplate = updates.rawTemplate !== undefined ? updates.rawTemplate : String(existing.raw_template);
+  const description = updates.description !== undefined ? updates.description : String(existing.description || '');
+
+  await db.execute({
+    sql: `UPDATE templates SET name = ?, raw_template = ?, description = ?, updated_at = ? WHERE id = ?`,
+    args: [name, rawTemplate, description, now, id]
+  });
+
+  const parsed = parseRawToStructured(rawTemplate);
+
+  let projects = updates.projects;
+  if (!projects) projects = parsed.projects;
+  if (projects !== undefined) {
+    await db.execute({ sql: 'DELETE FROM template_projects WHERE template_id = ?', args: [id] });
+    for (const p of projects) {
+      await db.execute({
+        sql: 'INSERT INTO template_projects (id, template_id, project) VALUES (?, ?, ?)',
+        args: [`tmplp-${id}-${p}`, id, p]
+      });
+    }
+  }
+
+  let contexts = updates.contexts;
+  if (!contexts) contexts = parsed.contexts;
+  if (contexts !== undefined) {
+    await db.execute({ sql: 'DELETE FROM template_contexts WHERE template_id = ?', args: [id] });
+    for (const c of contexts) {
+      await db.execute({
+        sql: 'INSERT INTO template_contexts (id, template_id, context) VALUES (?, ?, ?)',
+        args: [`tmplc-${id}-${c}`, id, c]
+      });
+    }
+  }
+
+  if (updates.subtasks !== undefined) {
+    await db.execute({ sql: 'DELETE FROM template_subtasks WHERE template_id = ?', args: [id] });
+    for (let i = 0; i < updates.subtasks.length; i++) {
+      const st = updates.subtasks[i];
+      await db.execute({
+        sql: 'INSERT INTO template_subtasks (id, template_id, title, position) VALUES (?, ?, ?, ?)',
+        args: [st.id || `tmpls-${id}-${i}`, id, st.title, i]
+      });
+    }
+  }
+
+  const subRes = await db.execute({ sql: 'SELECT * FROM template_subtasks WHERE template_id = ? ORDER BY position ASC', args: [id] });
+  const finalSubtasks: TemplateSubtask[] = subRes.rows.map(r => ({
+    id: String(r.id),
+    templateId: id,
+    title: String(r.title),
+    position: Number(r.position)
+  }));
+
+  return {
+    id,
+    name,
+    rawTemplate,
+    description,
+    createdAt: String(existing.created_at),
+    updatedAt: now,
+    projects: projects || [],
+    contexts: contexts || [],
+    subtasks: finalSubtasks
+  };
+}
+
+export async function deleteTemplateFromDb(id: string): Promise<boolean> {
+  await initDb();
+  await db.execute({ sql: 'DELETE FROM templates WHERE id = ?', args: [id] });
+  return true;
+}
+
+export async function instantiateTaskFromTemplateId(
+  templateId: string,
+  varOverrides: Record<string, string> = {}
+): Promise<Task | null> {
+  const templates = await getAllTemplates();
+  const tmpl = templates.find(t => t.id === templateId || t.name.toLowerCase() === templateId.toLowerCase());
+  if (!tmpl) return null;
+
+  const { newTask } = instantiateTaskFromTemplate(tmpl, varOverrides);
+  return await insertTask(newTask);
 }

@@ -7,6 +7,7 @@ interface TaskDetailsProps {
   task: Task | null;
   onClose: () => void;
   onUpdateTask: (id: string, updates: Partial<Task>) => void;
+  onSaveAsTemplate?: (task: Task) => void;
   isLight: boolean;
 }
 
@@ -14,6 +15,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
   task,
   onClose,
   onUpdateTask,
+  onSaveAsTemplate,
   isLight
 }) => {
   // Task Name / Raw editing state
@@ -313,16 +315,33 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
     <div className={`w-full lg:w-80 h-full flex-shrink-0 border-l flex flex-col overflow-y-auto ${isLight ? 'border-gray-300 bg-gray-50' : 'border-gray-800 bg-gray-950'}`}>
       <div className={`p-3 border-b flex justify-between items-center ${isLight ? 'border-gray-300 bg-gray-200' : 'border-gray-800 bg-gray-900'}`}>
         <span className={`font-bold uppercase tracking-wider ${isLight ? 'text-gray-700' : 'text-gray-300'}`}>Inspector</span>
-        <button
-          onClick={onClose}
-          className={`px-2 py-1 text-xs font-bold border rounded transition-colors ${
-            isLight
-              ? 'border-gray-400 bg-gray-300 hover:bg-gray-400 text-gray-900'
-              : 'border-gray-700 bg-gray-800 hover:bg-gray-700 text-white'
-          }`}
-        >
-          [← Back]
-        </button>
+        
+        <div className="flex items-center gap-2">
+          {onSaveAsTemplate && (
+            <button
+              onClick={() => onSaveAsTemplate(task)}
+              className={`px-2 py-1 text-[11px] font-bold border transition-colors ${
+                isLight
+                  ? 'border-cyan-400 bg-cyan-100 text-cyan-900 hover:bg-cyan-200'
+                  : 'border-cyan-700 bg-cyan-950 text-cyan-300 hover:bg-cyan-900'
+              }`}
+              title="Save task as reusable template"
+            >
+              [Save Template]
+            </button>
+          )}
+
+          <button
+            onClick={onClose}
+            className={`px-2 py-1 text-xs font-bold border rounded transition-colors ${
+              isLight
+                ? 'border-gray-400 bg-gray-300 hover:bg-gray-400 text-gray-900'
+                : 'border-gray-700 bg-gray-800 hover:bg-gray-700 text-white'
+            }`}
+          >
+            [← Back]
+          </button>
+        </div>
       </div>
 
       <div className="p-3 space-y-4">

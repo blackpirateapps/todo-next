@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Task } from '@/types/todo';
+import { Task, Template } from '@/types/todo';
 import { Sidebar } from '@/components/Sidebar';
 import { TaskList } from '@/components/TaskList';
 import { CalendarView } from '@/components/CalendarView';
@@ -9,16 +9,19 @@ import { TaskDetails } from '@/components/TaskDetails';
 import { CommandInput } from '@/components/CommandInput';
 import { StatusBar, SyncStatus } from '@/components/StatusBar';
 import { LoginScreen } from '@/components/LoginScreen';
+import { TemplateModal } from '@/components/TemplateModal';
 import { updateRawDates, parseRawToStructured } from '@/utils/todoParser';
+import { instantiateTaskFromTemplate } from '@/utils/templateEngine';
 
 interface PendingMutation {
-  type: 'CREATE' | 'UPDATE' | 'DELETE';
+  type: 'CREATE' | 'UPDATE' | 'DELETE' | 'CREATE_TEMPLATE' | 'DELETE_TEMPLATE';
   id: string;
   data?: any;
 }
 
 export default function UtilitarianTodoPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [authRequired, setAuthRequired] = useState(false);
   const [authenticated, setAuthenticated] = useState(true);
@@ -30,22 +33,31 @@ export default function UtilitarianTodoPage() {
   const [isLightMode, setIsLightMode] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
+  // Template Modal State
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+
   // Sync & Offline State
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('synced');
   const [pendingQueue, setPendingQueue] = useState<PendingMutation[]>([]);
 
-  // Load pending queue from localStorage on client
+  // Load pending queue & cached templates from localStorage on client
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('todo_next_pending_queue');
-      if (saved) {
-        const parsed = JSON.parse(saved);
+      const savedQueue = localStorage.getItem('todo_next_pending_queue');
+      if (savedQueue) {
+        const parsed = JSON.parse(savedQueue);
         if (Array.isArray(parsed)) setPendingQueue(parsed);
+      }
+
+      const cachedTmpls = localStorage.getItem('todo_next_cached_templates');
+      if (cachedTmpls) {
+        const parsed = JSON.parse(cachedTmpls);
+        if (Array.isArray(parsed)) setTemplates(parsed);
       }
     } catch {}
   }, []);
 
-  // Persist pending queue to localStorage whenever it changes
+  // Persist pending queue to localStorage
   useEffect(() => {
     try {
       localStorage.setItem('todo_next_pending_queue', JSON.stringify(pendingQueue));
@@ -80,6 +92,18 @@ export default function UtilitarianTodoPage() {
           if (!res.ok) remaining.push(item);
         } else if (item.type === 'DELETE') {
           const res = await fetch(`/api/tasks/${item.id}`, {
+            method: 'DELETE',
+          });
+          if (!res.ok) remaining.push(item);
+        } else if (item.type === 'CREATE_TEMPLATE') {
+          const res = await fetch('/api/templates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(item.data),
+          });
+          if (!res.ok) remaining.push(item);
+        } else if (item.type === 'DELETE_TEMPLATE') {
+          const res = await fetch(`/api/templates/${item.id}`, {
             method: 'DELETE',
           });
           if (!res.ok) remaining.push(item);
@@ -120,7 +144,7 @@ export default function UtilitarianTodoPage() {
     };
   }, [pendingQueue.length, flushSyncQueue]);
 
-  // Check Auth & Fetch Tasks on Mount
+  // Check Auth, Fetch Tasks & Templates on Mount
   const fetchTasksAndAuth = async () => {
     try {
       const authRes = await fetch('/api/auth');
@@ -141,13 +165,27 @@ export default function UtilitarianTodoPage() {
               }
             }
           }
+
+          const templatesRes = await fetch('/api/templates');
+          if (templatesRes.ok) {
+            const templatesData = await templatesRes.json();
+            if (Array.isArray(templatesData)) {
+              setTemplates(templatesData);
+              localStorage.setItem('todo_next_cached_templates', JSON.stringify(templatesData));
+            }
+          }
         } catch {
-          // Offline fallback: load from cached localStorage
-          const cached = localStorage.getItem('todo_next_cached_tasks');
-          if (cached) {
-            const parsed = JSON.parse(cached);
+          // Offline fallback
+          const cachedTasks = localStorage.getItem('todo_next_cached_tasks');
+          if (cachedTasks) {
+            const parsed = JSON.parse(cachedTasks);
             setTasks(parsed);
             if (parsed.length > 0) setSelectedTask(parsed[0]);
+          }
+          const cachedTmpls = localStorage.getItem('todo_next_cached_templates');
+          if (cachedTmpls) {
+            const parsed = JSON.parse(cachedTmpls);
+            setTemplates(parsed);
           }
           setSyncStatus('offline');
         }
@@ -309,7 +347,6 @@ export default function UtilitarianTodoPage() {
   };
 
   const handleDeleteTask = async (id: string) => {
-    // Optimistic UI update
     setTasks(prev => {
       const updated = prev.filter(t => t.id !== id);
       localStorage.setItem('todo_next_cached_tasks', JSON.stringify(updated));
@@ -319,12 +356,9 @@ export default function UtilitarianTodoPage() {
       setSelectedTask(null);
     }
 
-    // Backend update or queue
     setSyncStatus('syncing');
     try {
-      const res = await fetch(`/api/tasks/${id}`, {
-        method: 'DELETE',
-      });
+      const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
       if (res.ok && pendingQueue.length === 0) {
         setSyncStatus('synced');
       } else {
@@ -335,8 +369,151 @@ export default function UtilitarianTodoPage() {
     }
   };
 
+  // --- TEMPLATES HANDLERS ---
+  const handleInstantiateTemplate = async (templateId: string) => {
+    const tmpl = templates.find(t => t.id === templateId || t.name.toLowerCase() === templateId.toLowerCase());
+    if (!tmpl) return;
+
+    const { newTask } = instantiateTaskFromTemplate(tmpl);
+
+    // Optimistic UI update
+    setTasks(prev => {
+      const updated = [newTask, ...prev];
+      localStorage.setItem('todo_next_cached_tasks', JSON.stringify(updated));
+      return updated;
+    });
+    setSelectedTask(newTask);
+
+    // Backend instantiation call
+    setSyncStatus('syncing');
+    try {
+      const res = await fetch(`/api/templates/${tmpl.id}/instantiate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (res.ok && pendingQueue.length === 0) {
+        setSyncStatus('synced');
+      } else {
+        queueMutation({ type: 'CREATE', id: newTask.id, data: newTask });
+      }
+    } catch {
+      queueMutation({ type: 'CREATE', id: newTask.id, data: newTask });
+    }
+  };
+
+  const handleCreateTemplate = async (newTmpl: Template) => {
+    setTemplates(prev => {
+      const updated = [newTmpl, ...prev];
+      localStorage.setItem('todo_next_cached_templates', JSON.stringify(updated));
+      return updated;
+    });
+
+    setSyncStatus('syncing');
+    try {
+      const res = await fetch('/api/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTmpl),
+      });
+      if (res.ok && pendingQueue.length === 0) {
+        setSyncStatus('synced');
+      } else {
+        queueMutation({ type: 'CREATE_TEMPLATE', id: newTmpl.id, data: newTmpl });
+      }
+    } catch {
+      queueMutation({ type: 'CREATE_TEMPLATE', id: newTmpl.id, data: newTmpl });
+    }
+  };
+
+  const handleDeleteTemplate = async (templateId: string) => {
+    setTemplates(prev => {
+      const updated = prev.filter(t => t.id !== templateId);
+      localStorage.setItem('todo_next_cached_templates', JSON.stringify(updated));
+      return updated;
+    });
+
+    setSyncStatus('syncing');
+    try {
+      const res = await fetch(`/api/templates/${templateId}`, { method: 'DELETE' });
+      if (res.ok && pendingQueue.length === 0) {
+        setSyncStatus('synced');
+      } else {
+        queueMutation({ type: 'DELETE_TEMPLATE', id: templateId });
+      }
+    } catch {
+      queueMutation({ type: 'DELETE_TEMPLATE', id: templateId });
+    }
+  };
+
+  const handleSaveTaskAsTemplate = (task: Task) => {
+    const newTmpl: Template = {
+      id: `tmpl-${Date.now()}`,
+      name: task.title || 'Saved Task Template',
+      rawTemplate: task.raw,
+      description: task.description || '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      projects: task.projects,
+      contexts: task.contexts,
+      subtasks: task.subtasks.map((st, idx) => ({
+        id: `tmpls-${Date.now()}-${idx}`,
+        title: st.raw || st.title,
+        position: idx
+      }))
+    };
+
+    handleCreateTemplate(newTmpl);
+    setIsTemplateModalOpen(true);
+  };
+
   const handleCommandSubmit = async (val: string) => {
     const trimmed = val.trim();
+
+    // Command 1: :template -> Open Template Manager
+    if (trimmed === ':template') {
+      setIsTemplateModalOpen(true);
+      setCommandQuery('');
+      return;
+    }
+
+    // Command 2: :use <template_name> -> Instantiate template by name
+    if (trimmed.startsWith(':use ')) {
+      const tmplQuery = trimmed.replace(':use ', '').trim();
+      const tmpl = templates.find(t => t.name.toLowerCase().includes(tmplQuery.toLowerCase()) || t.id === tmplQuery);
+      if (tmpl) {
+        await handleInstantiateTemplate(tmpl.id);
+        setCommandQuery('');
+      }
+      return;
+    }
+
+    // Command 3: :template save <name> -> Convert current selected task or raw input into template
+    if (trimmed.startsWith(':template save ')) {
+      const tmplName = trimmed.replace(':template save ', '').trim();
+      const newTmpl: Template = {
+        id: `tmpl-${Date.now()}`,
+        name: tmplName || 'New Template',
+        rawTemplate: selectedTask ? selectedTask.raw : '(A) New template task +project @context',
+        description: selectedTask ? selectedTask.description : '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        projects: selectedTask ? selectedTask.projects : [],
+        contexts: selectedTask ? selectedTask.contexts : [],
+        subtasks: selectedTask ? selectedTask.subtasks.map((st, idx) => ({
+          id: `tmpls-${Date.now()}-${idx}`,
+          title: st.raw || st.title,
+          position: idx
+        })) : []
+      };
+
+      handleCreateTemplate(newTmpl);
+      setIsTemplateModalOpen(true);
+      setCommandQuery('');
+      return;
+    }
+
+    // Command 4: :add ... -> Standard Task Insertion
     if (trimmed.startsWith(':add ')) {
       const newTaskRaw = trimmed.replace(':add ', '');
       const parsed = parseRawToStructured(newTaskRaw);
@@ -358,7 +535,6 @@ export default function UtilitarianTodoPage() {
         comments: []
       };
 
-      // Optimistic UI update
       setTasks(prev => {
         const updated = [newTask, ...prev];
         localStorage.setItem('todo_next_cached_tasks', JSON.stringify(updated));
@@ -367,7 +543,6 @@ export default function UtilitarianTodoPage() {
       setSelectedTask(newTask);
       setCommandQuery('');
 
-      // Backend insertion or queue
       setSyncStatus('syncing');
       try {
         const res = await fetch('/api/tasks', {
@@ -421,6 +596,7 @@ export default function UtilitarianTodoPage() {
         isLight={isLightMode}
         activeView={activeView}
         onChangeView={setActiveView}
+        onOpenTemplates={() => setIsTemplateModalOpen(true)}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -459,6 +635,7 @@ export default function UtilitarianTodoPage() {
             task={selectedTask}
             onClose={() => setSelectedTask(null)}
             onUpdateTask={handleUpdateTask}
+            onSaveAsTemplate={handleSaveTaskAsTemplate}
             isLight={isLightMode}
           />
         </div>
@@ -475,6 +652,16 @@ export default function UtilitarianTodoPage() {
         syncStatus={syncStatus}
         pendingCount={pendingQueue.length}
         onForceSync={flushSyncQueue}
+      />
+
+      <TemplateModal
+        isOpen={isTemplateModalOpen}
+        onClose={() => setIsTemplateModalOpen(false)}
+        templates={templates}
+        onInstantiateTemplate={handleInstantiateTemplate}
+        onCreateTemplate={handleCreateTemplate}
+        onDeleteTemplate={handleDeleteTemplate}
+        isLight={isLightMode}
       />
     </div>
   );

@@ -31,3 +31,22 @@ export interface Task {
   subtasks: Subtask[];
   comments: Comment[];
 }
+
+export interface TemplateSubtask {
+  id: string;
+  templateId?: string;
+  title: string;
+  position: number;
+}
+
+export interface Template {
+  id: string;
+  name: string;
+  rawTemplate: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+  projects: string[];
+  contexts: string[];
+  subtasks: TemplateSubtask[];
+}

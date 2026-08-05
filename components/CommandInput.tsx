@@ -10,6 +10,7 @@ interface CommandInputProps {
   isLight: boolean;
   activeView: 'list' | 'calendar';
   onChangeView: (view: 'list' | 'calendar') => void;
+  onOpenTemplates: () => void;
 }
 
 export const CommandInput: React.FC<CommandInputProps> = ({
@@ -20,7 +21,8 @@ export const CommandInput: React.FC<CommandInputProps> = ({
   activeFilter,
   isLight,
   activeView,
-  onChangeView
+  onChangeView,
+  onOpenTemplates
 }) => {
   const [isGuideOpen, setIsGuideOpen] = useState(false);
 
@@ -68,6 +70,19 @@ export const CommandInput: React.FC<CommandInputProps> = ({
           </button>
         </div>
 
+        {/* Templates Button */}
+        <button
+          onClick={onOpenTemplates}
+          className={`px-2 py-0.5 text-xs font-mono font-bold border transition-colors ${
+            isLight
+              ? 'border-gray-300 bg-gray-200 hover:bg-gray-300 text-cyan-800'
+              : 'border-gray-800 bg-gray-900 hover:bg-gray-800 text-cyan-300'
+          }`}
+          title="Open Task Templates"
+        >
+          [Templates]
+        </button>
+
         {/* Syntax Guide Button */}
         <button
           onClick={() => setIsGuideOpen(true)}
@@ -87,7 +102,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({
           value={commandQuery}
           onChange={(e) => setCommandQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Filter... or :add (A) New task +proj @ctx due:YYYY-MM-DD"
+          placeholder="Filter... or :add (A) Task... or :use Sprint Release"
           className={`flex-1 min-w-[160px] bg-transparent outline-none text-xs sm:text-sm ${isLight ? 'text-green-700 placeholder-gray-400' : 'text-green-400 placeholder-gray-700'}`}
           autoFocus
         />
