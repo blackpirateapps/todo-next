@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Task, Subtask, Comment } from '@/types/todo';
-import { updateRawDates } from '@/utils/todoParser';
+import { updateRawDates, parseRawToStructured } from '@/utils/todoParser';
+import { FormattedText } from './FormattedText';
 
 interface TaskDetailsProps {
   task: Task | null;
@@ -15,6 +16,10 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
   onUpdateTask,
   isLight
 }) => {
+  // Task Name / Raw editing state
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+
   // Description editing state
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [descInput, setDescInput] = useState('');
@@ -39,9 +44,11 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
 
   useEffect(() => {
     if (task) {
+      setNameInput(task.raw || task.title || '');
       setDescInput(task.description || '');
       setCreationDateInput(task.creationDate || '');
       setDueDateInput(task.dueDate || '');
+      setIsEditingName(false);
       setIsEditingDesc(false);
       setIsEditingCreationDate(false);
       setIsEditingDueDate(false);
@@ -55,6 +62,32 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
       </div>
     );
   }
+
+  // --- Task Name / Raw Handlers ---
+  const handleStartEditName = () => {
+    setNameInput(task.raw || task.title || '');
+    setIsEditingName(true);
+  };
+
+  const handleSaveName = () => {
+    const trimmed = nameInput.trim();
+    if (!trimmed) return;
+    const parsed = parseRawToStructured(trimmed, task.creationDate);
+
+    onUpdateTask(task.id, {
+      raw: trimmed,
+      title: parsed.title,
+      priority: parsed.priority,
+      status: parsed.completed ? 'completed' : 'open',
+      completed: parsed.completed,
+      creationDate: parsed.creationDate,
+      dueDate: parsed.dueDate,
+      dueTime: parsed.dueTime,
+      projects: parsed.projects,
+      contexts: parsed.contexts
+    });
+    setIsEditingName(false);
+  };
 
   // --- Date Handlers ---
   const handleSaveCreationDate = () => {
@@ -189,6 +222,64 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
       </div>
 
       <div className="p-3 space-y-4">
+        {/* Editable Task Name / Raw String Section */}
+        <div>
+          <div className={`font-bold uppercase border-b mb-1 flex justify-between items-center ${isLight ? 'text-gray-500 border-gray-300' : 'text-gray-500 border-gray-800'}`}>
+            <span>Task Name</span>
+            {!isEditingName && (
+              <button
+                onClick={handleStartEditName}
+                className={`text-xs hover:underline ${isLight ? 'text-blue-600' : 'text-blue-400'}`}
+              >
+                [Edit]
+              </button>
+            )}
+          </div>
+          {isEditingName ? (
+            <div className="space-y-2">
+              <textarea
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSaveName();
+                  }
+                }}
+                className={`w-full p-2 border text-xs font-mono rounded-none focus:outline-none ${
+                  isLight ? 'bg-white text-gray-900 border-gray-400' : 'bg-black text-gray-200 border-gray-700'
+                }`}
+                rows={2}
+                placeholder="Enter task text..."
+                autoFocus
+              />
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => setIsEditingName(false)}
+                  className={`px-2 py-1 text-xs border ${isLight ? 'border-gray-300 hover:bg-gray-200' : 'border-gray-700 hover:bg-gray-800'}`}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveName}
+                  className={`px-3 py-1 text-xs font-bold ${isLight ? 'bg-cyan-700 text-white hover:bg-cyan-800' : 'bg-cyan-600 text-black hover:bg-cyan-500'}`}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              onClick={handleStartEditName}
+              className={`leading-relaxed whitespace-pre-wrap font-mono text-xs cursor-pointer hover:bg-gray-100/10 p-1.5 border rounded transition-colors ${
+                isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-black border-gray-800 text-gray-200'
+              }`}
+            >
+              <FormattedText text={task.raw} isCompleted={task.completed} isLight={isLight} />
+            </div>
+          )}
+        </div>
+
         {/* Task Metadata & Editable Dates */}
         <div className={`grid grid-cols-2 gap-2 border p-2 text-xs ${isLight ? 'border-gray-300 bg-white text-gray-700' : 'border-gray-800 bg-black text-gray-400'}`}>
           <div><span className={isLight ? 'text-gray-400' : 'text-gray-600'}>ID: </span>{task.id}</div>

@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { SyntaxGuideModal } from './SyntaxGuideModal';
 
 interface CommandInputProps {
   commandQuery: string;
@@ -21,6 +22,8 @@ export const CommandInput: React.FC<CommandInputProps> = ({
   activeView,
   onChangeView
 }) => {
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       onCommandSubmit(commandQuery);
@@ -28,52 +31,73 @@ export const CommandInput: React.FC<CommandInputProps> = ({
   };
 
   return (
-    <div className={`flex-shrink-0 border-b p-2 flex flex-wrap items-center gap-2 ${isLight ? 'bg-gray-100 border-gray-300' : 'bg-gray-950 border-gray-800'}`}>
-      <button
-        onClick={onToggleMobileSidebar}
-        className={`md:hidden px-2 py-1 text-xs font-bold border rounded transition-colors whitespace-nowrap ${
-          activeFilter
-            ? (isLight ? 'bg-cyan-100 border-cyan-400 text-cyan-800' : 'bg-cyan-950 border-cyan-700 text-cyan-300')
-            : (isLight ? 'border-gray-300 bg-gray-200 text-gray-700' : 'border-gray-700 bg-gray-900 text-gray-300')
-        }`}
-      >
-        [{activeFilter ? activeFilter : 'Filters'}]
-      </button>
+    <>
+      <div className={`flex-shrink-0 border-b p-2 flex flex-wrap items-center gap-2 ${isLight ? 'bg-gray-100 border-gray-300' : 'bg-gray-950 border-gray-800'}`}>
+        <button
+          onClick={onToggleMobileSidebar}
+          className={`md:hidden px-2 py-1 text-xs font-bold border rounded transition-colors whitespace-nowrap ${
+            activeFilter
+              ? (isLight ? 'bg-cyan-100 border-cyan-400 text-cyan-800' : 'bg-cyan-950 border-cyan-700 text-cyan-300')
+              : (isLight ? 'border-gray-300 bg-gray-200 text-gray-700' : 'border-gray-700 bg-gray-900 text-gray-300')
+          }`}
+        >
+          [{activeFilter ? activeFilter : 'Filters'}]
+        </button>
 
-      {/* View Switcher: List vs Calendar */}
-      <div className="flex border text-xs font-mono select-none">
+        {/* View Switcher: List vs Calendar */}
+        <div className="flex border text-xs font-mono select-none">
+          <button
+            onClick={() => onChangeView('list')}
+            className={`px-2 py-0.5 font-bold ${
+              activeView === 'list'
+                ? (isLight ? 'bg-gray-300 text-gray-900' : 'bg-gray-800 text-white')
+                : (isLight ? 'hover:bg-gray-200 text-gray-600' : 'hover:bg-gray-800 text-gray-400')
+            }`}
+          >
+            [List]
+          </button>
+          <button
+            onClick={() => onChangeView('calendar')}
+            className={`px-2 py-0.5 font-bold border-l ${isLight ? 'border-gray-300' : 'border-gray-800'} ${
+              activeView === 'calendar'
+                ? (isLight ? 'bg-cyan-200 text-cyan-900' : 'bg-cyan-950 text-cyan-300')
+                : (isLight ? 'hover:bg-gray-200 text-gray-600' : 'hover:bg-gray-800 text-gray-400')
+            }`}
+          >
+            [Calendar]
+          </button>
+        </div>
+
+        {/* Syntax Guide Button */}
         <button
-          onClick={() => onChangeView('list')}
-          className={`px-2 py-0.5 font-bold ${
-            activeView === 'list'
-              ? (isLight ? 'bg-gray-300 text-gray-900' : 'bg-gray-800 text-white')
-              : (isLight ? 'hover:bg-gray-200 text-gray-600' : 'hover:bg-gray-800 text-gray-400')
+          onClick={() => setIsGuideOpen(true)}
+          className={`px-2 py-0.5 text-xs font-mono font-bold border transition-colors ${
+            isLight
+              ? 'border-gray-300 bg-gray-200 hover:bg-gray-300 text-green-800'
+              : 'border-gray-800 bg-gray-900 hover:bg-gray-800 text-green-400'
           }`}
+          title="Open todo.txt syntax guide"
         >
-          [List]
+          [?] Syntax
         </button>
-        <button
-          onClick={() => onChangeView('calendar')}
-          className={`px-2 py-0.5 font-bold border-l ${isLight ? 'border-gray-300' : 'border-gray-800'} ${
-            activeView === 'calendar'
-              ? (isLight ? 'bg-cyan-200 text-cyan-900' : 'bg-cyan-950 text-cyan-300')
-              : (isLight ? 'hover:bg-gray-200 text-gray-600' : 'hover:bg-gray-800 text-gray-400')
-          }`}
-        >
-          [Calendar]
-        </button>
+
+        <span className={`font-bold select-none ${isLight ? 'text-green-600' : 'text-green-500'}`}>&gt;</span>
+        <input
+          type="text"
+          value={commandQuery}
+          onChange={(e) => setCommandQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Filter... or :add (A) New task +proj @ctx due:YYYY-MM-DD"
+          className={`flex-1 min-w-[160px] bg-transparent outline-none text-xs sm:text-sm ${isLight ? 'text-green-700 placeholder-gray-400' : 'text-green-400 placeholder-gray-700'}`}
+          autoFocus
+        />
       </div>
 
-      <span className={`font-bold select-none ${isLight ? 'text-green-600' : 'text-green-500'}`}>&gt;</span>
-      <input
-        type="text"
-        value={commandQuery}
-        onChange={(e) => setCommandQuery(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Filter... or :add (A) New task +proj @ctx due:YYYY-MM-DD"
-        className={`flex-1 min-w-[160px] bg-transparent outline-none text-xs sm:text-sm ${isLight ? 'text-green-700 placeholder-gray-400' : 'text-green-400 placeholder-gray-700'}`}
-        autoFocus
+      <SyntaxGuideModal
+        isOpen={isGuideOpen}
+        onClose={() => setIsGuideOpen(false)}
+        isLight={isLight}
       />
-    </div>
+    </>
   );
 };

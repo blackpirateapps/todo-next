@@ -4,14 +4,11 @@
 `todo-next` (Title: **Todo Next**) is a lightweight, terminal-styled task manager heavily influenced by the **`todo.txt` format** and **Unix philosophy**. It provides a fast, minimalist interface with keyboard navigation, syntax highlighting for projects (`+project`), contexts (`@context`), priorities (`(A)`, `(B)`), due dates (`due:YYYY-MM-DD`), dual theme support (Dark/Light mode), and full **List & Calendar views**.
 
 Recently updated with:
+- **Interactive Syntax Guide (`[?] Syntax`)**: Built-in cheat sheet (`SyntaxGuideModal.tsx`) detailing `todo.txt` rules for priorities, projects, contexts, due dates, and times.
+- **Editable Task Name in Inspector**: Task Name / raw string is directly editable at the top of the Inspector (`TaskDetails.tsx`). Editing automatically re-parses priority, projects, contexts, due dates, and times.
 - **Project Title & Branding**: App title set to **Todo Next** across layout metadata, PWA web app manifest, and icons.
-- **Full PWA & Offline Support**:
-  - Web App Manifest (`public/manifest.json`) & custom app icon (`public/icon.jpg`).
-  - Service Worker (`public/sw.js`) for offline asset & page shell caching.
-  - Offline task caching in `localStorage` (`todo_next_cached_tasks`).
-- **Unsaved Changes & Sync Indicator**:
-  - Real-time status badge in `StatusBar.tsx`: `[Synced ✓]`, `[Syncing...]`, `[Unsaved (N)]`, or `[Offline - N pending]`.
-  - Offline mutation queue (`todo_next_pending_queue`) that automatically syncs background changes to Turso DB when connectivity is restored.
+- **Full PWA & Offline Support**: Web App Manifest (`manifest.json`), custom PWA app icons, Service Worker (`sw.js`), and offline task caching.
+- **Unsaved Changes & Sync Indicator**: Real-time status badge in `StatusBar.tsx` (`[Synced ✓]`, `[Syncing...]`, `[Unsaved (N)]`, `[Offline - N pending]`) with background queue syncing.
 - **Normalized Relational DB Schema & Migration**: Structured multi-table schema (`tasks`, `task_projects`, `task_contexts`, `subtasks`, `comments`) with automated legacy schema migration.
 - **Drag & Drop Task Rescheduling**: Native HTML5 Drag and Drop for Desktop and Touch gesture tracking for Mobile.
 - **Weekly 24-Hour View with Y-Axis Time Slots**: Hourly time slots (`00:00` to `23:00`) plotted on the Y-axis.
@@ -37,12 +34,13 @@ Recently updated with:
 │   └── page.tsx                      # Main container managing view mode, drag-and-drop, offline queue & API sync
 ├── components/
 │   ├── CalendarView.tsx              # Monthly & 24-hour Weekly calendar grid with Drag & Drop (Desktop & Mobile)
-│   ├── CommandInput.tsx              # Terminal prompt (> input, :add command & List/Calendar view switcher)
+│   ├── CommandInput.tsx              # Terminal prompt (> input, :add command, [?] Syntax guide & List/Calendar view switcher)
 │   ├── FormattedText.tsx             # todo.txt syntax highlighter (+proj, @ctx, (A), due:YYYY-MM-DD)
 │   ├── LoginScreen.tsx               # Retro terminal-styled login screen for password protection
 │   ├── Sidebar.tsx                   # Filter sidebar listing unique +projects and @contexts (with mobile drawer)
 │   ├── StatusBar.tsx                 # Vim/Unix status bar with sync status indicator ([Synced], [Unsaved], [Offline])
-│   ├── TaskDetails.tsx               # Inspector drawer with editable creation date, due date, description, subtasks, comments
+│   ├── SyntaxGuideModal.tsx          # Modal popup cheat sheet explaining todo.txt syntax rules
+│   ├── TaskDetails.tsx               # Inspector drawer with editable task name, creation date, due date, description, subtasks, comments
 │   └── TaskList.tsx                  # Tabular task view optimized for touch & desktop
 ├── lib/
 │   ├── auth.ts                       # Password verification & session cookie helpers
@@ -59,13 +57,3 @@ Recently updated with:
 ├── .env.example                      # Example environment variables (APP_PASSWORD, Turso DB)
 └── HANDOFF.md                        # AI Handoff Documentation (this document)
 ```
-
----
-
-## ⚡ Sync Status & Offline Queue
-
-The bottom status bar (`StatusBar.tsx`) displays real-time sync indicators:
-- **`[Synced ✓]`**: All local mutations are saved to Turso DB.
-- **`[Syncing...]`**: In-flight HTTP request sending updates to `/api/tasks`.
-- **`[Unsaved (N)]`**: Pending local changes queued to be saved.
-- **`[Offline - N pending]`**: Network is disconnected; changes are saved in `localStorage` and will automatically flush to Turso DB once connection returns.
