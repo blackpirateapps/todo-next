@@ -4,8 +4,13 @@
 `todo-next` (Title: **Todo Next**) is a lightweight, terminal-styled task manager heavily influenced by the **`todo.txt` format** and **Unix philosophy**. It provides a fast, minimalist interface with keyboard navigation, syntax highlighting for projects (`+project`), contexts (`@context`), priorities (`(A)`, `(B)`), due dates (`due:YYYY-MM-DD`), dual theme support (Dark/Light mode), and full **List & Calendar views**.
 
 Recently updated with:
+- **Advanced Sorting & Filtering in List View**:
+  - **Sorting**: Creation Date, Due Date, Name/Title, Priority (Ascending `[ASC ↑]` & Descending `[DESC ↓]`).
+  - **Filtering**: Status (`All`, `Open`, `Completed`), Priority (`All`, `(A)`, `(B)`, `(C)`, `None`), Period (`Month / Year`).
+  - Works globally on All Tasks as well as Project- and Context-specific filtered views.
+- **Editable Projects (+proj) & Contexts (@ctx) in Inspector**: Add or delete project/context tags directly in `TaskDetails.tsx`, updating `task_projects` and `task_contexts` DB tables.
 - **Interactive Syntax Guide (`[?] Syntax`)**: Built-in cheat sheet (`SyntaxGuideModal.tsx`) detailing `todo.txt` rules for priorities, projects, contexts, due dates, and times.
-- **Editable Task Name in Inspector**: Task Name / raw string is directly editable at the top of the Inspector (`TaskDetails.tsx`). Editing automatically re-parses priority, projects, contexts, due dates, and times.
+- **Editable Task Name in Inspector**: Task Name / raw string is directly editable at the top of the Inspector (`TaskDetails.tsx`).
 - **Project Title & Branding**: App title set to **Todo Next** across layout metadata, PWA web app manifest, and icons.
 - **Full PWA & Offline Support**: Web App Manifest (`manifest.json`), custom PWA app icons, Service Worker (`sw.js`), and offline task caching.
 - **Unsaved Changes & Sync Indicator**: Real-time status badge in `StatusBar.tsx` (`[Synced ✓]`, `[Syncing...]`, `[Unsaved (N)]`, `[Offline - N pending]`) with background queue syncing.
@@ -40,8 +45,8 @@ Recently updated with:
 │   ├── Sidebar.tsx                   # Filter sidebar listing unique +projects and @contexts (with mobile drawer)
 │   ├── StatusBar.tsx                 # Vim/Unix status bar with sync status indicator ([Synced], [Unsaved], [Offline])
 │   ├── SyntaxGuideModal.tsx          # Modal popup cheat sheet explaining todo.txt syntax rules
-│   ├── TaskDetails.tsx               # Inspector drawer with editable task name, creation date, due date, description, subtasks, comments
-│   └── TaskList.tsx                  # Tabular task view optimized for touch & desktop
+│   ├── TaskDetails.tsx               # Inspector drawer with editable task name, projects, contexts, dates, description, subtasks, comments
+│   └── TaskList.tsx                  # Tabular task view with multi-field sorting (Asc/Desc) & filtering (Status, Pri, Month/Year)
 ├── lib/
 │   ├── auth.ts                       # Password verification & session cookie helpers
 │   └── db.ts                         # Turso DB (@libsql/client) normalized schema, migration & CRUD helpers

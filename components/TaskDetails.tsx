@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Task, Subtask, Comment } from '@/types/todo';
-import { updateRawDates, parseRawToStructured } from '@/utils/todoParser';
+import { updateRawDates, parseRawToStructured, buildRawFromStructured } from '@/utils/todoParser';
 import { FormattedText } from './FormattedText';
 
 interface TaskDetailsProps {
@@ -31,6 +31,10 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
   const [isEditingDueDate, setIsEditingDueDate] = useState(false);
   const [dueDateInput, setDueDateInput] = useState('');
 
+  // Projects & Contexts input states
+  const [newProjectInput, setNewProjectInput] = useState('');
+  const [newContextInput, setNewContextInput] = useState('');
+
   // Subtask creation & editing state
   const [newSubtaskRaw, setNewSubtaskRaw] = useState('');
   const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
@@ -52,6 +56,8 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
       setIsEditingDesc(false);
       setIsEditingCreationDate(false);
       setIsEditingDueDate(false);
+      setNewProjectInput('');
+      setNewContextInput('');
     }
   }, [task?.id]);
 
@@ -87,6 +93,104 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
       contexts: parsed.contexts
     });
     setIsEditingName(false);
+  };
+
+  // --- Projects Handlers ---
+  const handleAddProject = (e: React.FormEvent) => {
+    e.preventDefault();
+    let proj = newProjectInput.trim();
+    if (!proj) return;
+    if (!proj.startsWith('+')) proj = `+${proj}`;
+
+    if (!task.projects.includes(proj)) {
+      const updatedProjects = [...task.projects, proj];
+      const newRaw = buildRawFromStructured({
+        title: task.title,
+        priority: task.priority,
+        creationDate: task.creationDate,
+        completionDate: task.completionDate,
+        dueDate: task.dueDate,
+        dueTime: task.dueTime,
+        completed: task.completed,
+        projects: updatedProjects,
+        contexts: task.contexts
+      });
+
+      onUpdateTask(task.id, {
+        projects: updatedProjects,
+        raw: newRaw
+      });
+    }
+    setNewProjectInput('');
+  };
+
+  const handleDeleteProject = (projToDelete: string) => {
+    const updatedProjects = task.projects.filter(p => p !== projToDelete);
+    const newRaw = buildRawFromStructured({
+      title: task.title,
+      priority: task.priority,
+      creationDate: task.creationDate,
+      completionDate: task.completionDate,
+      dueDate: task.dueDate,
+      dueTime: task.dueTime,
+      completed: task.completed,
+      projects: updatedProjects,
+      contexts: task.contexts
+    });
+
+    onUpdateTask(task.id, {
+      projects: updatedProjects,
+      raw: newRaw
+    });
+  };
+
+  // --- Contexts Handlers ---
+  const handleAddContext = (e: React.FormEvent) => {
+    e.preventDefault();
+    let ctx = newContextInput.trim();
+    if (!ctx) return;
+    if (!ctx.startsWith('@')) ctx = `@${ctx}`;
+
+    if (!task.contexts.includes(ctx)) {
+      const updatedContexts = [...task.contexts, ctx];
+      const newRaw = buildRawFromStructured({
+        title: task.title,
+        priority: task.priority,
+        creationDate: task.creationDate,
+        completionDate: task.completionDate,
+        dueDate: task.dueDate,
+        dueTime: task.dueTime,
+        completed: task.completed,
+        projects: task.projects,
+        contexts: updatedContexts
+      });
+
+      onUpdateTask(task.id, {
+        contexts: updatedContexts,
+        raw: newRaw
+      });
+    }
+    setNewContextInput('');
+  };
+
+  const handleDeleteContext = (ctxToDelete: string) => {
+    const updatedContexts = task.contexts.filter(c => c !== ctxToDelete);
+    const newRaw = buildRawFromStructured({
+      title: task.title,
+      priority: task.priority,
+      creationDate: task.creationDate,
+      completionDate: task.completionDate,
+      dueDate: task.dueDate,
+      dueTime: task.dueTime,
+      completed: task.completed,
+      projects: task.projects,
+      contexts: updatedContexts
+    });
+
+    onUpdateTask(task.id, {
+      contexts: updatedContexts,
+      raw: newRaw
+    });
   };
 
   // --- Date Handlers ---
@@ -364,6 +468,102 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
               {task.completed ? 'Completed' : 'Open'}
             </span>
           </div>
+        </div>
+
+        {/* Editable Projects (+project) */}
+        <div>
+          <div className={`font-bold uppercase border-b mb-1.5 flex justify-between items-center ${isLight ? 'text-gray-500 border-gray-300' : 'text-gray-500 border-gray-800'}`}>
+            <span>Projects (+proj)</span>
+            <span className="text-[10px] opacity-75">{task.projects.length}</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {task.projects.map(proj => (
+              <span
+                key={proj}
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-mono font-semibold ${
+                  isLight ? 'bg-cyan-100 text-cyan-800 border border-cyan-300' : 'bg-cyan-950 text-cyan-300 border border-cyan-800'
+                }`}
+              >
+                {proj}
+                <button
+                  onClick={() => handleDeleteProject(proj)}
+                  className="hover:text-red-500 focus:outline-none ml-1"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            {task.projects.length === 0 && (
+              <div className={`italic text-xs ${isLight ? 'text-gray-400' : 'text-gray-600'}`}>No projects tagged.</div>
+            )}
+          </div>
+          <form onSubmit={handleAddProject} className="flex gap-1">
+            <input
+              type="text"
+              value={newProjectInput}
+              onChange={(e) => setNewProjectInput(e.target.value)}
+              placeholder="+ add project..."
+              className={`flex-1 px-2 py-0.5 text-xs font-mono border focus:outline-none ${
+                isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-black border-gray-800 text-gray-200 placeholder-gray-600'
+              }`}
+            />
+            <button
+              type="submit"
+              className={`px-2 py-0.5 text-xs font-mono font-bold border ${
+                isLight ? 'border-gray-300 bg-gray-200 hover:bg-gray-300 text-gray-800' : 'border-gray-800 bg-gray-900 hover:bg-gray-800 text-gray-300'
+              }`}
+            >
+              +
+            </button>
+          </form>
+        </div>
+
+        {/* Editable Contexts (@context) */}
+        <div>
+          <div className={`font-bold uppercase border-b mb-1.5 flex justify-between items-center ${isLight ? 'text-gray-500 border-gray-300' : 'text-gray-500 border-gray-800'}`}>
+            <span>Contexts (@ctx)</span>
+            <span className="text-[10px] opacity-75">{task.contexts.length}</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {task.contexts.map(ctx => (
+              <span
+                key={ctx}
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-mono font-semibold ${
+                  isLight ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                }`}
+              >
+                {ctx}
+                <button
+                  onClick={() => handleDeleteContext(ctx)}
+                  className="hover:text-red-500 focus:outline-none ml-1"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            {task.contexts.length === 0 && (
+              <div className={`italic text-xs ${isLight ? 'text-gray-400' : 'text-gray-600'}`}>No contexts tagged.</div>
+            )}
+          </div>
+          <form onSubmit={handleAddContext} className="flex gap-1">
+            <input
+              type="text"
+              value={newContextInput}
+              onChange={(e) => setNewContextInput(e.target.value)}
+              placeholder="@ add context..."
+              className={`flex-1 px-2 py-0.5 text-xs font-mono border focus:outline-none ${
+                isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-black border-gray-800 text-gray-200 placeholder-gray-600'
+              }`}
+            />
+            <button
+              type="submit"
+              className={`px-2 py-0.5 text-xs font-mono font-bold border ${
+                isLight ? 'border-gray-300 bg-gray-200 hover:bg-gray-300 text-gray-800' : 'border-gray-800 bg-gray-900 hover:bg-gray-800 text-gray-300'
+              }`}
+            >
+              +
+            </button>
+          </form>
         </div>
 
         {/* Editable Description */}
