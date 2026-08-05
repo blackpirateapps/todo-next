@@ -108,9 +108,11 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
   const handleAddSubtask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSubtaskRaw.trim()) return;
+    const text = newSubtaskRaw.trim();
     const newSt: Subtask = {
       id: `${task.id}-st${Date.now()}`,
-      raw: newSubtaskRaw.trim(),
+      title: text,
+      raw: text,
       completed: false
     };
     onUpdateTask(task.id, { subtasks: [...task.subtasks, newSt] });
@@ -119,12 +121,13 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
 
   const handleStartEditSubtask = (st: Subtask) => {
     setEditingSubtaskId(st.id);
-    setEditingSubtaskText(st.raw);
+    setEditingSubtaskText(st.raw || st.title);
   };
 
   const handleSaveSubtask = (subtaskId: string) => {
+    const text = editingSubtaskText.trim();
     const updatedSubtasks = task.subtasks.map(st =>
-      st.id === subtaskId ? { ...st, raw: editingSubtaskText.trim() } : st
+      st.id === subtaskId ? { ...st, title: text, raw: text } : st
     );
     onUpdateTask(task.id, { subtasks: updatedSubtasks });
     setEditingSubtaskId(null);
@@ -368,7 +371,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
                           : isLight ? 'text-gray-700 hover:text-gray-900' : 'text-gray-300 hover:text-white'
                       }`}
                     >
-                      {st.raw}
+                      {st.raw || st.title}
                     </span>
                   )}
                 </div>

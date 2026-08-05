@@ -1,54 +1,155 @@
-export interface ParsedDates {
+export interface ParsedTaskMeta {
+  title: string;
+  priority: string | null;
   creationDate: string;
   completionDate?: string;
   dueDate?: string;
-  time?: string;
+  dueTime?: string;
+  completed: boolean;
+  projects: string[];
+  contexts: string[];
 }
 
-export function parseDatesFromRaw(raw: string, fallbackCreation?: string): ParsedDates {
+export function parseRawToStructured(raw: string, fallbackCreation?: string): ParsedTaskMeta {
+  const words = raw.trim().split(/\s+/);
+
+  let completed = false;
+  let priority: string | null = null;
   let creationDate = fallbackCreation || new Date().toISOString().split('T')[0];
   let completionDate: string | undefined = undefined;
   let dueDate: string | undefined = undefined;
-  let time: string | undefined = undefined;
+  let dueTime: string | undefined = undefined;
+  const projects: string[] = [];
+  const contexts: string[] = [];
+  const titleWords: string[] = [];
 
-  // Time tag: time:HH:MM or @HH:MM (e.g. time:14:30)
-  const timeMatch = raw.match(/\btime:(\d{1,2}:\d{2})\b/i);
-  if (timeMatch) {
-    time = timeMatch[1].padStart(5, '0');
-  }
+  let idx = 0;
 
-  // Due date: due:YYYY-MM-DD or due:YYYY-MM-DDTHH:MM
-  const dueMatch = raw.match(/\bdue:(\d{4}-\d{2}-\d{2})(?:T(\d{1,2}:\d{2}))?\b/i);
-  if (dueMatch) {
-    dueDate = dueMatch[1];
-    if (dueMatch[2]) {
-      time = dueMatch[2].padStart(5, '0');
+  // Check completed prefix: x YYYY-MM-DD YYYY-MM-DD ... or x ...
+  if (words[0] === 'x') {
+    completed = true;
+    idx++;
+    if (words[idx] && /^\d{4}-\d{2}-\d{2}$/.test(words[idx])) {
+      completionDate = words[idx];
+      idx++;
+      if (words[idx] && /^\d{4}-\d{2}-\d{2}$/.test(words[idx])) {
+        creationDate = words[idx];
+        idx++;
+      }
     }
   }
 
-  // Check if completed: x YYYY-MM-DD YYYY-MM-DD ...
-  const completedWithTwoDatesMatch = raw.match(/^x\s+(\d{4}-\d{2}-\d{2})\s+(\d{4}-\d{2}-\d{2})\s/);
-  if (completedWithTwoDatesMatch) {
-    completionDate = completedWithTwoDatesMatch[1];
-    creationDate = completedWithTwoDatesMatch[2];
-    return { creationDate, completionDate, dueDate, time };
+  // Check priority: (A)
+  if (words[idx] && /^\([A-Z]\)$/.test(words[idx])) {
+    priority = words[idx][1];
+    idx++;
   }
 
-  // Priority date: (A) YYYY-MM-DD ...
-  const priorityDateMatch = raw.match(/^\([A-Z]\)\s+(\d{4}-\d{2}-\d{2})\s/);
-  if (priorityDateMatch) {
-    creationDate = priorityDateMatch[1];
-    return { creationDate, completionDate, dueDate, time };
+  // Check creation date if not completed: YYYY-MM-DD
+  if (!completed && words[idx] && /^\d{4}-\d{2}-\d{2}$/.test(words[idx])) {
+    creationDate = words[idx];
+    idx++;
   }
 
-  // Plain creation date at start: YYYY-MM-DD ...
-  const plainDateMatch = raw.match(/^(\d{4}-\d{2}-\d{2})\s/);
-  if (plainDateMatch) {
-    creationDate = plainDateMatch[1];
-    return { creationDate, completionDate, dueDate, time };
+  // Process remaining tokens
+  for (; idx < words.length; idx++) {
+    const word = words[idx];
+
+    if (word.startsWith('+') && word.length > 1) {
+      if (!projects.includes(word)) projects.push(word);
+    } else if (word.startsWith('@') && word.length > 1) {
+      if (!contexts.includes(word)) contexts.push(word);
+    } else if (/\bdue:(\d{4}-\d{2}-\d{2})(?:T(\d{1,2}:\d{2}))?\b/i.test(word)) {
+      const match = word.match(/\bdue:(\d{4}-\d{2}-\d{2})(?:T(\d{1,2}:\d{2}))?\b/i);
+      if (match) {
+        dueDate = match[1];
+        if (match[2]) dueTime = match[2].padStart(5, '0');
+      }
+    } else if (/\btime:(\d{1,2}:\d{2})\b/i.test(word)) {
+      const match = word.match(/\btime:(\d{1,2}:\d{2})\b/i);
+      if (match) dueTime = match[1].padStart(5, '0');
+    } else {
+      titleWords.push(word);
+    }
   }
 
-  return { creationDate, completionDate, dueDate, time };
+  const title = titleWords.join(' ') || raw;
+
+  return {
+    title,
+    priority,
+    creationDate,
+    completionDate,
+    dueDate,
+    dueTime,
+    completed,
+    projects,
+    contexts,
+  };
+}
+
+export function buildRawFromStructured(meta: {
+  title: string;
+  priority?: string | null;
+  creationDate: string;
+  completionDate?: string;
+  dueDate?: string;
+  dueTime?: string;
+  completed: boolean;
+  projects?: string[];
+  contexts?: string[];
+}): string {
+  const parts: string[] = [];
+
+  if (meta.completed) {
+    parts.push('x');
+    if (meta.completionDate) parts.push(meta.completionDate);
+    parts.push(meta.creationDate);
+  }
+
+  if (meta.priority) {
+    parts.push(`(${meta.priority})`);
+  }
+
+  if (!meta.completed && meta.creationDate) {
+    parts.push(meta.creationDate);
+  }
+
+  if (meta.title) {
+    parts.push(meta.title);
+  }
+
+  if (meta.projects && meta.projects.length > 0) {
+    meta.projects.forEach(p => {
+      if (!parts.includes(p)) parts.push(p);
+    });
+  }
+
+  if (meta.contexts && meta.contexts.length > 0) {
+    meta.contexts.forEach(c => {
+      if (!parts.includes(c)) parts.push(c);
+    });
+  }
+
+  if (meta.dueDate) {
+    parts.push(`due:${meta.dueDate}`);
+  }
+
+  if (meta.dueTime) {
+    parts.push(`time:${meta.dueTime}`);
+  }
+
+  return parts.join(' ');
+}
+
+export function parseDatesFromRaw(raw: string, fallbackCreation?: string) {
+  const parsed = parseRawToStructured(raw, fallbackCreation);
+  return {
+    creationDate: parsed.creationDate,
+    completionDate: parsed.completionDate,
+    dueDate: parsed.dueDate,
+    time: parsed.dueTime,
+  };
 }
 
 export function updateRawDates(
@@ -57,49 +158,16 @@ export function updateRawDates(
   newDueDate?: string | null,
   newTime?: string | null
 ): string {
-  let updatedRaw = raw;
-
-  // 1. Update or clear time (time:HH:MM)
-  if (newTime !== undefined) {
-    if (newTime && newTime.trim() !== '') {
-      if (/\btime:\d{1,2}:\d{2}\b/i.test(updatedRaw)) {
-        updatedRaw = updatedRaw.replace(/\btime:\d{1,2}:\d{2}\b/i, `time:${newTime}`);
-      } else {
-        updatedRaw = `${updatedRaw.trim()} time:${newTime}`;
-      }
-    } else {
-      updatedRaw = updatedRaw.replace(/\s*\btime:\d{1,2}:\d{2}\b/i, '').trim();
-    }
-  }
-
-  // 2. Update or clear due date (due:YYYY-MM-DD)
-  if (newDueDate !== undefined) {
-    if (newDueDate && newDueDate.trim() !== '') {
-      if (/\bdue:\d{4}-\d{2}-\d{2}(?:T\d{1,2}:\d{2})?\b/i.test(updatedRaw)) {
-        updatedRaw = updatedRaw.replace(/\bdue:\d{4}-\d{2}-\d{2}(?:T\d{1,2}:\d{2})?\b/i, `due:${newDueDate}`);
-      } else {
-        updatedRaw = `${updatedRaw.trim()} due:${newDueDate}`;
-      }
-    } else {
-      // Clear due date
-      updatedRaw = updatedRaw.replace(/\s*\bdue:\d{4}-\d{2}-\d{2}(?:T\d{1,2}:\d{2})?\b/i, '').trim();
-    }
-  }
-
-  // 3. Update creation date if provided
-  if (newCreationDate && /^\d{4}-\d{2}-\d{2}$/.test(newCreationDate)) {
-    if (/^x\s+(\d{4}-\d{2}-\d{2})\s+(\d{4}-\d{2}-\d{2})\s/.test(updatedRaw)) {
-      updatedRaw = updatedRaw.replace(/^x\s+(\d{4}-\d{2}-\d{2})\s+(\d{4}-\d{2}-\d{2})\s/, `x $1 ${newCreationDate} `);
-    } else if (/^\([A-Z]\)\s+(\d{4}-\d{2}-\d{2})\s/.test(updatedRaw)) {
-      updatedRaw = updatedRaw.replace(/^(\([A-Z]\))\s+(\d{4}-\d{2}-\d{2})\s/, `$1 ${newCreationDate} `);
-    } else if (/^(\d{4}-\d{2}-\d{2})\s/.test(updatedRaw)) {
-      updatedRaw = updatedRaw.replace(/^(\d{4}-\d{2}-\d{2})\s/, `${newCreationDate} `);
-    } else if (/^\([A-Z]\)\s/.test(updatedRaw)) {
-      updatedRaw = updatedRaw.replace(/^(\([A-Z]\))\s/, `$1 ${newCreationDate} `);
-    } else if (!updatedRaw.startsWith('x ')) {
-      updatedRaw = `${newCreationDate} ${updatedRaw}`;
-    }
-  }
-
-  return updatedRaw;
+  const parsed = parseRawToStructured(raw, newCreationDate);
+  return buildRawFromStructured({
+    title: parsed.title,
+    priority: parsed.priority,
+    completed: parsed.completed,
+    completionDate: parsed.completionDate,
+    creationDate: newCreationDate || parsed.creationDate,
+    dueDate: newDueDate !== undefined ? (newDueDate || undefined) : parsed.dueDate,
+    dueTime: newTime !== undefined ? (newTime || undefined) : parsed.dueTime,
+    projects: parsed.projects,
+    contexts: parsed.contexts,
+  });
 }

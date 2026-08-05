@@ -9,7 +9,7 @@ import { TaskDetails } from '@/components/TaskDetails';
 import { CommandInput } from '@/components/CommandInput';
 import { StatusBar } from '@/components/StatusBar';
 import { LoginScreen } from '@/components/LoginScreen';
-import { updateRawDates, parseDatesFromRaw } from '@/utils/todoParser';
+import { updateRawDates, parseRawToStructured } from '@/utils/todoParser';
 
 export default function UtilitarianTodoPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -89,7 +89,7 @@ export default function UtilitarianTodoPage() {
       if (taskToUpdate.priority) newRaw = `(${taskToUpdate.priority}) ${newRaw}`;
     }
 
-    const updates = { completed: isNowCompleted, raw: newRaw };
+    const updates = { completed: isNowCompleted, status: (isNowCompleted ? 'completed' : 'open') as 'open' | 'completed', raw: newRaw };
 
     // Optimistic UI update
     setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
@@ -124,13 +124,13 @@ export default function UtilitarianTodoPage() {
     const taskToMove = tasks.find(t => t.id === taskId);
     if (!taskToMove) return;
 
-    // Update raw string with new due date and optional time tag
     const newRaw = updateRawDates(taskToMove.raw, taskToMove.creationDate, targetDate, targetTime || null);
-    const parsed = parseDatesFromRaw(newRaw, taskToMove.creationDate);
+    const parsed = parseRawToStructured(newRaw, taskToMove.creationDate);
 
     const updates: Partial<Task> = {
       raw: newRaw,
       dueDate: parsed.dueDate,
+      dueTime: parsed.dueTime,
       creationDate: parsed.creationDate,
     };
 
@@ -170,16 +170,21 @@ export default function UtilitarianTodoPage() {
     const trimmed = val.trim();
     if (trimmed.startsWith(':add ')) {
       const newTaskRaw = trimmed.replace(':add ', '');
-      const parsed = parseDatesFromRaw(newTaskRaw);
+      const parsed = parseRawToStructured(newTaskRaw);
 
       const newTask: Task = {
         id: `t${Date.now()}`,
+        title: parsed.title,
         raw: newTaskRaw,
-        completed: false,
-        priority: newTaskRaw.match(/^\([A-Z]\)/) ? newTaskRaw[1] : null,
+        status: parsed.completed ? 'completed' : 'open',
+        completed: parsed.completed,
+        priority: parsed.priority,
         creationDate: parsed.creationDate,
         dueDate: parsed.dueDate,
+        dueTime: parsed.dueTime,
         description: '',
+        projects: parsed.projects,
+        contexts: parsed.contexts,
         subtasks: [],
         comments: []
       };
