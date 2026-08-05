@@ -11,7 +11,7 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, isCompleted,
   return (
     <>
       {words.map((word, index) => {
-        // Priority
+        // Priority: (A), (B), etc.
         if (word.match(/^\([A-Z]\)$/)) {
           let priorityColor = '';
           if (word === '(A)') priorityColor = isLight ? 'text-red-600' : 'text-red-400';
@@ -25,7 +25,30 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, isCompleted,
             </span>
           );
         }
-        // Project
+        // Due date tag: due:YYYY-MM-DD
+        if (word.match(/^due:\d{4}-\d{2}-\d{2}$/)) {
+          return (
+            <span
+              key={index}
+              className={`font-semibold px-1 rounded text-xs ${
+                isCompleted
+                  ? (isLight ? 'bg-gray-200 text-gray-400' : 'bg-gray-900 text-gray-600')
+                  : (isLight ? 'bg-purple-100 text-purple-700' : 'bg-purple-950 text-purple-300')
+              }`}
+            >
+              {word}{' '}
+            </span>
+          );
+        }
+        // General Key:Value tag (e.g. key:val)
+        if (word.match(/^[a-zA-Z0-9_-]+:[a-zA-Z0-9_-]+$/)) {
+          return (
+            <span key={index} className={`font-semibold ${isCompleted ? (isLight ? 'text-gray-400' : 'text-gray-600') : (isLight ? 'text-purple-600' : 'text-purple-400')}`}>
+              {word}{' '}
+            </span>
+          );
+        }
+        // Project (+project)
         if (word.startsWith('+') && word.length > 1) {
           return (
             <span key={index} className={`font-semibold ${isCompleted ? (isLight ? 'text-gray-400' : 'text-gray-600') : (isLight ? 'text-cyan-700' : 'text-cyan-400')}`}>
@@ -33,7 +56,7 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, isCompleted,
             </span>
           );
         }
-        // Context
+        // Context (@context)
         if (word.startsWith('@') && word.length > 1) {
           return (
             <span key={index} className={`font-semibold ${isCompleted ? (isLight ? 'text-gray-400' : 'text-gray-600') : (isLight ? 'text-emerald-700' : 'text-green-400')}`}>
@@ -41,7 +64,7 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, isCompleted,
             </span>
           );
         }
-        // Dates
+        // Dates (YYYY-MM-DD)
         if (word.match(/^\d{4}-\d{2}-\d{2}$/)) {
           return (
             <span key={index} className={isLight ? 'text-gray-500' : 'text-gray-500'}>

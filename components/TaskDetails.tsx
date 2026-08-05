@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Task, Subtask, Comment } from '@/types/todo';
+import { updateRawDates } from '@/utils/todoParser';
 
 interface TaskDetailsProps {
   task: Task | null;
@@ -18,6 +19,13 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [descInput, setDescInput] = useState('');
 
+  // Date editing states
+  const [isEditingCreationDate, setIsEditingCreationDate] = useState(false);
+  const [creationDateInput, setCreationDateInput] = useState('');
+
+  const [isEditingDueDate, setIsEditingDueDate] = useState(false);
+  const [dueDateInput, setDueDateInput] = useState('');
+
   // Subtask creation & editing state
   const [newSubtaskRaw, setNewSubtaskRaw] = useState('');
   const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
@@ -29,6 +37,17 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
   const [editingCommentIndex, setEditingCommentIndex] = useState<number | null>(null);
   const [editingCommentText, setEditingCommentText] = useState('');
 
+  useEffect(() => {
+    if (task) {
+      setDescInput(task.description || '');
+      setCreationDateInput(task.creationDate || '');
+      setDueDateInput(task.dueDate || '');
+      setIsEditingDesc(false);
+      setIsEditingCreationDate(false);
+      setIsEditingDueDate(false);
+    }
+  }, [task?.id]);
+
   if (!task) {
     return (
       <div className={`w-72 flex-shrink-0 border-l p-4 flex items-center justify-center hidden lg:flex ${isLight ? 'border-gray-300 bg-gray-50 text-gray-400' : 'border-gray-800 bg-gray-950 text-gray-600'}`}>
@@ -36,6 +55,36 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
       </div>
     );
   }
+
+  // --- Date Handlers ---
+  const handleSaveCreationDate = () => {
+    if (!creationDateInput) return;
+    const newRaw = updateRawDates(task.raw, creationDateInput, task.dueDate);
+    onUpdateTask(task.id, {
+      creationDate: creationDateInput,
+      raw: newRaw
+    });
+    setIsEditingCreationDate(false);
+  };
+
+  const handleSaveDueDate = () => {
+    const newRaw = updateRawDates(task.raw, task.creationDate, dueDateInput || null);
+    onUpdateTask(task.id, {
+      dueDate: dueDateInput || undefined,
+      raw: newRaw
+    });
+    setIsEditingDueDate(false);
+  };
+
+  const handleClearDueDate = () => {
+    const newRaw = updateRawDates(task.raw, task.creationDate, null);
+    onUpdateTask(task.id, {
+      dueDate: undefined,
+      raw: newRaw
+    });
+    setDueDateInput('');
+    setIsEditingDueDate(false);
+  };
 
   // --- Description Handlers ---
   const handleStartEditDesc = () => {
@@ -121,19 +170,106 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
   const completedSubtasksCount = task.subtasks.filter(s => s.completed).length;
 
   return (
-    <div className={`w-full lg:w-80 flex-shrink-0 border-l flex flex-col overflow-y-auto ${isLight ? 'border-gray-300 bg-gray-50' : 'border-gray-800 bg-gray-950'}`}>
-      <div className={`p-2 border-b flex justify-between items-center ${isLight ? 'border-gray-300 bg-gray-200' : 'border-gray-800 bg-gray-900'}`}>
-        <span className={`font-bold uppercase tracking-wider ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>Inspector</span>
-        <button onClick={onClose} className={`px-1 lg:hidden ${isLight ? 'text-gray-500 hover:text-gray-900' : 'text-gray-500 hover:text-white'}`}>[x]</button>
+    <div className={`w-full lg:w-80 h-full flex-shrink-0 border-l flex flex-col overflow-y-auto ${isLight ? 'border-gray-300 bg-gray-50' : 'border-gray-800 bg-gray-950'}`}>
+      <div className={`p-3 border-b flex justify-between items-center ${isLight ? 'border-gray-300 bg-gray-200' : 'border-gray-800 bg-gray-900'}`}>
+        <span className={`font-bold uppercase tracking-wider ${isLight ? 'text-gray-700' : 'text-gray-300'}`}>Inspector</span>
+        <button
+          onClick={onClose}
+          className={`px-2 py-1 text-xs font-bold border rounded transition-colors ${
+            isLight
+              ? 'border-gray-400 bg-gray-300 hover:bg-gray-400 text-gray-900'
+              : 'border-gray-700 bg-gray-800 hover:bg-gray-700 text-white'
+          }`}
+        >
+          [← Back]
+        </button>
       </div>
 
       <div className="p-3 space-y-4">
-        {/* Task Metadata */}
-        <div className={`grid grid-cols-2 gap-2 border p-2 ${isLight ? 'border-gray-300 bg-white text-gray-600' : 'border-gray-800 bg-black text-gray-500'}`}>
+        {/* Task Metadata & Editable Dates */}
+        <div className={`grid grid-cols-2 gap-2 border p-2 text-xs ${isLight ? 'border-gray-300 bg-white text-gray-700' : 'border-gray-800 bg-black text-gray-400'}`}>
           <div><span className={isLight ? 'text-gray-400' : 'text-gray-600'}>ID: </span>{task.id}</div>
           <div><span className={isLight ? 'text-gray-400' : 'text-gray-600'}>Pri: </span>{task.priority || 'None'}</div>
-          <div><span className={isLight ? 'text-gray-400' : 'text-gray-600'}>Created: </span>{task.creationDate}</div>
-          <div><span className={isLight ? 'text-gray-400' : 'text-gray-600'}>Status: </span>{task.completed ? 'Done' : 'Open'}</div>
+          
+          {/* Creation Date Field */}
+          <div className="col-span-2 flex items-center justify-between border-t pt-1 mt-1 border-dashed border-gray-500/30">
+            <div>
+              <span className={isLight ? 'text-gray-500' : 'text-gray-500'}>Created: </span>
+              {isEditingCreationDate ? (
+                <input
+                  type="date"
+                  value={creationDateInput}
+                  onChange={(e) => setCreationDateInput(e.target.value)}
+                  onBlur={handleSaveCreationDate}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveCreationDate()}
+                  className={`px-1 border font-mono text-xs ${isLight ? 'bg-white border-gray-400 text-black' : 'bg-gray-900 border-gray-700 text-white'}`}
+                  autoFocus
+                />
+              ) : (
+                <span
+                  onClick={() => setIsEditingCreationDate(true)}
+                  className="font-mono cursor-pointer hover:underline"
+                >
+                  {task.creationDate || 'Set date'}
+                </span>
+              )}
+            </div>
+            {!isEditingCreationDate && (
+              <button
+                onClick={() => setIsEditingCreationDate(true)}
+                className={`text-[10px] ${isLight ? 'text-blue-600' : 'text-blue-400'}`}
+              >
+                [edit]
+              </button>
+            )}
+          </div>
+
+          {/* Due Date Field */}
+          <div className="col-span-2 flex items-center justify-between border-t pt-1 border-dashed border-gray-500/30">
+            <div>
+              <span className={isLight ? 'text-gray-500' : 'text-gray-500'}>Due Date: </span>
+              {isEditingDueDate ? (
+                <div className="inline-flex gap-1 items-center">
+                  <input
+                    type="date"
+                    value={dueDateInput}
+                    onChange={(e) => setDueDateInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSaveDueDate()}
+                    className={`px-1 border font-mono text-xs ${isLight ? 'bg-white border-gray-400 text-black' : 'bg-gray-900 border-gray-700 text-white'}`}
+                    autoFocus
+                  />
+                  <button onClick={handleSaveDueDate} className="text-[10px] text-green-500 font-bold">[save]</button>
+                  <button onClick={handleClearDueDate} className="text-[10px] text-red-400">[clear]</button>
+                </div>
+              ) : (
+                <span
+                  onClick={() => setIsEditingDueDate(true)}
+                  className={`font-mono cursor-pointer hover:underline ${
+                    task.dueDate
+                      ? (isLight ? 'text-purple-700 font-bold' : 'text-purple-400 font-bold')
+                      : (isLight ? 'text-gray-400 italic' : 'text-gray-600 italic')
+                  }`}
+                >
+                  {task.dueDate || 'No due date'}
+                </span>
+              )}
+            </div>
+            {!isEditingDueDate && (
+              <button
+                onClick={() => setIsEditingDueDate(true)}
+                className={`text-[10px] ${isLight ? 'text-purple-600' : 'text-purple-400'}`}
+              >
+                [edit]
+              </button>
+            )}
+          </div>
+
+          <div className="col-span-2 border-t pt-1 border-dashed border-gray-500/30">
+            <span className={isLight ? 'text-gray-500' : 'text-gray-500'}>Status: </span>
+            <span className={task.completed ? 'text-green-500 font-bold' : 'text-amber-500'}>
+              {task.completed ? 'Completed' : 'Open'}
+            </span>
+          </div>
         </div>
 
         {/* Editable Description */}
@@ -164,13 +300,13 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
               <div className="flex gap-2 justify-end">
                 <button
                   onClick={() => setIsEditingDesc(false)}
-                  className={`px-2 py-0.5 border text-xs ${isLight ? 'border-gray-300 hover:bg-gray-200' : 'border-gray-700 hover:bg-gray-800'}`}
+                  className={`px-2 py-1 text-xs border ${isLight ? 'border-gray-300 hover:bg-gray-200' : 'border-gray-700 hover:bg-gray-800'}`}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveDesc}
-                  className={`px-2 py-0.5 text-xs font-bold ${isLight ? 'bg-cyan-700 text-white hover:bg-cyan-800' : 'bg-cyan-600 text-black hover:bg-cyan-500'}`}
+                  className={`px-3 py-1 text-xs font-bold ${isLight ? 'bg-cyan-700 text-white hover:bg-cyan-800' : 'bg-cyan-600 text-black hover:bg-cyan-500'}`}
                 >
                   Save
                 </button>
@@ -179,7 +315,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
           ) : (
             <p
               onClick={handleStartEditDesc}
-              className={`leading-relaxed whitespace-pre-wrap font-sans text-sm cursor-pointer hover:bg-gray-100/10 p-1 rounded transition-colors ${
+              className={`leading-relaxed whitespace-pre-wrap font-sans text-sm cursor-pointer hover:bg-gray-100/10 p-1.5 rounded transition-colors ${
                 isLight ? 'text-gray-700' : 'text-gray-300'
               }`}
             >
@@ -197,13 +333,13 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
             </span>
           </div>
 
-          <ul className="space-y-1.5 mb-2">
+          <ul className="space-y-2 mb-2">
             {task.subtasks.map(st => (
               <li key={st.id} className="flex items-center justify-between group gap-2 text-sm">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <button
                     onClick={() => handleToggleSubtask(st.id)}
-                    className={`focus:outline-none font-mono ${isLight ? 'text-gray-500 hover:text-gray-900' : 'text-gray-400 hover:text-white'}`}
+                    className={`focus:outline-none font-mono min-w-[24px] py-1 ${isLight ? 'text-gray-500 hover:text-gray-900' : 'text-gray-400 hover:text-white'}`}
                   >
                     {st.completed ? '[x]' : '[ ]'}
                   </button>
@@ -218,7 +354,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
                         if (e.key === 'Escape') setEditingSubtaskId(null);
                       }}
                       onBlur={() => handleSaveSubtask(st.id)}
-                      className={`flex-1 px-1 border font-sans text-xs focus:outline-none ${
+                      className={`flex-1 px-1 py-0.5 border font-sans text-xs focus:outline-none ${
                         isLight ? 'bg-white border-gray-400 text-gray-900' : 'bg-black border-gray-700 text-white'
                       }`}
                       autoFocus
@@ -237,14 +373,12 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
                   )}
                 </div>
 
-                <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100">
-                  <button
-                    onClick={() => handleDeleteSubtask(st.id)}
-                    className={`text-xs hover:text-red-500 focus:outline-none ${isLight ? 'text-gray-400' : 'text-gray-600'}`}
-                  >
-                    [x]
-                  </button>
-                </div>
+                <button
+                  onClick={() => handleDeleteSubtask(st.id)}
+                  className={`text-xs px-1 py-0.5 hover:text-red-500 focus:outline-none ${isLight ? 'text-gray-400' : 'text-gray-600'}`}
+                >
+                  [x]
+                </button>
               </li>
             ))}
           </ul>
@@ -255,13 +389,13 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
               value={newSubtaskRaw}
               onChange={(e) => setNewSubtaskRaw(e.target.value)}
               placeholder="+ add subtask..."
-              className={`flex-1 px-2 py-0.5 text-xs font-sans border focus:outline-none ${
+              className={`flex-1 px-2 py-1 text-xs font-sans border focus:outline-none ${
                 isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-black border-gray-800 text-gray-200 placeholder-gray-600'
               }`}
             />
             <button
               type="submit"
-              className={`px-2 py-0.5 text-xs font-mono border ${
+              className={`px-3 py-1 text-xs font-mono font-bold border ${
                 isLight ? 'border-gray-300 bg-gray-200 hover:bg-gray-300 text-gray-800' : 'border-gray-800 bg-gray-900 hover:bg-gray-800 text-gray-300'
               }`}
             >
@@ -306,13 +440,13 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
                     <div className="flex gap-1 justify-end">
                       <button
                         onClick={() => setEditingCommentIndex(null)}
-                        className="px-1.5 py-0.5 text-xs border border-gray-500"
+                        className="px-2 py-0.5 text-xs border border-gray-500"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={() => handleSaveComment(idx)}
-                        className={`px-1.5 py-0.5 text-xs font-bold ${isLight ? 'bg-cyan-700 text-white' : 'bg-cyan-600 text-black'}`}
+                        className={`px-2 py-0.5 text-xs font-bold ${isLight ? 'bg-cyan-700 text-white' : 'bg-cyan-600 text-black'}`}
                       >
                         Save
                       </button>
@@ -333,7 +467,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
             )}
           </div>
 
-          <form onSubmit={handleAddComment} className="space-y-1.5 border p-2 text-xs">
+          <form onSubmit={handleAddComment} className="space-y-2 border p-2 text-xs">
             <div className="flex items-center gap-1">
               <span className={isLight ? 'text-cyan-700 font-bold' : 'text-cyan-500 font-bold'}>@</span>
               <input
@@ -341,7 +475,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
                 value={newCommentAuthor}
                 onChange={(e) => setNewCommentAuthor(e.target.value)}
                 placeholder="author"
-                className={`w-24 px-1 py-0.5 border font-sans focus:outline-none ${
+                className={`w-28 px-1.5 py-1 border font-sans focus:outline-none ${
                   isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-black border-gray-800 text-white'
                 }`}
               />
@@ -351,14 +485,14 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
               onChange={(e) => setNewCommentText(e.target.value)}
               placeholder="Write a comment..."
               rows={2}
-              className={`w-full p-1 font-sans border focus:outline-none ${
+              className={`w-full p-1.5 font-sans border focus:outline-none ${
                 isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-black border-gray-800 text-gray-200 placeholder-gray-600'
               }`}
             />
             <div className="flex justify-end">
               <button
                 type="submit"
-                className={`px-2 py-0.5 font-mono font-bold ${
+                className={`px-3 py-1 font-mono font-bold ${
                   isLight ? 'bg-cyan-700 text-white hover:bg-cyan-800' : 'bg-cyan-600 text-black hover:bg-cyan-500'
                 }`}
               >

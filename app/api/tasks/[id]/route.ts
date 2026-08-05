@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server';
 import { updateTaskInDb, deleteTaskFromDb } from '@/lib/db';
+import { isAuthenticated } from '@/lib/auth';
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { id } = await params;
     const updates = await request.json();
@@ -22,6 +27,10 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { id } = await params;
     await deleteTaskFromDb(id);

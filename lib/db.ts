@@ -1,5 +1,6 @@
 import { createClient } from '@libsql/client';
 import { Task } from '@/types/todo';
+import { parseDatesFromRaw } from '@/utils/todoParser';
 
 const url = process.env.TURSO_DATABASE_URL || 'file:todo.db';
 const authToken = process.env.TURSO_AUTH_TOKEN;
@@ -12,10 +13,11 @@ export const db = createClient({
 const initialTasks: Task[] = [
   {
     id: 't1',
-    raw: '(A) 2026-08-06 Implement core parsing logic for +backend @dev',
+    raw: '(A) 2026-08-06 Implement core parsing logic for +backend @dev due:2026-08-12',
     completed: false,
     priority: 'A',
     creationDate: '2026-08-05',
+    dueDate: '2026-08-12',
     description: 'Need to write a robust regex parser that handles priorities (A-Z), dates, +projects, and @contexts natively without breaking on malformed strings. Reference the original todo.txt spec.',
     subtasks: [
       { id: 't1-1', raw: 'Write unit tests for edge cases', completed: true },
@@ -27,10 +29,11 @@ const initialTasks: Task[] = [
   },
   {
     id: 't2',
-    raw: '(B) 2026-08-05 Provision new database cluster +infra @ops',
+    raw: '(B) 2026-08-05 Provision new database cluster +infra @ops due:2026-08-15',
     completed: false,
     priority: 'B',
     creationDate: '2026-08-04',
+    dueDate: '2026-08-15',
     description: 'Scale up the PostgreSQL cluster to handle the new analytics load. Ensure pgBouncer is configured correctly.',
     subtasks: [],
     comments: []
@@ -58,10 +61,11 @@ const initialTasks: Task[] = [
   },
   {
     id: 't5',
-    raw: '(C) Draft Q3 architecture review +docs @management',
+    raw: '(C) Draft Q3 architecture review +docs @management due:2026-08-20',
     completed: false,
     priority: 'C',
     creationDate: '2026-08-02',
+    dueDate: '2026-08-20',
     description: 'Focus on the migration from legacy monolith to the new microservices architecture. Highlight cost savings.',
     subtasks: [],
     comments: [
@@ -141,13 +145,17 @@ export async function getAllTasks(): Promise<Task[]> {
     } catch {
       comments = [];
     }
+    const raw = String(row.raw);
+    const parsed = parseDatesFromRaw(raw, String(row.creation_date || ''));
+
     return {
       id: String(row.id),
-      raw: String(row.raw),
+      raw,
       completed: Boolean(row.completed),
       priority: row.priority ? String(row.priority) : null,
-      creationDate: String(row.creation_date || ''),
-      completionDate: row.completion_date ? String(row.completion_date) : undefined,
+      creationDate: parsed.creationDate,
+      completionDate: parsed.completionDate || (row.completion_date ? String(row.completion_date) : undefined),
+      dueDate: parsed.dueDate,
       description: String(row.description || ''),
       subtasks,
       comments,
@@ -157,6 +165,8 @@ export async function getAllTasks(): Promise<Task[]> {
 
 export async function insertTask(task: Task): Promise<Task> {
   await initDb();
+  const parsed = parseDatesFromRaw(task.raw, task.creationDate);
+
   await db.execute({
     sql: `INSERT INTO tasks (id, raw, completed, priority, creation_date, completion_date, description, subtasks, comments)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -165,14 +175,19 @@ export async function insertTask(task: Task): Promise<Task> {
       task.raw,
       task.completed ? 1 : 0,
       task.priority,
-      task.creationDate,
-      task.completionDate || null,
+      parsed.creationDate,
+      parsed.completionDate || task.completionDate || null,
       task.description || '',
       JSON.stringify(task.subtasks || []),
       JSON.stringify(task.comments || [])
     ]
   });
-  return task;
+  return {
+    ...task,
+    creationDate: parsed.creationDate,
+    completionDate: parsed.completionDate || task.completionDate,
+    dueDate: parsed.dueDate || task.dueDate,
+  };
 }
 
 export async function updateTaskInDb(id: string, updates: Partial<Task>): Promise<Task | null> {
@@ -198,10 +213,12 @@ export async function updateTaskInDb(id: string, updates: Partial<Task>): Promis
   }
 
   const newRaw = updates.raw !== undefined ? updates.raw : String(existing.raw);
+  const parsed = parseDatesFromRaw(newRaw, updates.creationDate || String(existing.creation_date || ''));
+
   const newCompleted = updates.completed !== undefined ? (updates.completed ? 1 : 0) : Number(existing.completed);
   const newPriority = updates.priority !== undefined ? updates.priority : (existing.priority ? String(existing.priority) : null);
-  const newCreationDate = updates.creationDate !== undefined ? updates.creationDate : String(existing.creation_date || '');
-  const newCompletionDate = updates.completionDate !== undefined ? updates.completionDate : (existing.completion_date ? String(existing.completion_date) : null);
+  const newCreationDate = parsed.creationDate;
+  const newCompletionDate = parsed.completionDate || (updates.completionDate !== undefined ? updates.completionDate : (existing.completion_date ? String(existing.completion_date) : null));
   const newDescription = updates.description !== undefined ? updates.description : String(existing.description || '');
 
   await db.execute({
@@ -227,6 +244,7 @@ export async function updateTaskInDb(id: string, updates: Partial<Task>): Promis
     priority: newPriority,
     creationDate: newCreationDate,
     completionDate: newCompletionDate || undefined,
+    dueDate: parsed.dueDate,
     description: newDescription,
     subtasks: JSON.parse(subtasks),
     comments: JSON.parse(comments)

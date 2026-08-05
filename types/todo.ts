@@ -18,6 +18,7 @@ export interface Task {
   priority: string | null;
   creationDate: string;
   completionDate?: string;
+  dueDate?: string;
   description: string;
   subtasks: Subtask[];
   comments: Comment[];

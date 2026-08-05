@@ -7,35 +7,57 @@ import { TaskList } from '@/components/TaskList';
 import { TaskDetails } from '@/components/TaskDetails';
 import { CommandInput } from '@/components/CommandInput';
 import { StatusBar } from '@/components/StatusBar';
+import { LoginScreen } from '@/components/LoginScreen';
 
 export default function UtilitarianTodoPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authRequired, setAuthRequired] = useState(false);
+  const [authenticated, setAuthenticated] = useState(true);
+
   const [commandQuery, setCommandQuery] = useState('');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeFilter, setActiveFilter] = useState('');
   const [isLightMode, setIsLightMode] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
-  // Fetch tasks from API on mount
-  useEffect(() => {
-    let mounted = true;
-    fetch('/api/tasks')
-      .then(res => res.json())
-      .then(data => {
-        if (mounted && Array.isArray(data)) {
-          setTasks(data);
-          if (data.length > 0) {
-            setSelectedTask(data[0]);
+  // Check Auth & Fetch Tasks on Mount
+  const fetchTasksAndAuth = async () => {
+    try {
+      const authRes = await fetch('/api/auth');
+      const authData = await authRes.json();
+      setAuthRequired(Boolean(authData.authRequired));
+      setAuthenticated(Boolean(authData.authenticated));
+
+      if (authData.authenticated || !authData.authRequired) {
+        const tasksRes = await fetch('/api/tasks');
+        if (tasksRes.ok) {
+          const tasksData = await tasksRes.json();
+          if (Array.isArray(tasksData)) {
+            setTasks(tasksData);
+            if (tasksData.length > 0) {
+              setSelectedTask(tasksData[0]);
+            }
           }
-          setLoading(false);
         }
-      })
-      .catch(err => {
-        console.error('Error fetching tasks:', err);
-        if (mounted) setLoading(false);
-      });
-    return () => { mounted = false; };
+      }
+    } catch (err) {
+      console.error('Initialization error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasksAndAuth();
   }, []);
+
+  const handleLogout = async () => {
+    await fetch('/api/auth', { method: 'DELETE' });
+    setAuthenticated(false);
+    setTasks([]);
+    setSelectedTask(null);
+  };
 
   const filteredTasks = useMemo(() => {
     let result = tasks;
@@ -143,9 +165,21 @@ export default function UtilitarianTodoPage() {
 
   if (loading) {
     return (
-      <div className={`flex items-center justify-center h-screen font-mono ${rootThemeClass}`}>
-        Loading Database...
+      <div className={`flex items-center justify-center h-screen font-mono text-sm ${rootThemeClass}`}>
+        Loading System...
       </div>
+    );
+  }
+
+  if (authRequired && !authenticated) {
+    return (
+      <LoginScreen
+        onLoginSuccess={() => {
+          setAuthenticated(true);
+          fetchTasksAndAuth();
+        }}
+        isLight={isLightMode}
+      />
     );
   }
 
@@ -155,6 +189,8 @@ export default function UtilitarianTodoPage() {
         commandQuery={commandQuery}
         setCommandQuery={setCommandQuery}
         onCommandSubmit={handleCommandSubmit}
+        onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+        activeFilter={activeFilter}
         isLight={isLightMode}
       />
 
@@ -164,6 +200,8 @@ export default function UtilitarianTodoPage() {
           onFilterClick={setActiveFilter}
           activeFilter={activeFilter}
           isLight={isLightMode}
+          isOpenMobile={isMobileSidebarOpen}
+          onCloseMobile={() => setIsMobileSidebarOpen(false)}
         />
         <TaskList
           tasks={filteredTasks}
@@ -173,7 +211,7 @@ export default function UtilitarianTodoPage() {
           onDeleteTask={handleDeleteTask}
           isLight={isLightMode}
         />
-        <div className={`absolute inset-y-0 right-0 z-20 transition-transform duration-200 ease-in-out transform ${selectedTask ? 'translate-x-0' : 'translate-x-full'} lg:relative lg:translate-x-0`}>
+        <div className={`fixed inset-0 z-30 transition-transform duration-200 ease-in-out transform ${selectedTask ? 'translate-x-0' : 'translate-x-full'} lg:relative lg:translate-x-0 lg:z-10`}>
           <TaskDetails
             task={selectedTask}
             onClose={() => setSelectedTask(null)}
@@ -189,6 +227,8 @@ export default function UtilitarianTodoPage() {
         activeFilter={activeFilter}
         isLightMode={isLightMode}
         onToggleTheme={() => setIsLightMode(!isLightMode)}
+        authRequired={authRequired}
+        onLogout={handleLogout}
       />
     </div>
   );

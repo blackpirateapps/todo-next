@@ -1,9 +1,9 @@
 # AI Handoff Document - Todo-Next (todo.txt & Turso DB)
 
 ## 📌 Project Overview
-`todo-next` is a lightweight, terminal-styled task manager heavily influenced by the **`todo.txt` format** and **Unix philosophy**. It provides a fast, minimalist interface with keyboard navigation, syntax highlighting for projects (`+project`), contexts (`@context`), priorities (`(A)`, `(B)`), and dual theme support (Dark/Light mode).
+`todo-next` is a lightweight, terminal-styled task manager heavily influenced by the **`todo.txt` format** and **Unix philosophy**. It provides a fast, minimalist interface with keyboard navigation, syntax highlighting for projects (`+project`), contexts (`@context`), priorities (`(A)`, `(B)`), due dates (`due:YYYY-MM-DD`), and dual theme support (Dark/Light mode).
 
-Recently refactored from a monolithic `page.tsx` into clean, maintainable modular components with full backend persistence powered by **Turso DB** (`@libsql/client`).
+Recently updated with **Password Authentication**, **Mobile Responsiveness**, **Editable Creation & Due Dates**, modular components, and backend persistence powered by **Turso DB** (`@libsql/client`).
 
 ---
 
@@ -12,27 +12,41 @@ Recently refactored from a monolithic `page.tsx` into clean, maintainable modula
 ```
 ├── app/
 │   ├── api/
+│   │   ├── auth/
+│   │   │   └── route.ts              # GET (auth status), POST (login), DELETE (logout)
 │   │   └── tasks/
 │   │       ├── route.ts              # GET (all tasks), POST (create task)
 │   │       └── [id]/
 │   │           └── route.ts          # PATCH (update task fields/subtasks/comments), DELETE (remove task)
 │   ├── globals.css                   # Tailwind v4 directives & font configurations
 │   ├── layout.tsx                    # Main HTML layout wrapper
-│   └── page.tsx                      # Modular main container managing state & API sync
+│   └── page.tsx                      # Main container managing auth state, mobile drawers & API sync
 ├── components/
-│   ├── CommandInput.tsx              # Terminal prompt (> input & :add command parsing)
-│   ├── FormattedText.tsx             # todo.txt syntax highlighter (priorities, projects, contexts)
-│   ├── Sidebar.tsx                   # Filter sidebar listing unique +projects and @contexts
-│   ├── StatusBar.tsx                 # Vim/Unix status bar displaying mode, task counters & theme toggle
-│   ├── TaskDetails.tsx               # Inspector drawer with editable description, subtasks, and comments
-│   └── TaskList.tsx                  # Tabular task view with status toggle and row selection
+│   ├── CommandInput.tsx              # Terminal prompt (> input, :add command & mobile filter drawer toggle)
+│   ├── FormattedText.tsx             # todo.txt syntax highlighter (+proj, @ctx, (A), due:YYYY-MM-DD)
+│   ├── LoginScreen.tsx               # Retro terminal-styled login screen for password protection
+│   ├── Sidebar.tsx                   # Filter sidebar listing unique +projects and @contexts (with mobile drawer)
+│   ├── StatusBar.tsx                 # Vim/Unix status bar displaying mode, task counters, theme toggle & logout
+│   ├── TaskDetails.tsx               # Inspector drawer with editable creation date, due date, description, subtasks, comments
+│   └── TaskList.tsx                  # Tabular task view optimized for touch & desktop
 ├── lib/
+│   ├── auth.ts                       # Password verification & session cookie helpers
 │   └── db.ts                         # Turso DB (@libsql/client) initialization, migration & CRUD helpers
 ├── types/
 │   └── todo.ts                       # TypeScript interfaces for Task, Subtask, and Comment
-├── .env.example                      # Example environment variables for Turso DB connection
+├── utils/
+│   └── todoParser.ts                 # Parsing & updating raw todo.txt text with creationDate & due:YYYY-MM-DD
+├── .env.example                      # Example environment variables (APP_PASSWORD, Turso DB)
 └── HANDOFF.md                        # AI Handoff Documentation (this document)
 ```
+
+---
+
+## 🔒 Password Protection (`APP_PASSWORD`)
+Authentication is controlled by the `APP_PASSWORD` environment variable.
+
+- **Enabled:** If `APP_PASSWORD` is set in `.env.local` or environment, the app displays `LoginScreen` and protects `/api/tasks` endpoints with HTTP-only session cookies.
+- **Disabled:** If `APP_PASSWORD` is omitted or empty, authentication is bypassed automatically.
 
 ---
 
@@ -41,63 +55,26 @@ Recently refactored from a monolithic `page.tsx` into clean, maintainable modula
 Persistence is handled by `@libsql/client`, which supports both local LibSQL SQLite files and cloud-hosted Turso DB clusters.
 
 ### Environment Setup (`.env.local`)
-To connect to a live Turso DB cluster in production, add the following environment variables:
-
 ```env
+APP_PASSWORD=your_secret_password
 TURSO_DATABASE_URL=libsql://your-database-name-org.turso.io
 TURSO_AUTH_TOKEN=your-turso-auth-token
 ```
 
 > **Fallback Mode:** If `TURSO_DATABASE_URL` is omitted, `lib/db.ts` automatically falls back to a local SQLite database file (`file:todo.db`), ensuring out-of-the-box local operation without external dependencies.
 
-### Database Schema (`tasks` table)
-```sql
-CREATE TABLE IF NOT EXISTS tasks (
-  id TEXT PRIMARY KEY,
-  raw TEXT NOT NULL,
-  completed INTEGER NOT NULL DEFAULT 0,
-  priority TEXT,
-  creation_date TEXT,
-  completion_date TEXT,
-  description TEXT DEFAULT '',
-  subtasks TEXT DEFAULT '[]',
-  comments TEXT DEFAULT '[]'
-);
-```
+---
+
+## 📅 Date & Due Date Support (`due:YYYY-MM-DD`)
+
+- **Creation Date**: Editable directly in the Inspector (`TaskDetails.tsx`). Updating it modifies the leading `YYYY-MM-DD` date in the task's `raw` string.
+- **Due Date**: Native `todo.txt` tag support (`due:YYYY-MM-DD`). Editable or clearable in the Inspector. Syncs dynamically with `raw` text and receives dedicated badge highlighting in `FormattedText.tsx`.
 
 ---
 
-## ⚙️ Inspector Functionality (Editable Fields)
+## 📱 Mobile Responsiveness
 
-The right-side Inspector panel (`TaskDetails.tsx`) allows interactive editing for:
-
-1. **Description**:
-   - Click `[Edit]` or click the description body to switch to a textarea.
-   - Save updates directly to Turso DB via `PATCH /api/tasks/[id]`.
-
-2. **Subtasks**:
-   - **Toggle**: Click `[ ]` / `[x]` to toggle subtask completion status.
-   - **Add**: Enter new subtask text in `+ add subtask...` input and press Enter.
-   - **Edit**: Click subtask text to edit inline.
-   - **Delete**: Click `[x]` next to any subtask to remove it.
-
-3. **Comments**:
-   - **Add**: Specify author (`@author`) and comment body, then click `Comment`.
-   - **Edit**: Click comment text to edit inline.
-   - **Delete**: Click `[x]` to remove a comment.
-
----
-
-## 🚀 Key Commands & NPM Scripts
-
-- `npm run dev`: Start Next.js development server
-- `npm run build`: Build production application bundle (Next.js 16 App Router)
-- `npm run start`: Run production server
-- `npm run lint`: Run ESLint checks
-- `npx tsc --noEmit`: Run TypeScript type checking
-
----
-
-## 🛠 Next.js 16 & Breaking API Conventions
-Per `AGENTS.md` and Next.js 16 conventions:
-- Dynamic API route parameters in `app/api/tasks/[id]/route.ts` treat `params` as a Promise: `{ params }: { params: Promise<{ id: string }> }`. Always `await params` before accessing route variables.
+- **Header / Prompt**: Scaled text and padding to prevent auto-zoom on mobile inputs.
+- **Mobile Filter Drawer**: Added `[Filters]` button on small screens to open a slide-over drawer for `+projects` and `@contexts`.
+- **Inspector Drawer**: Full-screen overlay with `[← Back]` button for mobile viewports.
+- **Touch-Friendly Controls**: Increased touch targets for checkboxes, delete buttons, and list rows.
