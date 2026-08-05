@@ -3,6 +3,7 @@ import { Task, Subtask, Comment } from '@/types/todo';
 import { updateRawDates, parseRawToStructured, buildRawFromStructured } from '@/utils/todoParser';
 import { FormattedText } from './FormattedText';
 import { SubtaskProgressBar } from './SubtaskProgressBar';
+import { ConfirmModal } from './ConfirmModal';
 
 interface TaskDetailsProps {
   task: Task | null;
@@ -48,6 +49,13 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
   const [newCommentText, setNewCommentText] = useState('');
   const [editingCommentIndex, setEditingCommentIndex] = useState<number | null>(null);
   const [editingCommentText, setEditingCommentText] = useState('');
+
+  // Deletion Confirmation State
+  const [pendingDelete, setPendingDelete] = useState<{
+    type: 'project' | 'context' | 'subtask' | 'comment';
+    title: string;
+    payload: any;
+  } | null>(null);
 
   useEffect(() => {
     if (task) {
@@ -127,7 +135,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
     setNewProjectInput('');
   };
 
-  const handleDeleteProject = (projToDelete: string) => {
+  const executeDeleteProject = (projToDelete: string) => {
     const updatedProjects = task.projects.filter(p => p !== projToDelete);
     const newRaw = buildRawFromStructured({
       title: task.title,
@@ -176,7 +184,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
     setNewContextInput('');
   };
 
-  const handleDeleteContext = (ctxToDelete: string) => {
+  const executeDeleteContext = (ctxToDelete: string) => {
     const updatedContexts = task.contexts.filter(c => c !== ctxToDelete);
     const newRaw = buildRawFromStructured({
       title: task.title,
@@ -273,7 +281,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
     setEditingSubtaskId(null);
   };
 
-  const handleDeleteSubtask = (subtaskId: string) => {
+  const executeDeleteSubtask = (subtaskId: string) => {
     const updatedSubtasks = task.subtasks.filter(st => st.id !== subtaskId);
     onUpdateTask(task.id, { subtasks: updatedSubtasks });
   };
@@ -305,9 +313,18 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
     setEditingCommentIndex(null);
   };
 
-  const handleDeleteComment = (index: number) => {
+  const executeDeleteComment = (index: number) => {
     const updatedComments = task.comments.filter((_, i) => i !== index);
     onUpdateTask(task.id, { comments: updatedComments });
+  };
+
+  const handleConfirmDelete = () => {
+    if (!pendingDelete) return;
+    if (pendingDelete.type === 'project') executeDeleteProject(pendingDelete.payload);
+    else if (pendingDelete.type === 'context') executeDeleteContext(pendingDelete.payload);
+    else if (pendingDelete.type === 'subtask') executeDeleteSubtask(pendingDelete.payload);
+    else if (pendingDelete.type === 'comment') executeDeleteComment(pendingDelete.payload);
+    setPendingDelete(null);
   };
 
   return (
@@ -504,7 +521,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
               >
                 {proj}
                 <button
-                  onClick={() => handleDeleteProject(proj)}
+                  onClick={() => setPendingDelete({ type: 'project', title: `project tag "${proj}"`, payload: proj })}
                   className="hover:text-red-500 focus:outline-none ml-1"
                 >
                   ×
@@ -552,7 +569,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
               >
                 {ctx}
                 <button
-                  onClick={() => handleDeleteContext(ctx)}
+                  onClick={() => setPendingDelete({ type: 'context', title: `context tag "${ctx}"`, payload: ctx })}
                   className="hover:text-red-500 focus:outline-none ml-1"
                 >
                   ×
@@ -692,7 +709,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
                 </div>
 
                 <button
-                  onClick={() => handleDeleteSubtask(st.id)}
+                  onClick={() => setPendingDelete({ type: 'subtask', title: `subtask "${st.title}"`, payload: st.id })}
                   className={`text-xs px-1 py-0.5 hover:text-red-500 focus:outline-none ${isLight ? 'text-gray-400' : 'text-gray-600'}`}
                 >
                   [x]
@@ -736,7 +753,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
                   <div className="flex items-center gap-2 text-xs">
                     <span>{comment.timestamp}</span>
                     <button
-                      onClick={() => handleDeleteComment(idx)}
+                      onClick={() => setPendingDelete({ type: 'comment', title: `comment by @${comment.author}`, payload: idx })}
                       className={`hover:text-red-500 focus:outline-none ${isLight ? 'text-gray-400' : 'text-gray-600'}`}
                     >
                       [x]
@@ -820,6 +837,15 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
           </form>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={Boolean(pendingDelete)}
+        title="DELETE ITEM"
+        message={pendingDelete ? `Are you sure you want to delete ${pendingDelete.title}?` : ''}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setPendingDelete(null)}
+        isLight={isLight}
+      />
     </div>
   );
 };

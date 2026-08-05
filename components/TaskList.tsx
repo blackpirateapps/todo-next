@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Task } from '@/types/todo';
 import { FormattedText } from './FormattedText';
 import { SubtaskProgressBar } from './SubtaskProgressBar';
+import { ConfirmModal } from './ConfirmModal';
 
 export type SortField = 'creationDate' | 'dueDate' | 'title' | 'priority';
 export type SortOrder = 'asc' | 'desc';
@@ -33,6 +34,9 @@ export const TaskList: React.FC<TaskListProps> = ({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [periodFilter, setPeriodFilter] = useState<string>('all');
+
+  // Delete Confirmation State
+  const [deletingTask, setDeletingTask] = useState<Task | null>(null);
 
   // Dynamically extract available months & years from tasks
   const periodOptions = useMemo(() => {
@@ -97,6 +101,13 @@ export const TaskList: React.FC<TaskListProps> = ({
 
     return result;
   }, [tasks, statusFilter, priorityFilter, periodFilter, sortField, sortOrder]);
+
+  const confirmDeleteTask = () => {
+    if (deletingTask) {
+      onDeleteTask(deletingTask.id);
+      setDeletingTask(null);
+    }
+  };
 
   return (
     <div className={`flex-1 flex flex-col h-full overflow-hidden outline-none ${isLight ? 'bg-white' : 'bg-black'}`} tabIndex={0}>
@@ -228,7 +239,10 @@ export const TaskList: React.FC<TaskListProps> = ({
                   </td>
                   <td
                     className={`w-12 text-center py-2.5 border-l ${isLight ? 'border-gray-200' : 'border-gray-800/50'}`}
-                    onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeletingTask(task);
+                    }}
                   >
                     <button className={`focus:outline-none p-1 text-xs hover:text-red-500 ${isLight ? 'text-gray-400' : 'text-gray-600'}`}>
                       [del]
@@ -247,6 +261,15 @@ export const TaskList: React.FC<TaskListProps> = ({
           </tbody>
         </table>
       </div>
+
+      <ConfirmModal
+        isOpen={Boolean(deletingTask)}
+        title="DELETE TASK"
+        message={deletingTask ? `Are you sure you want to delete task "${deletingTask.raw}"?` : ''}
+        onConfirm={confirmDeleteTask}
+        onCancel={() => setDeletingTask(null)}
+        isLight={isLight}
+      />
     </div>
   );
 };

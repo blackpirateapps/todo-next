@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Template } from '@/types/todo';
 import { resolveTemplateTokens } from '@/utils/templateEngine';
 import { FormattedText } from './FormattedText';
+import { ConfirmModal } from './ConfirmModal';
 
 interface TemplateModalProps {
   isOpen: boolean;
@@ -25,6 +26,9 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
   const [activeTab, setActiveTab] = useState<'gallery' | 'builder'>('gallery');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Delete Confirmation State
+  const [deletingTemplate, setDeletingTemplate] = useState<Template | null>(null);
+
   // Builder State
   const [builderName, setBuilderName] = useState('');
   const [builderRaw, setBuilderRaw] = useState('');
@@ -42,6 +46,13 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
   const handleUseTemplate = (templateId: string) => {
     onInstantiateTemplate(templateId);
     onClose();
+  };
+
+  const confirmDeleteTemplate = () => {
+    if (deletingTemplate) {
+      onDeleteTemplate(deletingTemplate.id);
+      setDeletingTemplate(null);
+    }
   };
 
   const handleSaveBuilder = (e: React.FormEvent) => {
@@ -169,7 +180,7 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
                           [ Use Template ]
                         </button>
                         <button
-                          onClick={() => onDeleteTemplate(tmpl.id)}
+                          onClick={() => setDeletingTemplate(tmpl)}
                           className={`px-2 py-1 border text-xs hover:text-red-500 ${
                             isLight ? 'border-gray-300 text-gray-500' : 'border-gray-800 text-gray-500'
                           }`}
@@ -294,6 +305,15 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
           </form>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={Boolean(deletingTemplate)}
+        title="DELETE TEMPLATE"
+        message={deletingTemplate ? `Are you sure you want to delete template "${deletingTemplate.name}"?` : ''}
+        onConfirm={confirmDeleteTemplate}
+        onCancel={() => setDeletingTemplate(null)}
+        isLight={isLight}
+      />
     </div>
   );
 };
