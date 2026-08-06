@@ -62,7 +62,10 @@ Recently updated with:
 │       └── build-flutter-apk.yml     # GitHub Actions CI workflow building Android APK
 ├── app/
 │   ├── api/
-│   │   ├── auth/route.ts
+│   │   ├── auth/
+│   │   │   ├── route.ts
+│   │   │   ├── legacy-verify/route.ts # Verify APP_PASSWORD env variable for bpx migration
+│   │   │   └── migrate-bpx/route.ts   # Execute zero-data-loss migration for account bpx
 │   │   ├── health/route.ts           # Diagnostic endpoint for DB & Vercel serverless health
 │   │   ├── recurring/route.ts        # Endpoint for listing recurring schedules
 │   │   ├── tasks/
@@ -80,9 +83,9 @@ Recently updated with:
 │   ├── CommandInput.tsx              # :rec, :skip, :recurring terminal commands
 │   ├── ConfirmModal.tsx
 │   ├── FormattedText.tsx
-│   ├── LoginScreen.tsx
+│   ├── LoginScreen.tsx               # Firebase Auth login/signup & bpx migration wizard
 │   ├── Sidebar.tsx
-│   ├── StatusBar.tsx
+│   ├── StatusBar.tsx                 # Displays logged-in user email and sync indicator
 │   ├── SubtaskProgressBar.tsx
 │   ├── SyntaxGuideModal.tsx          # rec: syntax guide documentation
 │   ├── TaskDetails.tsx              # Recurrence pattern control card & presets
