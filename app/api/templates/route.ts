@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
 import { getAllTemplates, insertTemplate } from '@/lib/db';
-import { isAuthenticated } from '@/lib/auth';
+import { getAuthenticatedUser } from '@/lib/auth';
 import { Template } from '@/types/todo';
 
 export async function GET() {
-  if (!(await isAuthenticated())) {
+  const user = await getAuthenticatedUser();
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const templates = await getAllTemplates();
+    const templates = await getAllTemplates(user.uid);
     return NextResponse.json(templates);
   } catch (error: any) {
     console.error('[GET /api/templates Error]:', {
@@ -27,7 +28,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!(await isAuthenticated())) {
+  const user = await getAuthenticatedUser();
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -37,7 +39,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid template payload' }, { status: 400 });
     }
 
-    const newTemplate = await insertTemplate(body);
+    const newTemplate = await insertTemplate(body, user.uid);
     return NextResponse.json(newTemplate, { status: 201 });
   } catch (error: any) {
     console.error('[POST /api/templates Error]:', {

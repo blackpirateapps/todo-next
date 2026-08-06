@@ -1,19 +1,20 @@
 import { NextResponse } from 'next/server';
 import { getAllTasks, updateTaskInDb, insertTask } from '@/lib/db';
-import { isAuthenticated } from '@/lib/auth';
+import { getAuthenticatedUser } from '@/lib/auth';
 import { spawnNextRecurrenceInstance } from '@/utils/recurrenceEngine';
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isAuthenticated())) {
+  const user = await getAuthenticatedUser();
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     const { id } = await params;
-    const allTasks = await getAllTasks();
+    const allTasks = await getAllTasks(user.uid);
     const existingTask = allTasks.find(t => t.id === id);
 
     if (!existingTask) {
@@ -34,13 +35,13 @@ export async function POST(
       status: 'completed',
       completionDate,
       raw: newRaw
-    });
+    }, user.uid);
 
     let nextTask = null;
     if (existingTask.recurrence) {
       const spawned = spawnNextRecurrenceInstance(existingTask, completionDate);
       if (spawned) {
-        nextTask = await insertTask(spawned);
+        nextTask = await insertTask(spawned, user.uid);
       }
     }
 

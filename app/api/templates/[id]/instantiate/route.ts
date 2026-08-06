@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { instantiateTaskFromTemplateId } from '@/lib/db';
-import { isAuthenticated } from '@/lib/auth';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isAuthenticated())) {
+  const user = await getAuthenticatedUser();
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -15,7 +16,7 @@ export async function POST(
     const body = await request.json().catch(() => ({}));
     const varOverrides = body.varOverrides || {};
 
-    const newTask = await instantiateTaskFromTemplateId(id, varOverrides);
+    const newTask = await instantiateTaskFromTemplateId(id, varOverrides, user.uid);
     if (!newTask) {
       return NextResponse.json({ error: 'Template not found' }, { status: 404 });
     }

@@ -1,19 +1,20 @@
 import { NextResponse } from 'next/server';
 import { getAllTasks, updateTaskInDb } from '@/lib/db';
-import { isAuthenticated } from '@/lib/auth';
+import { getAuthenticatedUser } from '@/lib/auth';
 import { skipRecurrenceOccurrence } from '@/utils/recurrenceEngine';
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isAuthenticated())) {
+  const user = await getAuthenticatedUser();
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     const { id } = await params;
-    const allTasks = await getAllTasks();
+    const allTasks = await getAllTasks(user.uid);
     const existingTask = allTasks.find(t => t.id === id);
 
     if (!existingTask) {
@@ -28,7 +29,7 @@ export async function POST(
     const updatedTask = await updateTaskInDb(id, {
       dueDate: skippedTask.dueDate,
       raw: skippedTask.raw
-    });
+    }, user.uid);
 
     return NextResponse.json({ updatedTask });
   } catch (error: any) {

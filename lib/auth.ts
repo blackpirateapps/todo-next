@@ -1,34 +1,38 @@
 import { cookies, headers } from 'next/headers';
-import crypto from 'crypto';
+import { verifyFirebaseIdToken } from './firebaseAdmin';
 
-export function getExpectedSessionToken(): string | null {
-  const password = process.env.APP_PASSWORD;
-  if (!password) return null;
-  return crypto.createHash('sha256').update(password).digest('hex');
+export function getExpectedLegacyPassword(): string | null {
+  return process.env.APP_PASSWORD || null;
 }
 
-export function isAuthRequired(): boolean {
-  return Boolean(process.env.APP_PASSWORD);
-}
-
-export async function isAuthenticated(): Promise<boolean> {
-  const expectedToken = getExpectedSessionToken();
-  if (!expectedToken) return true; // Password not set, open access
-
-  const headerStore = await headers();
-  const bearerToken = headerStore.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
-  const customHeaderToken = headerStore.get('x-app-session')?.trim();
-  if (bearerToken === expectedToken || customHeaderToken === expectedToken) {
-    return true;
-  }
-
-  const cookieStore = await cookies();
-  const sessionToken = cookieStore.get('app_session')?.value;
-  return sessionToken === expectedToken;
-}
-
-export function verifyPassword(password: string): boolean {
+export function verifyLegacyPassword(password: string): boolean {
   const expectedPassword = process.env.APP_PASSWORD;
   if (!expectedPassword) return true;
   return password === expectedPassword;
+}
+
+export async function getAuthenticatedUser(): Promise<{ uid: string; email?: string } | null> {
+  const headerStore = await headers();
+  const authHeader = headerStore.get('authorization');
+  const customHeaderToken = headerStore.get('x-app-session')?.trim();
+
+  let token = customHeaderToken;
+  if (!token && authHeader) {
+    token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  }
+
+  if (!token) {
+    const cookieStore = await cookies();
+    token = cookieStore.get('app_session')?.value;
+  }
+
+  if (!token) return null;
+
+  const verified = await verifyFirebaseIdToken(token);
+  return verified;
+}
+
+export async function isAuthenticated(): Promise<boolean> {
+  const user = await getAuthenticatedUser();
+  return Boolean(user);
 }

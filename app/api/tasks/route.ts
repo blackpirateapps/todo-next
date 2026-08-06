@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
 import { getAllTasks, insertTask } from '@/lib/db';
-import { isAuthenticated } from '@/lib/auth';
+import { getAuthenticatedUser } from '@/lib/auth';
 import { Task } from '@/types/todo';
 
 export async function GET() {
-  if (!(await isAuthenticated())) {
+  const user = await getAuthenticatedUser();
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const tasks = await getAllTasks();
+    const tasks = await getAllTasks(user.uid);
     return NextResponse.json(tasks);
   } catch (error: any) {
     console.error('[GET /api/tasks Error]:', {
@@ -27,7 +28,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!(await isAuthenticated())) {
+  const user = await getAuthenticatedUser();
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -37,7 +39,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid task payload' }, { status: 400 });
     }
 
-    const newTask = await insertTask(body);
+    const newTask = await insertTask(body, user.uid);
     return NextResponse.json(newTask, { status: 201 });
   } catch (error: any) {
     console.error('[POST /api/tasks Error]:', {

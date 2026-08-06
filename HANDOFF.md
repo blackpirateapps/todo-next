@@ -4,6 +4,14 @@
 `todo-next` (Title: **Todo Next**) is a lightweight, terminal-styled task manager heavily influenced by the **`todo.txt` format** and **Unix philosophy**. It provides a fast, minimalist interface with keyboard navigation, syntax highlighting for projects (`+project`), contexts (`@context`), priorities (`(A)`, `(B)`), due dates (`due:YYYY-MM-DD`), dual theme support (Dark/Light mode), and full **List & Calendar views**.
 
 Recently updated with:
+- **Full SaaS Conversion & Firebase Authentication**:
+  - Converted app from single-user to multi-tenant SaaS application allowing open user sign-up and log-in with email & password via Firebase Auth.
+  - Multi-tenancy database schema: added `users` table (`id`, `email`, `username`, `is_migrated`, `created_at`) and `user_id` foreign keys to `tasks` and `templates`.
+  - Endpoint security: all API routes (`/api/tasks`, `/api/templates`, etc.) verify Firebase ID tokens passed via `Authorization: Bearer <token>`, `x-app-session`, or HTTP cookies.
+- **Zero-Data-Loss Legacy Migration Engine (`bpx` / `hi@sudipx.in`)**:
+  - Legacy single-user data migration wizard built into `LoginScreen.tsx` for account `bpx` (`hi@sudipx.in`).
+  - Verifies legacy environment password (`APP_PASSWORD`), allows user to set a new password, registers the Firebase account, and atomically re-assigns all pre-existing single-user tasks and templates to `bpx`'s Firebase UID.
+  - Diagnostic endpoints added: `POST /api/auth/legacy-verify` and `POST /api/auth/migrate-bpx`.
 - **Serverless Vercel 500 Error Prevention & Health Diagnostics**:
   - Fixed read-only filesystem crash on Vercel when `TURSO_DATABASE_URL` is omitted by defaulting to `file:/tmp/todo.db` in serverless environments (`process.env.VERCEL`).
   - Added comprehensive `console.error()` logging with stack traces, request context, and environment status across all API routes (`/api/tasks`, `/api/templates`, `/api/auth`).

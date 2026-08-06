@@ -13,6 +13,8 @@ import { TemplateModal } from '@/components/TemplateModal';
 import { updateRawDates, parseRawToStructured, buildRawFromStructured } from '@/utils/todoParser';
 import { instantiateTaskFromTemplate } from '@/utils/templateEngine';
 import { spawnNextRecurrenceInstance, skipRecurrenceOccurrence } from '@/utils/recurrenceEngine';
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged, signOut, getIdToken, User } from 'firebase/auth';
 
 interface PendingMutation {
   type: 'CREATE' | 'UPDATE' | 'DELETE' | 'CREATE_TEMPLATE' | 'DELETE_TEMPLATE';
@@ -24,8 +26,8 @@ export default function UtilitarianTodoPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
-  const [authRequired, setAuthRequired] = useState(false);
-  const [authenticated, setAuthenticated] = useState(true);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isBpxMigrated, setIsBpxMigrated] = useState(false);
 
   const [activeView, setActiveView] = useState<'list' | 'calendar'>('list');
   const [commandQuery, setCommandQuery] = useState('');
@@ -65,6 +67,17 @@ export default function UtilitarianTodoPage() {
     } catch {}
   }, [pendingQueue]);
 
+  // Helper to get auth header
+  const getAuthHeaders = useCallback(async (): Promise<Record<string, string>> => {
+    if (!auth.currentUser) return { 'Content-Type': 'application/json' };
+    const token = await getIdToken(auth.currentUser);
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      'x-app-session': token
+    };
+  }, []);
+
   // Flush Pending Sync Queue to DB backend
   const flushSyncQueue = useCallback(async () => {
     if (pendingQueue.length === 0) {
@@ -74,38 +87,41 @@ export default function UtilitarianTodoPage() {
 
     setSyncStatus('syncing');
     const remaining: PendingMutation[] = [];
+    const headers = await getAuthHeaders();
 
     for (const item of pendingQueue) {
       try {
         if (item.type === 'CREATE') {
           const res = await fetch('/api/tasks', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify(item.data),
           });
           if (!res.ok) remaining.push(item);
         } else if (item.type === 'UPDATE') {
           const res = await fetch(`/api/tasks/${item.id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify(item.data),
           });
           if (!res.ok) remaining.push(item);
         } else if (item.type === 'DELETE') {
           const res = await fetch(`/api/tasks/${item.id}`, {
             method: 'DELETE',
+            headers
           });
           if (!res.ok) remaining.push(item);
         } else if (item.type === 'CREATE_TEMPLATE') {
           const res = await fetch('/api/templates', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify(item.data),
           });
           if (!res.ok) remaining.push(item);
         } else if (item.type === 'DELETE_TEMPLATE') {
           const res = await fetch(`/api/templates/${item.id}`, {
             method: 'DELETE',
+            headers
           });
           if (!res.ok) remaining.push(item);
         }
@@ -120,7 +136,7 @@ export default function UtilitarianTodoPage() {
     } else {
       setSyncStatus(navigator.onLine ? 'unsaved' : 'offline');
     }
-  }, [pendingQueue]);
+  }, [pendingQueue, getAuthHeaders]);
 
   // Check Online/Offline Network Status
   useEffect(() => {
@@ -145,66 +161,83 @@ export default function UtilitarianTodoPage() {
     };
   }, [pendingQueue.length, flushSyncQueue]);
 
-  // Check Auth, Fetch Tasks & Templates on Mount
-  const fetchTasksAndAuth = async () => {
+  // Fetch Tasks & Templates for authenticated user
+  const fetchTasksAndTemplates = useCallback(async () => {
     try {
-      const authRes = await fetch('/api/auth');
-      const authData = await authRes.json();
-      setAuthRequired(Boolean(authData.authRequired));
-      setAuthenticated(Boolean(authData.authenticated));
+      const headers = await getAuthHeaders();
 
-      if (authData.authenticated || !authData.authRequired) {
-        try {
-          const tasksRes = await fetch('/api/tasks');
-          if (tasksRes.ok) {
-            const tasksData = await tasksRes.json();
-            if (Array.isArray(tasksData)) {
-              setTasks(tasksData);
-              localStorage.setItem('todo_next_cached_tasks', JSON.stringify(tasksData));
-              if (tasksData.length > 0) {
-                setSelectedTask(tasksData[0]);
-              }
-            }
-          }
+      const authRes = await fetch('/api/auth', { headers });
+      if (authRes.ok) {
+        const authData = await authRes.json();
+        setIsBpxMigrated(Boolean(authData.isBpxMigrated));
+      }
 
-          const templatesRes = await fetch('/api/templates');
-          if (templatesRes.ok) {
-            const templatesData = await templatesRes.json();
-            if (Array.isArray(templatesData)) {
-              setTemplates(templatesData);
-              localStorage.setItem('todo_next_cached_templates', JSON.stringify(templatesData));
-            }
+      const tasksRes = await fetch('/api/tasks', { headers });
+      if (tasksRes.ok) {
+        const tasksData = await tasksRes.json();
+        if (Array.isArray(tasksData)) {
+          setTasks(tasksData);
+          localStorage.setItem('todo_next_cached_tasks', JSON.stringify(tasksData));
+          if (tasksData.length > 0) {
+            setSelectedTask(tasksData[0]);
           }
-        } catch {
-          // Offline fallback
-          const cachedTasks = localStorage.getItem('todo_next_cached_tasks');
-          if (cachedTasks) {
-            const parsed = JSON.parse(cachedTasks);
-            setTasks(parsed);
-            if (parsed.length > 0) setSelectedTask(parsed[0]);
-          }
-          const cachedTmpls = localStorage.getItem('todo_next_cached_templates');
-          if (cachedTmpls) {
-            const parsed = JSON.parse(cachedTmpls);
-            setTemplates(parsed);
-          }
-          setSyncStatus('offline');
         }
       }
-    } catch (err) {
-      console.error('Initialization error:', err);
+
+      const templatesRes = await fetch('/api/templates', { headers });
+      if (templatesRes.ok) {
+        const templatesData = await templatesRes.json();
+        if (Array.isArray(templatesData)) {
+          setTemplates(templatesData);
+          localStorage.setItem('todo_next_cached_templates', JSON.stringify(templatesData));
+        }
+      }
+    } catch {
+      // Offline fallback
+      const cachedTasks = localStorage.getItem('todo_next_cached_tasks');
+      if (cachedTasks) {
+        const parsed = JSON.parse(cachedTasks);
+        setTasks(parsed);
+        if (parsed.length > 0) setSelectedTask(parsed[0]);
+      }
+      const cachedTmpls = localStorage.getItem('todo_next_cached_templates');
+      if (cachedTmpls) {
+        const parsed = JSON.parse(cachedTmpls);
+        setTemplates(parsed);
+      }
+      setSyncStatus('offline');
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthHeaders]);
 
+  // Firebase Auth State Observer
   useEffect(() => {
-    fetchTasksAndAuth();
-  }, []);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user);
+      if (user) {
+        const token = await getIdToken(user);
+        await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token })
+        });
+        await fetchTasksAndTemplates();
+      } else {
+        setTasks([]);
+        setTemplates([]);
+        setSelectedTask(null);
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [fetchTasksAndTemplates]);
 
   const handleLogout = async () => {
+    await signOut(auth);
     await fetch('/api/auth', { method: 'DELETE' });
-    setAuthenticated(false);
+    setCurrentUser(null);
     setTasks([]);
     setSelectedTask(null);
   };
@@ -266,10 +299,11 @@ export default function UtilitarianTodoPage() {
     // Backend update or queue
     setSyncStatus('syncing');
     try {
+      const headers = await getAuthHeaders();
       if (isNowCompleted && taskToUpdate.recurrence) {
         const res = await fetch(`/api/tasks/${id}/complete`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ completionDate: today }),
         });
         if (res.ok && pendingQueue.length === 0) {
@@ -283,7 +317,7 @@ export default function UtilitarianTodoPage() {
       } else {
         const res = await fetch(`/api/tasks/${id}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(updates),
         });
         if (res.ok && pendingQueue.length === 0) {
@@ -319,7 +353,8 @@ export default function UtilitarianTodoPage() {
 
     setSyncStatus('syncing');
     try {
-      const res = await fetch(`/api/tasks/${id}/skip`, { method: 'POST' });
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/tasks/${id}/skip`, { method: 'POST', headers });
       if (res.ok && pendingQueue.length === 0) {
         setSyncStatus('synced');
       } else {
@@ -344,9 +379,10 @@ export default function UtilitarianTodoPage() {
     // Backend update or queue
     setSyncStatus('syncing');
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch(`/api/tasks/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(updates),
       });
       if (res.ok && pendingQueue.length === 0) {
@@ -386,9 +422,10 @@ export default function UtilitarianTodoPage() {
     // Backend update or queue
     setSyncStatus('syncing');
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch(`/api/tasks/${taskId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(updates),
       });
       if (res.ok && pendingQueue.length === 0) {
@@ -418,7 +455,8 @@ export default function UtilitarianTodoPage() {
 
     setSyncStatus('syncing');
     try {
-      const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE', headers });
       if (res.ok && pendingQueue.length === 0) {
         setSyncStatus('synced');
       } else {
@@ -447,9 +485,10 @@ export default function UtilitarianTodoPage() {
     // Backend instantiation call
     setSyncStatus('syncing');
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch(`/api/templates/${tmpl.id}/instantiate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({}),
       });
       if (res.ok && pendingQueue.length === 0) {
@@ -471,9 +510,10 @@ export default function UtilitarianTodoPage() {
 
     setSyncStatus('syncing');
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch('/api/templates', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(newTmpl),
       });
       if (res.ok && pendingQueue.length === 0) {
@@ -495,7 +535,8 @@ export default function UtilitarianTodoPage() {
 
     setSyncStatus('syncing');
     try {
-      const res = await fetch(`/api/templates/${templateId}`, { method: 'DELETE' });
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/templates/${templateId}`, { method: 'DELETE', headers });
       if (res.ok && pendingQueue.length === 0) {
         setSyncStatus('synced');
       } else {
@@ -661,9 +702,10 @@ export default function UtilitarianTodoPage() {
 
       setSyncStatus('syncing');
       try {
+        const headers = await getAuthHeaders();
         const res = await fetch('/api/tasks', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(newTask),
         });
         if (res.ok && pendingQueue.length === 0) {
@@ -684,19 +726,17 @@ export default function UtilitarianTodoPage() {
   if (loading) {
     return (
       <div className={`flex items-center justify-center h-screen font-mono text-sm ${rootThemeClass}`}>
-        Loading System...
+        Loading Todo-Next SaaS System...
       </div>
     );
   }
 
-  if (authRequired && !authenticated) {
+  if (!currentUser) {
     return (
       <LoginScreen
-        onLoginSuccess={() => {
-          setAuthenticated(true);
-          fetchTasksAndAuth();
-        }}
+        onLoginSuccess={fetchTasksAndTemplates}
         isLight={isLightMode}
+        isBpxMigrated={isBpxMigrated}
       />
     );
   }
@@ -764,7 +804,8 @@ export default function UtilitarianTodoPage() {
         activeFilter={activeFilter}
         isLightMode={isLightMode}
         onToggleTheme={() => setIsLightMode(!isLightMode)}
-        authRequired={authRequired}
+        authRequired={true}
+        userEmail={currentUser.email}
         onLogout={handleLogout}
         syncStatus={syncStatus}
         pendingCount={pendingQueue.length}

@@ -111,6 +111,17 @@ export async function initDb() {
   try {
     await db.execute('PRAGMA foreign_keys = ON;');
 
+    // Create Users Table for SaaS
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        username TEXT UNIQUE,
+        is_migrated INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL
+      );
+    `);
+
     // Create Relational Tasks Tables
     await db.execute(`
       CREATE TABLE IF NOT EXISTS tasks (
@@ -124,7 +135,8 @@ export async function initDb() {
         due_time TEXT,
         description TEXT DEFAULT '',
         recurrence TEXT DEFAULT NULL,
-        parent_recurring_id TEXT DEFAULT NULL
+        parent_recurring_id TEXT DEFAULT NULL,
+        user_id TEXT DEFAULT NULL
       );
     `);
 
@@ -175,7 +187,8 @@ export async function initDb() {
         raw_template TEXT NOT NULL,
         description TEXT DEFAULT '',
         created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
+        updated_at TEXT NOT NULL,
+        user_id TEXT DEFAULT NULL
       );
     `);
 
@@ -224,7 +237,10 @@ export async function initDb() {
           completion_date TEXT,
           due_date TEXT,
           due_time TEXT,
-          description TEXT DEFAULT ''
+          description TEXT DEFAULT '',
+          recurrence TEXT DEFAULT NULL,
+          parent_recurring_id TEXT DEFAULT NULL,
+          user_id TEXT DEFAULT NULL
         );
       `);
 
@@ -241,12 +257,15 @@ export async function initDb() {
           parsed.completionDate || (legacy.completion_date ? String(legacy.completion_date) : null),
           parsed.dueDate ? String(parsed.dueDate) : null,
           parsed.dueTime ? String(parsed.dueTime) : null,
-          String(legacy.description || '')
+          String(legacy.description || ''),
+          parsed.recurrence ? String(parsed.recurrence) : null,
+          null,
+          legacy.user_id ? String(legacy.user_id) : null
         ];
 
         await db.execute({
-          sql: `INSERT INTO tasks_normalized (id, title, status, priority, creation_date, completion_date, due_date, due_time, description)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          sql: `INSERT INTO tasks_normalized (id, title, status, priority, creation_date, completion_date, due_date, due_time, description, recurrence, parent_recurring_id, user_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           args: normArgs
         });
 
@@ -290,16 +309,22 @@ export async function initDb() {
     }
 
     const currentCols = await db.execute("PRAGMA table_info(tasks)");
-    const hasRecurrenceCol = currentCols.rows.some(row => row.name === 'recurrence');
-    if (!hasRecurrenceCol) {
+    if (!currentCols.rows.some(row => row.name === 'recurrence')) {
       await db.execute("ALTER TABLE tasks ADD COLUMN recurrence TEXT DEFAULT NULL;");
     }
-    const hasParentRecurringCol = currentCols.rows.some(row => row.name === 'parent_recurring_id');
-    if (!hasParentRecurringCol) {
+    if (!currentCols.rows.some(row => row.name === 'parent_recurring_id')) {
       await db.execute("ALTER TABLE tasks ADD COLUMN parent_recurring_id TEXT DEFAULT NULL;");
     }
+    if (!currentCols.rows.some(row => row.name === 'user_id')) {
+      await db.execute("ALTER TABLE tasks ADD COLUMN user_id TEXT DEFAULT NULL;");
+    }
 
-    // Initial Seed for Tasks
+    const currentTmplCols = await db.execute("PRAGMA table_info(templates)");
+    if (!currentTmplCols.rows.some(row => row.name === 'user_id')) {
+      await db.execute("ALTER TABLE templates ADD COLUMN user_id TEXT DEFAULT NULL;");
+    }
+
+    // Initial Seed for Tasks if empty
     const countRes = await db.execute('SELECT COUNT(*) as count FROM tasks');
     const count = Number(countRes.rows[0]?.count ?? 0);
 
@@ -308,8 +333,8 @@ export async function initDb() {
         const parsed = parseRawToStructured(initTask.raw);
 
         await db.execute({
-          sql: `INSERT INTO tasks (id, title, status, priority, creation_date, completion_date, due_date, due_time, description)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          sql: `INSERT INTO tasks (id, title, status, priority, creation_date, completion_date, due_date, due_time, description, user_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
           args: [
             initTask.id,
             parsed.title,
@@ -353,7 +378,7 @@ export async function initDb() {
       }
     }
 
-    // Initial Seed for Templates
+    // Initial Seed for Templates if empty
     const tmplCountRes = await db.execute('SELECT COUNT(*) as count FROM templates');
     const tmplCount = Number(tmplCountRes.rows[0]?.count ?? 0);
 
@@ -363,8 +388,8 @@ export async function initDb() {
         const parsed = parseRawToStructured(t.rawTemplate);
 
         await db.execute({
-          sql: `INSERT INTO templates (id, name, raw_template, description, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?)`,
+          sql: `INSERT INTO templates (id, name, raw_template, description, created_at, updated_at, user_id)
+                VALUES (?, ?, ?, ?, ?, ?, NULL)`,
           args: [t.id, t.name, t.rawTemplate, t.description, nowStr, nowStr]
         });
 
@@ -403,11 +428,64 @@ export async function initDb() {
   }
 }
 
+// --- LEGACY MIGRATION HELPERS ---
+
+export async function migrateLegacyDataToUser(userId: string, email: string, username = 'bpx') {
+  await initDb();
+  const now = new Date().toISOString();
+
+  await db.execute({
+    sql: `INSERT OR REPLACE INTO users (id, email, username, is_migrated, created_at)
+          VALUES (?, ?, ?, 1, ?)`,
+    args: [userId, email, username, now]
+  });
+
+  await db.execute({
+    sql: `UPDATE tasks SET user_id = ? WHERE user_id IS NULL`,
+    args: [userId]
+  });
+
+  await db.execute({
+    sql: `UPDATE templates SET user_id = ? WHERE user_id IS NULL`,
+    args: [userId]
+  });
+
+  console.log(`[Legacy Migration Complete]: Successfully assigned all unassigned tasks and templates to user ${userId} (${email} / ${username}).`);
+}
+
+export async function isBpxMigrated(): Promise<boolean> {
+  await initDb();
+  const res = await db.execute({
+    sql: `SELECT is_migrated FROM users WHERE username = 'bpx' OR email = 'hi@sudipx.in' OR email = 'bpx@todo-next.local'`,
+    args: []
+  });
+  if (res.rows.length === 0) return false;
+  return Number(res.rows[0].is_migrated) === 1;
+}
+
+export async function registerUserInDb(userId: string, email: string, username?: string) {
+  await initDb();
+  const now = new Date().toISOString();
+  await db.execute({
+    sql: `INSERT OR IGNORE INTO users (id, email, username, is_migrated, created_at)
+          VALUES (?, ?, ?, 0, ?)`,
+    args: [userId, email, username || email.split('@')[0], now]
+  });
+}
+
 // --- TASK CRUD OPERATIONS ---
 
-export async function getAllTasks(): Promise<Task[]> {
+export async function getAllTasks(userId?: string): Promise<Task[]> {
   await initDb();
-  const tasksRes = await db.execute('SELECT * FROM tasks ORDER BY id ASC');
+  let sql = 'SELECT * FROM tasks ORDER BY id ASC';
+  const args: InValue[] = [];
+
+  if (userId) {
+    sql = 'SELECT * FROM tasks WHERE user_id = ? OR user_id IS NULL ORDER BY id ASC';
+    args.push(userId);
+  }
+
+  const tasksRes = await db.execute({ sql, args });
   const projectsRes = await db.execute('SELECT * FROM task_projects');
   const contextsRes = await db.execute('SELECT * FROM task_contexts');
   const subtasksRes = await db.execute('SELECT * FROM subtasks');
@@ -510,7 +588,7 @@ export async function getAllTasks(): Promise<Task[]> {
   });
 }
 
-export async function insertTask(task: Task): Promise<Task> {
+export async function insertTask(task: Task, userId?: string): Promise<Task> {
   await initDb();
   const parsed = parseRawToStructured(task.raw, task.creationDate);
 
@@ -526,8 +604,8 @@ export async function insertTask(task: Task): Promise<Task> {
   const description = task.description || '';
 
   await db.execute({
-    sql: `INSERT INTO tasks (id, title, status, priority, creation_date, completion_date, due_date, due_time, description, recurrence, parent_recurring_id)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    sql: `INSERT INTO tasks (id, title, status, priority, creation_date, completion_date, due_date, due_time, description, recurrence, parent_recurring_id, user_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       task.id,
       title,
@@ -539,7 +617,8 @@ export async function insertTask(task: Task): Promise<Task> {
       dueTime,
       description,
       recurrence,
-      parentRecurringId
+      parentRecurringId,
+      userId || null
     ]
   });
 
@@ -604,13 +683,18 @@ export async function insertTask(task: Task): Promise<Task> {
   };
 }
 
-export async function updateTaskInDb(id: string, updates: Partial<Task>): Promise<Task | null> {
+export async function updateTaskInDb(id: string, updates: Partial<Task>, userId?: string): Promise<Task | null> {
   await initDb();
 
-  const existingRes = await db.execute({
-    sql: 'SELECT * FROM tasks WHERE id = ?',
-    args: [id]
-  });
+  let sql = 'SELECT * FROM tasks WHERE id = ?';
+  const args: InValue[] = [id];
+
+  if (userId) {
+    sql = 'SELECT * FROM tasks WHERE id = ? AND (user_id = ? OR user_id IS NULL)';
+    args.push(userId);
+  }
+
+  const existingRes = await db.execute({ sql, args });
 
   if (existingRes.rows.length === 0) return null;
 
@@ -782,17 +866,33 @@ export async function updateTaskInDb(id: string, updates: Partial<Task>): Promis
   };
 }
 
-export async function deleteTaskFromDb(id: string): Promise<boolean> {
+export async function deleteTaskFromDb(id: string, userId?: string): Promise<boolean> {
   await initDb();
-  await db.execute({ sql: 'DELETE FROM tasks WHERE id = ?', args: [id] });
+  let sql = 'DELETE FROM tasks WHERE id = ?';
+  const args: InValue[] = [id];
+
+  if (userId) {
+    sql = 'DELETE FROM tasks WHERE id = ? AND (user_id = ? OR user_id IS NULL)';
+    args.push(userId);
+  }
+
+  await db.execute({ sql, args });
   return true;
 }
 
 // --- TEMPLATE CRUD OPERATIONS ---
 
-export async function getAllTemplates(): Promise<Template[]> {
+export async function getAllTemplates(userId?: string): Promise<Template[]> {
   await initDb();
-  const tmplRes = await db.execute('SELECT * FROM templates ORDER BY created_at DESC');
+  let sql = 'SELECT * FROM templates ORDER BY created_at DESC';
+  const args: InValue[] = [];
+
+  if (userId) {
+    sql = 'SELECT * FROM templates WHERE user_id = ? OR user_id IS NULL ORDER BY created_at DESC';
+    args.push(userId);
+  }
+
+  const tmplRes = await db.execute({ sql, args });
   const projRes = await db.execute('SELECT * FROM template_projects');
   const ctxRes = await db.execute('SELECT * FROM template_contexts');
   const subRes = await db.execute('SELECT * FROM template_subtasks ORDER BY position ASC');
@@ -846,21 +946,22 @@ export async function getAllTemplates(): Promise<Template[]> {
   });
 }
 
-export async function insertTemplate(template: Template): Promise<Template> {
+export async function insertTemplate(template: Template, userId?: string): Promise<Template> {
   await initDb();
   const now = new Date().toISOString();
   const parsed = parseRawToStructured(template.rawTemplate);
 
   await db.execute({
-    sql: `INSERT INTO templates (id, name, raw_template, description, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?)`,
+    sql: `INSERT INTO templates (id, name, raw_template, description, created_at, updated_at, user_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`,
     args: [
       template.id,
       template.name,
       template.rawTemplate,
       template.description || '',
       template.createdAt || now,
-      template.updatedAt || now
+      template.updatedAt || now,
+      userId || null
     ]
   });
 
@@ -897,11 +998,19 @@ export async function insertTemplate(template: Template): Promise<Template> {
   };
 }
 
-export async function updateTemplateInDb(id: string, updates: Partial<Template>): Promise<Template | null> {
+export async function updateTemplateInDb(id: string, updates: Partial<Template>, userId?: string): Promise<Template | null> {
   await initDb();
   const now = new Date().toISOString();
 
-  const existingRes = await db.execute({ sql: 'SELECT * FROM templates WHERE id = ?', args: [id] });
+  let sql = 'SELECT * FROM templates WHERE id = ?';
+  const args: InValue[] = [id];
+
+  if (userId) {
+    sql = 'SELECT * FROM templates WHERE id = ? AND (user_id = ? OR user_id IS NULL)';
+    args.push(userId);
+  }
+
+  const existingRes = await db.execute({ sql, args });
   if (existingRes.rows.length === 0) return null;
   const existing = existingRes.rows[0];
 
@@ -972,20 +1081,29 @@ export async function updateTemplateInDb(id: string, updates: Partial<Template>)
   };
 }
 
-export async function deleteTemplateFromDb(id: string): Promise<boolean> {
+export async function deleteTemplateFromDb(id: string, userId?: string): Promise<boolean> {
   await initDb();
-  await db.execute({ sql: 'DELETE FROM templates WHERE id = ?', args: [id] });
+  let sql = 'DELETE FROM templates WHERE id = ?';
+  const args: InValue[] = [id];
+
+  if (userId) {
+    sql = 'DELETE FROM templates WHERE id = ? AND (user_id = ? OR user_id IS NULL)';
+    args.push(userId);
+  }
+
+  await db.execute({ sql, args });
   return true;
 }
 
 export async function instantiateTaskFromTemplateId(
   templateId: string,
-  varOverrides: Record<string, string> = {}
+  varOverrides: Record<string, string> = {},
+  userId?: string
 ): Promise<Task | null> {
-  const templates = await getAllTemplates();
+  const templates = await getAllTemplates(userId);
   const tmpl = templates.find(t => t.id === templateId || t.name.toLowerCase() === templateId.toLowerCase());
   if (!tmpl) return null;
 
   const { newTask } = instantiateTaskFromTemplate(tmpl, varOverrides);
-  return await insertTask(newTask);
+  return await insertTask(newTask, userId);
 }

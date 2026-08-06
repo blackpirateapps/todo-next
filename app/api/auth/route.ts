@@ -1,34 +1,37 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { isAuthRequired, isAuthenticated, verifyPassword, getExpectedSessionToken } from '@/lib/auth';
+import { getAuthenticatedUser } from '@/lib/auth';
+import { isBpxMigrated } from '@/lib/db';
 
 export async function GET() {
-  const authRequired = isAuthRequired();
-  const authenticated = await isAuthenticated();
-  return NextResponse.json({ authRequired, authenticated });
+  const user = await getAuthenticatedUser();
+  const bpxMigrated = await isBpxMigrated();
+
+  return NextResponse.json({
+    authRequired: true,
+    authenticated: Boolean(user),
+    isBpxMigrated: bpxMigrated,
+    user: user ? { uid: user.uid, email: user.email } : null
+  });
 }
 
 export async function POST(request: Request) {
   try {
-    const { password } = await request.json();
-    if (!verifyPassword(password)) {
-      return NextResponse.json({ error: 'Incorrect password' }, { status: 401 });
+    const { token } = await request.json();
+    if (!token) {
+      return NextResponse.json({ error: 'Token is required' }, { status: 400 });
     }
 
-    const expectedToken = getExpectedSessionToken();
     const cookieStore = await cookies();
+    cookieStore.set('app_session', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+    });
 
-    if (expectedToken) {
-      cookieStore.set('app_session', expectedToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 60 * 60 * 24 * 30, // 30 days
-      });
-    }
-
-    return NextResponse.json({ success: true, token: expectedToken });
+    return NextResponse.json({ success: true, token });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Authentication failed' }, { status: 500 });
   }

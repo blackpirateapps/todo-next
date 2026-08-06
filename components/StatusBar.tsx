@@ -9,6 +9,7 @@ interface StatusBarProps {
   isLightMode: boolean;
   onToggleTheme: () => void;
   authRequired: boolean;
+  userEmail?: string | null;
   onLogout?: () => void;
   syncStatus: SyncStatus;
   pendingCount: number;
@@ -22,6 +23,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   isLightMode,
   onToggleTheme,
   authRequired,
+  userEmail,
   onLogout,
   syncStatus,
   pendingCount,
@@ -66,6 +68,11 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         <span className={`font-bold uppercase ${isLightMode ? 'text-blue-600' : 'text-blue-400'}`}>NORMAL</span>
         <span>{filteredCount}/{totalCount} items</span>
         {activeFilter && <span className="truncate max-w-[100px] sm:max-w-none">[Filter: {activeFilter}]</span>}
+        {userEmail && (
+          <span className="text-emerald-500 font-bold hidden md:inline truncate max-w-[160px]">
+            [{userEmail}]
+          </span>
+        )}
       </div>
 
       <div className="hidden lg:flex gap-4">

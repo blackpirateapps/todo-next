@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { updateTemplateInDb, deleteTemplateFromDb } from '@/lib/db';
-import { isAuthenticated } from '@/lib/auth';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isAuthenticated())) {
+  const user = await getAuthenticatedUser();
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -17,7 +18,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid updates payload' }, { status: 400 });
     }
 
-    const updatedTemplate = await updateTemplateInDb(id, updates);
+    const updatedTemplate = await updateTemplateInDb(id, updates, user.uid);
     if (!updatedTemplate) {
       return NextResponse.json({ error: 'Template not found' }, { status: 404 });
     }
@@ -41,13 +42,14 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isAuthenticated())) {
+  const user = await getAuthenticatedUser();
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     const { id } = await params;
-    await deleteTemplateFromDb(id);
+    await deleteTemplateFromDb(id, user.uid);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('[DELETE /api/templates/[id] Error]:', {
