@@ -66,8 +66,8 @@ Task instantiateTaskFromTemplate(Template template, [Map<String, String>? varOve
     );
   }).toList();
 
-  final projects = Set<String>.from([...template.projects, ...parsed.projects]).toList();
-  final contexts = Set<String>.from([...template.contexts, ...parsed.contexts]).toList();
+  final projects = {...template.projects, ...parsed.projects}.toList();
+  final contexts = {...template.contexts, ...parsed.contexts}.toList();
 
   return Task(
     id: taskId,

@@ -177,7 +177,7 @@ class _InspectorDrawerWidgetState extends State<InspectorDrawerWidget> {
     if (val.isEmpty) return;
     if (!val.startsWith('+')) val = '+$val';
 
-    final updatedProjects = Set<String>.from([...widget.task!.projects, val]).toList();
+    final updatedProjects = {...widget.task!.projects, val}.toList();
     final newRaw = buildRawFromStructured(
       title: widget.task!.title,
       priority: widget.task!.priority,
@@ -204,7 +204,7 @@ class _InspectorDrawerWidgetState extends State<InspectorDrawerWidget> {
     if (val.isEmpty) return;
     if (!val.startsWith('@')) val = '@$val';
 
-    final updatedContexts = Set<String>.from([...widget.task!.contexts, val]).toList();
+    final updatedContexts = {...widget.task!.contexts, val}.toList();
     final newRaw = buildRawFromStructured(
       title: widget.task!.title,
       priority: widget.task!.priority,
@@ -396,7 +396,7 @@ class _InspectorDrawerWidgetState extends State<InspectorDrawerWidget> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: widget.isLight ? Colors.purple[50] : Colors.purple[950]?.withOpacity(0.3),
+                    color: widget.isLight ? Colors.purple[50] : Colors.purple[950]?.withAlpha(80),
                     border: Border.all(color: widget.isLight ? Colors.purple[200]! : Colors.purple[800]!),
                   ),
                   child: Column(

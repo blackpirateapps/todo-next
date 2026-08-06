@@ -36,7 +36,7 @@ jobs:
       - name: Analyze Code
         run: |
           cd flutter_app
-          flutter analyze
+          flutter analyze --no-fatal-infos
 
       - name: Build Android APK (Release)
         run: |

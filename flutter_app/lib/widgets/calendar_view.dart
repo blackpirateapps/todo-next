@@ -383,7 +383,7 @@ class _CalendarViewWidgetState extends State<CalendarViewWidget> {
                                         margin: const EdgeInsets.only(bottom: 2),
                                         padding: const EdgeInsets.all(2),
                                         decoration: BoxDecoration(
-                                          color: widget.isLight ? Colors.purple[50]?.withOpacity(0.7) : Colors.purple[950]?.withOpacity(0.4),
+                                          color: widget.isLight ? Colors.purple[50]?.withAlpha(180) : Colors.purple[950]?.withAlpha(100),
                                           border: Border.all(
                                             color: widget.isLight ? Colors.purple[300]! : Colors.purple[800]!,
                                             style: BorderStyle.solid,
