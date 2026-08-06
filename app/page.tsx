@@ -27,7 +27,6 @@ export default function UtilitarianTodoPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isBpxMigrated, setIsBpxMigrated] = useState(false);
 
   const [activeView, setActiveView] = useState<'list' | 'calendar'>('list');
   const [commandQuery, setCommandQuery] = useState('');
@@ -165,12 +164,6 @@ export default function UtilitarianTodoPage() {
   const fetchTasksAndTemplates = useCallback(async () => {
     try {
       const headers = await getAuthHeaders();
-
-      const authRes = await fetch('/api/auth', { headers });
-      if (authRes.ok) {
-        const authData = await authRes.json();
-        setIsBpxMigrated(Boolean(authData.isBpxMigrated));
-      }
 
       const tasksRes = await fetch('/api/tasks', { headers });
       if (tasksRes.ok) {
@@ -736,7 +729,6 @@ export default function UtilitarianTodoPage() {
       <LoginScreen
         onLoginSuccess={fetchTasksAndTemplates}
         isLight={isLightMode}
-        isBpxMigrated={isBpxMigrated}
       />
     );
   }

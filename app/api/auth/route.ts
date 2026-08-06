@@ -1,16 +1,13 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getAuthenticatedUser } from '@/lib/auth';
-import { isBpxMigrated } from '@/lib/db';
 
 export async function GET() {
   const user = await getAuthenticatedUser();
-  const bpxMigrated = await isBpxMigrated();
 
   return NextResponse.json({
     authRequired: true,
     authenticated: Boolean(user),
-    isBpxMigrated: bpxMigrated,
     user: user ? { uid: user.uid, email: user.email } : null
   });
 }

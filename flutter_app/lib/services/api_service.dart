@@ -37,12 +37,36 @@ class ApiService {
     return {'authRequired': false, 'authenticated': true};
   }
 
-  static Future<bool> login(String password) async {
+  static Future<bool> login(String email, String password) async {
     try {
       final res = await http.post(
-        Uri.parse('$baseUrl/auth'),
+        Uri.parse('$baseUrl/auth/login'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'password': password}),
+        body: jsonEncode({'email': email, 'password': password}),
+      ).timeout(const Duration(seconds: 8));
+
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body);
+        if (body['success'] == true) {
+          final token = body['token'] as String?;
+          if (token != null && token.isNotEmpty) {
+            _authToken = token;
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString(_authTokenKey, token);
+          }
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  static Future<bool> signup(String email, String password) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/signup'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
       ).timeout(const Duration(seconds: 8));
 
       if (res.statusCode == 200) {

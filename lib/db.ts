@@ -428,47 +428,14 @@ export async function initDb() {
   }
 }
 
-// --- LEGACY MIGRATION HELPERS ---
-
-export async function migrateLegacyDataToUser(userId: string, email: string, username = 'bpx') {
-  await initDb();
-  const now = new Date().toISOString();
-
-  await db.execute({
-    sql: `INSERT OR REPLACE INTO users (id, email, username, is_migrated, created_at)
-          VALUES (?, ?, ?, 1, ?)`,
-    args: [userId, email, username, now]
-  });
-
-  await db.execute({
-    sql: `UPDATE tasks SET user_id = ? WHERE user_id IS NULL`,
-    args: [userId]
-  });
-
-  await db.execute({
-    sql: `UPDATE templates SET user_id = ? WHERE user_id IS NULL`,
-    args: [userId]
-  });
-
-  console.log(`[Legacy Migration Complete]: Successfully assigned all unassigned tasks and templates to user ${userId} (${email} / ${username}).`);
-}
-
-export async function isBpxMigrated(): Promise<boolean> {
-  await initDb();
-  const res = await db.execute({
-    sql: `SELECT is_migrated FROM users WHERE username = 'bpx' OR email = 'hi@sudipx.in' OR email = 'bpx@todo-next.local'`,
-    args: []
-  });
-  if (res.rows.length === 0) return false;
-  return Number(res.rows[0].is_migrated) === 1;
-}
+// --- USER MANAGEMENT ---
 
 export async function registerUserInDb(userId: string, email: string, username?: string) {
   await initDb();
   const now = new Date().toISOString();
   await db.execute({
     sql: `INSERT OR IGNORE INTO users (id, email, username, is_migrated, created_at)
-          VALUES (?, ?, ?, 0, ?)`,
+          VALUES (?, ?, ?, 1, ?)`,
     args: [userId, email, username || email.split('@')[0], now]
   });
 }
