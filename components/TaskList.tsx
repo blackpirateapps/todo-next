@@ -232,6 +232,18 @@ export const TaskList: React.FC<TaskListProps> = ({
                   <td className="py-2.5 px-2 text-xs sm:text-sm overflow-hidden break-words max-w-xs sm:max-w-md lg:max-w-xl">
                     <div className="flex flex-wrap items-center gap-2">
                       <FormattedText text={task.raw} isCompleted={task.completed} isLight={isLight} />
+                      {task.recurrence && (
+                        <span
+                          className={`px-1.5 py-0.5 text-[10px] font-mono font-bold border ${
+                            task.recurrence.includes('strict:') || task.recurrence.includes('+')
+                              ? (isLight ? 'bg-purple-100 border-purple-300 text-purple-800' : 'bg-purple-950 border-purple-800 text-purple-300')
+                              : (isLight ? 'bg-cyan-100 border-cyan-300 text-cyan-800' : 'bg-cyan-950 border-cyan-800 text-cyan-300')
+                          }`}
+                          title={`Recurring pattern: ${task.recurrence}`}
+                        >
+                          {task.recurrence.includes('strict:') || task.recurrence.includes('+') ? '⚡' : '🔄'} {task.recurrence.startsWith('rec:') ? task.recurrence : `rec:${task.recurrence}`}
+                        </span>
+                      )}
                       {hasSubtasks && (
                         <SubtaskProgressBar subtasks={task.subtasks} isLight={isLight} compact showText />
                       )}

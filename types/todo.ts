@@ -14,6 +14,16 @@ export interface Comment {
   text: string;
 }
 
+export type RecurrenceUnit = 'd' | 'w' | 'm' | 'y' | 'weekday' | 'mwf';
+export type RecurrenceMode = 'completion' | 'strict';
+
+export interface RecurrenceRule {
+  raw: string;
+  interval: number;
+  unit: RecurrenceUnit;
+  mode: RecurrenceMode;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -26,6 +36,8 @@ export interface Task {
   dueDate?: string;
   dueTime?: string;
   description: string;
+  recurrence?: string;
+  parentRecurringId?: string;
   projects: string[];
   contexts: string[];
   subtasks: Subtask[];

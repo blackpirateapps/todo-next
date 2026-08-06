@@ -1,9 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Task } from '@/types/todo';
 import { FormattedText } from './FormattedText';
 import { SubtaskProgressBar } from './SubtaskProgressBar';
 import { formatDateISO, getMonthDays, getWeekDays, MONTH_NAMES, WEEKDAY_NAMES } from '@/utils/dateUtils';
 import { parseDatesFromRaw } from '@/utils/todoParser';
+import { getUpcomingRecurrenceDates } from '@/utils/recurrenceEngine';
 
 interface CalendarViewProps {
   tasks: Task[];
@@ -70,6 +71,23 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       tasksByDate.set(targetDate, [...existing, task]);
     }
   });
+
+  // Calculate future projected recurrence dates
+  const projectedRecurringByDate = useMemo(() => {
+    const map = new Map<string, Task[]>();
+    if (dateField !== 'due') return map;
+
+    tasks.forEach(t => {
+      if (t.recurrence && !t.completed) {
+        const upcoming = getUpcomingRecurrenceDates(t, 5);
+        upcoming.forEach(dISO => {
+          const list = map.get(dISO) || [];
+          map.set(dISO, [...list, t]);
+        });
+      }
+    });
+    return map;
+  }, [tasks, dateField]);
 
   // Desktop Drag & Drop Handlers
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
@@ -309,7 +327,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     </button>
                   </div>
 
-                  {/* Task Items in Day Cell */}
+                    {/* Task Items in Day Cell */}
                   <div className="flex-1 overflow-y-auto space-y-1 relative z-10">
                     {dayTasks.map(task => {
                       const isSelected = selectedTaskId === task.id;
@@ -360,6 +378,31 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                                 </div>
                               )}
                             </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Projected Recurring Tasks Ghost Chips */}
+                    {(projectedRecurringByDate.get(dayISO) || []).map((projTask, pIdx) => {
+                      if (dayTasks.some(t => t.id === projTask.id)) return null;
+                      return (
+                        <div
+                          key={`proj-${projTask.id}-${pIdx}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectTask(projTask);
+                          }}
+                          className={`p-1 border border-dashed rounded text-[10px] font-mono transition-all opacity-75 ${
+                            isLight
+                              ? 'bg-purple-50/70 border-purple-300 text-purple-900 hover:opacity-100'
+                              : 'bg-purple-950/40 border-purple-800 text-purple-300 hover:opacity-100'
+                          }`}
+                          title={`Projected recurrence for: ${projTask.title}`}
+                        >
+                          <div className="flex items-center gap-1 truncate">
+                            <span className="text-[9px]">🔄</span>
+                            <span className="truncate opacity-90">{projTask.title}</span>
                           </div>
                         </div>
                       );

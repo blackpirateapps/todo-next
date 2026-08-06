@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Task, Subtask, Comment } from '@/types/todo';
 import { updateRawDates, parseRawToStructured, buildRawFromStructured } from '@/utils/todoParser';
+import { skipRecurrenceOccurrence } from '@/utils/recurrenceEngine';
 import { FormattedText } from './FormattedText';
 import { SubtaskProgressBar } from './SubtaskProgressBar';
 import { ConfirmModal } from './ConfirmModal';
@@ -10,6 +11,7 @@ interface TaskDetailsProps {
   onClose: () => void;
   onUpdateTask: (id: string, updates: Partial<Task>) => void;
   onSaveAsTemplate?: (task: Task) => void;
+  onSkipRecurrence?: (id: string) => void;
   isLight: boolean;
 }
 
@@ -18,8 +20,13 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
   onClose,
   onUpdateTask,
   onSaveAsTemplate,
+  onSkipRecurrence,
   isLight
 }) => {
+  // Custom Recurrence Input state
+  const [customRecInput, setCustomRecInput] = useState('');
+  const [isStrictRec, setIsStrictRec] = useState(false);
+
   // Task Name / Raw editing state
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
@@ -222,6 +229,65 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
       raw: newRaw
     });
     setIsEditingDueDate(false);
+  };
+
+  // --- Recurrence Handlers ---
+  const handleSetRecurrence = (ruleUnit: string, strictOverride?: boolean) => {
+    const isStrict = strictOverride !== undefined ? strictOverride : isStrictRec;
+    let recTag = ruleUnit.toLowerCase().startsWith('rec:') ? ruleUnit.substring(4) : ruleUnit;
+    if (isStrict && !recTag.startsWith('strict:') && !recTag.startsWith('+')) {
+      recTag = `strict:${recTag}`;
+    }
+    
+    const newRaw = buildRawFromStructured({
+      title: task.title,
+      priority: task.priority,
+      creationDate: task.creationDate,
+      completionDate: task.completionDate,
+      dueDate: task.dueDate,
+      dueTime: task.dueTime,
+      recurrence: recTag,
+      completed: task.completed,
+      projects: task.projects,
+      contexts: task.contexts
+    });
+
+    onUpdateTask(task.id, {
+      recurrence: recTag,
+      raw: newRaw
+    });
+  };
+
+  const handleClearRecurrence = () => {
+    const newRaw = buildRawFromStructured({
+      title: task.title,
+      priority: task.priority,
+      creationDate: task.creationDate,
+      completionDate: task.completionDate,
+      dueDate: task.dueDate,
+      dueTime: task.dueTime,
+      recurrence: undefined,
+      completed: task.completed,
+      projects: task.projects,
+      contexts: task.contexts
+    });
+
+    onUpdateTask(task.id, {
+      recurrence: undefined,
+      raw: newRaw
+    });
+  };
+
+  const handleSkipRecurrence = () => {
+    if (onSkipRecurrence) {
+      onSkipRecurrence(task.id);
+    } else {
+      const skipped = skipRecurrenceOccurrence(task);
+      onUpdateTask(task.id, {
+        dueDate: skipped.dueDate,
+        raw: skipped.raw
+      });
+    }
   };
 
   const handleClearDueDate = () => {
@@ -503,6 +569,149 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
               {task.completed ? 'Completed' : 'Open'}
             </span>
           </div>
+        </div>
+
+        {/* Recurrence Control Card */}
+        <div className={`border p-2.5 text-xs font-mono space-y-2 ${isLight ? 'border-gray-300 bg-white' : 'border-gray-800 bg-black'}`}>
+          <div className="flex justify-between items-center border-b pb-1">
+            <span className={`font-bold uppercase tracking-wider ${isLight ? 'text-purple-800' : 'text-purple-400'}`}>
+              🔄 Recurrence Pattern
+            </span>
+            {task.recurrence && (
+              <button
+                onClick={handleClearRecurrence}
+                className="text-[10px] text-red-400 hover:underline"
+              >
+                [Remove]
+              </button>
+            )}
+          </div>
+
+          {task.recurrence ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className={`px-2 py-0.5 border font-bold text-xs ${
+                  task.recurrence.includes('strict:') || task.recurrence.includes('+')
+                    ? (isLight ? 'bg-purple-100 border-purple-300 text-purple-900' : 'bg-purple-950 border-purple-800 text-purple-300')
+                    : (isLight ? 'bg-cyan-100 border-cyan-300 text-cyan-900' : 'bg-cyan-950 border-cyan-800 text-cyan-300')
+                }`}>
+                  {task.recurrence.includes('strict:') || task.recurrence.includes('+') ? '⚡ Strict: ' : '🔄 Relative: '}
+                  {task.recurrence.startsWith('rec:') ? task.recurrence : `rec:${task.recurrence}`}
+                </span>
+                {!task.completed && (
+                  <button
+                    onClick={handleSkipRecurrence}
+                    className={`px-2 py-0.5 text-[11px] font-bold border transition-colors ${
+                      isLight ? 'border-amber-400 bg-amber-100 text-amber-900 hover:bg-amber-200' : 'border-amber-700 bg-amber-950 text-amber-300 hover:bg-amber-900'
+                    }`}
+                    title="Advance due date to next cycle without completing task"
+                  >
+                    [Skip Cycle]
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className={`italic text-[11px] ${isLight ? 'text-gray-400' : 'text-gray-600'}`}>
+              No recurrence schedule configured.
+            </div>
+          )}
+
+          {/* Quick Presets */}
+          <div className="pt-1">
+            <div className={`text-[10px] uppercase font-bold mb-1 ${isLight ? 'text-gray-500' : 'text-gray-500'}`}>Set Preset Rule:</div>
+            <div className="flex flex-wrap gap-1">
+              <button
+                onClick={() => handleSetRecurrence('1d')}
+                className={`px-1.5 py-0.5 text-[11px] border font-bold ${
+                  task.recurrence?.includes('1d')
+                    ? (isLight ? 'bg-cyan-200 border-cyan-400 text-black' : 'bg-cyan-950 border-cyan-600 text-white')
+                    : (isLight ? 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200' : 'bg-gray-900 border-gray-800 text-gray-300 hover:bg-gray-800')
+                }`}
+              >
+                Daily
+              </button>
+              <button
+                onClick={() => handleSetRecurrence('weekday')}
+                className={`px-1.5 py-0.5 text-[11px] border font-bold ${
+                  task.recurrence?.includes('weekday')
+                    ? (isLight ? 'bg-cyan-200 border-cyan-400 text-black' : 'bg-cyan-950 border-cyan-600 text-white')
+                    : (isLight ? 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200' : 'bg-gray-900 border-gray-800 text-gray-300 hover:bg-gray-800')
+                }`}
+              >
+                Weekdays
+              </button>
+              <button
+                onClick={() => handleSetRecurrence('1w')}
+                className={`px-1.5 py-0.5 text-[11px] border font-bold ${
+                  task.recurrence?.includes('1w')
+                    ? (isLight ? 'bg-cyan-200 border-cyan-400 text-black' : 'bg-cyan-950 border-cyan-600 text-white')
+                    : (isLight ? 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200' : 'bg-gray-900 border-gray-800 text-gray-300 hover:bg-gray-800')
+                }`}
+              >
+                Weekly
+              </button>
+              <button
+                onClick={() => handleSetRecurrence('1m')}
+                className={`px-1.5 py-0.5 text-[11px] border font-bold ${
+                  task.recurrence?.includes('1m')
+                    ? (isLight ? 'bg-cyan-200 border-cyan-400 text-black' : 'bg-cyan-950 border-cyan-600 text-white')
+                    : (isLight ? 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200' : 'bg-gray-900 border-gray-800 text-gray-300 hover:bg-gray-800')
+                }`}
+              >
+                Monthly
+              </button>
+            </div>
+          </div>
+
+          {/* Mode Toggle & Custom Input */}
+          <div className="flex items-center justify-between pt-1 border-t border-dashed border-gray-500/30">
+            <label className="flex items-center gap-1 cursor-pointer select-none text-[11px]">
+              <input
+                type="checkbox"
+                checked={task.recurrence ? task.recurrence.includes('strict:') || task.recurrence.includes('+') : isStrictRec}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setIsStrictRec(checked);
+                  if (task.recurrence) {
+                    const cleanRule = task.recurrence.replace(/^rec:/, '').replace(/^strict:/, '').replace(/^\+/, '');
+                    handleSetRecurrence(cleanRule, checked);
+                  }
+                }}
+                className="rounded-none focus:outline-none"
+              />
+              <span className={isLight ? 'text-gray-700 font-semibold' : 'text-gray-300 font-semibold'}>Strict (due date relative)</span>
+            </label>
+          </div>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (customRecInput.trim()) {
+                handleSetRecurrence(customRecInput.trim());
+                setCustomRecInput('');
+              }
+            }}
+            className="flex gap-1 pt-1"
+          >
+            <input
+              type="text"
+              value={customRecInput}
+              onChange={(e) => setCustomRecInput(e.target.value)}
+              placeholder="rec: e.g. 3d, 2w, mwf"
+              className={`flex-1 px-2 py-0.5 text-xs font-mono border focus:outline-none ${
+                isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-black border-gray-800 text-gray-200 placeholder-gray-600'
+              }`}
+            />
+            <button
+              type="submit"
+              className={`px-2 py-0.5 text-xs font-mono font-bold border ${
+                isLight ? 'border-gray-300 bg-gray-200 hover:bg-gray-300 text-gray-800' : 'border-gray-800 bg-gray-900 hover:bg-gray-800 text-gray-300'
+              }`}
+            >
+              Set
+            </button>
+          </form>
         </div>
 
         {/* Editable Projects (+project) */}

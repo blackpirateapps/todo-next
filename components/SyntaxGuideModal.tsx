@@ -74,12 +74,23 @@ export const SyntaxGuideModal: React.FC<SyntaxGuideModalProps> = ({
 
           <div>
             <div className={`font-bold uppercase mb-1 border-b pb-0.5 ${isLight ? 'text-gray-600 border-gray-300' : 'text-gray-400 border-gray-800'}`}>
-              5. Full Examples
+              5. Recurring Tasks (rec:)
+            </div>
+            <ul className="list-disc list-inside space-y-1 opacity-90">
+              <li><code className={isLight ? 'text-cyan-700 font-bold' : 'text-cyan-400 font-bold'}>rec:1d</code> / <code className={isLight ? 'text-cyan-700 font-bold' : 'text-cyan-400 font-bold'}>rec:1w</code> — Recur every N days/weeks after completion.</li>
+              <li><code className={isLight ? 'text-purple-700 font-bold' : 'text-purple-400 font-bold'}>rec:strict:1w</code> — Strict recurrence (relative to original due date).</li>
+              <li><code className={isLight ? 'text-emerald-700 font-bold' : 'text-emerald-400 font-bold'}>rec:weekday</code> — Recur every weekday (Mon-Fri).</li>
+            </ul>
+          </div>
+
+          <div>
+            <div className={`font-bold uppercase mb-1 border-b pb-0.5 ${isLight ? 'text-gray-600 border-gray-300' : 'text-gray-400 border-gray-800'}`}>
+              6. Full Examples
             </div>
             <div className={`p-2 border font-mono text-[11px] space-y-1.5 ${isLight ? 'bg-gray-100 border-gray-300' : 'bg-gray-900 border-gray-800'}`}>
               <div>:add (A) Build core parser +backend @dev due:2026-08-12 time:10:00</div>
-              <div>:add (B) Provision database cluster +infra @ops due:2026-08-15</div>
-              <div>:add Buy coffee beans @errands</div>
+              <div>:add (B) Weekly code review +dev @review due:2026-08-15 rec:1w</div>
+              <div>:add Morning prep & inbox zero @personal rec:weekday</div>
             </div>
           </div>
         </div>

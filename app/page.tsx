@@ -10,8 +10,9 @@ import { CommandInput } from '@/components/CommandInput';
 import { StatusBar, SyncStatus } from '@/components/StatusBar';
 import { LoginScreen } from '@/components/LoginScreen';
 import { TemplateModal } from '@/components/TemplateModal';
-import { updateRawDates, parseRawToStructured } from '@/utils/todoParser';
+import { updateRawDates, parseRawToStructured, buildRawFromStructured } from '@/utils/todoParser';
 import { instantiateTaskFromTemplate } from '@/utils/templateEngine';
+import { spawnNextRecurrenceInstance, skipRecurrenceOccurrence } from '@/utils/recurrenceEngine';
 
 interface PendingMutation {
   type: 'CREATE' | 'UPDATE' | 'DELETE' | 'CREATE_TEMPLATE' | 'DELETE_TEMPLATE';
@@ -240,14 +241,24 @@ export default function UtilitarianTodoPage() {
       if (taskToUpdate.priority) newRaw = `(${taskToUpdate.priority}) ${newRaw}`;
     }
 
-    const updates = { completed: isNowCompleted, status: (isNowCompleted ? 'completed' : 'open') as 'open' | 'completed', raw: newRaw };
+    const updates = { completed: isNowCompleted, status: (isNowCompleted ? 'completed' : 'open') as 'open' | 'completed', raw: newRaw, completionDate: isNowCompleted ? today : undefined };
+
+    // Check if task is recurring and marking complete -> spawn next occurrence instance!
+    let nextTaskInstance: Task | null = null;
+    if (isNowCompleted && taskToUpdate.recurrence) {
+      nextTaskInstance = spawnNextRecurrenceInstance(taskToUpdate, today);
+    }
 
     // Optimistic UI update
     setTasks(prev => {
-      const updated = prev.map(t => t.id === id ? { ...t, ...updates } : t);
+      let updated = prev.map(t => t.id === id ? { ...t, ...updates } : t);
+      if (nextTaskInstance) {
+        updated = [nextTaskInstance, ...updated];
+      }
       localStorage.setItem('todo_next_cached_tasks', JSON.stringify(updated));
       return updated;
     });
+
     if (selectedTask?.id === id) {
       setSelectedTask(prev => prev ? { ...prev, ...updates } : null);
     }
@@ -255,11 +266,60 @@ export default function UtilitarianTodoPage() {
     // Backend update or queue
     setSyncStatus('syncing');
     try {
-      const res = await fetch(`/api/tasks/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      });
+      if (isNowCompleted && taskToUpdate.recurrence) {
+        const res = await fetch(`/api/tasks/${id}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ completionDate: today }),
+        });
+        if (res.ok && pendingQueue.length === 0) {
+          setSyncStatus('synced');
+        } else {
+          queueMutation({ type: 'UPDATE', id, data: updates });
+          if (nextTaskInstance) {
+            queueMutation({ type: 'CREATE', id: nextTaskInstance.id, data: nextTaskInstance });
+          }
+        }
+      } else {
+        const res = await fetch(`/api/tasks/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates),
+        });
+        if (res.ok && pendingQueue.length === 0) {
+          setSyncStatus('synced');
+        } else {
+          queueMutation({ type: 'UPDATE', id, data: updates });
+        }
+      }
+    } catch {
+      queueMutation({ type: 'UPDATE', id, data: updates });
+      if (nextTaskInstance) {
+        queueMutation({ type: 'CREATE', id: nextTaskInstance.id, data: nextTaskInstance });
+      }
+    }
+  };
+
+  const handleSkipRecurrence = async (id: string) => {
+    const taskToSkip = tasks.find(t => t.id === id);
+    if (!taskToSkip || !taskToSkip.recurrence) return;
+
+    const skipped = skipRecurrenceOccurrence(taskToSkip);
+    const updates = { dueDate: skipped.dueDate, raw: skipped.raw };
+
+    setTasks(prev => {
+      const updated = prev.map(t => t.id === id ? { ...t, ...updates } : t);
+      localStorage.setItem('todo_next_cached_tasks', JSON.stringify(updated));
+      return updated;
+    });
+
+    if (selectedTask?.id === id) {
+      setSelectedTask(prev => prev ? { ...prev, ...updates } : null);
+    }
+
+    setSyncStatus('syncing');
+    try {
+      const res = await fetch(`/api/tasks/${id}/skip`, { method: 'POST' });
       if (res.ok && pendingQueue.length === 0) {
         setSyncStatus('synced');
       } else {
@@ -470,6 +530,61 @@ export default function UtilitarianTodoPage() {
   const handleCommandSubmit = async (val: string) => {
     const trimmed = val.trim();
 
+    // Command: :recurring -> Filter by rec:
+    if (trimmed === ':recurring') {
+      setActiveFilter('rec:');
+      setCommandQuery('');
+      return;
+    }
+
+    // Command: :skip -> Skip next occurrence of selected task
+    if (trimmed === ':skip') {
+      if (selectedTask) {
+        await handleSkipRecurrence(selectedTask.id);
+        setCommandQuery('');
+      }
+      return;
+    }
+
+    // Command: :rec <rule> -> Set recurrence on selected task
+    if (trimmed.startsWith(':rec ')) {
+      const recVal = trimmed.replace(':rec ', '').trim();
+      if (selectedTask) {
+        if (recVal === 'off' || recVal === 'none' || recVal === 'clear') {
+          const newRaw = buildRawFromStructured({
+            title: selectedTask.title,
+            priority: selectedTask.priority,
+            creationDate: selectedTask.creationDate,
+            completionDate: selectedTask.completionDate,
+            dueDate: selectedTask.dueDate,
+            dueTime: selectedTask.dueTime,
+            recurrence: undefined,
+            completed: selectedTask.completed,
+            projects: selectedTask.projects,
+            contexts: selectedTask.contexts
+          });
+          await handleUpdateTask(selectedTask.id, { recurrence: undefined, raw: newRaw });
+        } else {
+          const cleanRec = recVal.startsWith('rec:') ? recVal.substring(4) : recVal;
+          const newRaw = buildRawFromStructured({
+            title: selectedTask.title,
+            priority: selectedTask.priority,
+            creationDate: selectedTask.creationDate,
+            completionDate: selectedTask.completionDate,
+            dueDate: selectedTask.dueDate,
+            dueTime: selectedTask.dueTime,
+            recurrence: cleanRec,
+            completed: selectedTask.completed,
+            projects: selectedTask.projects,
+            contexts: selectedTask.contexts
+          });
+          await handleUpdateTask(selectedTask.id, { recurrence: cleanRec, raw: newRaw });
+        }
+        setCommandQuery('');
+      }
+      return;
+    }
+
     // Command 1: :template -> Open Template Manager
     if (trimmed === ':template') {
       setIsTemplateModalOpen(true);
@@ -528,6 +643,7 @@ export default function UtilitarianTodoPage() {
         creationDate: parsed.creationDate,
         dueDate: parsed.dueDate,
         dueTime: parsed.dueTime,
+        recurrence: parsed.recurrence,
         description: '',
         projects: parsed.projects,
         contexts: parsed.contexts,
@@ -636,6 +752,7 @@ export default function UtilitarianTodoPage() {
             onClose={() => setSelectedTask(null)}
             onUpdateTask={handleUpdateTask}
             onSaveAsTemplate={handleSaveTaskAsTemplate}
+            onSkipRecurrence={handleSkipRecurrence}
             isLight={isLightMode}
           />
         </div>

@@ -17,6 +17,12 @@ Recently updated with:
 - **First-Class Task Templates System**:
   - Relational tables & dynamic token engine (`{today}`, `{due:+Nd}`, `{due:+Nw}`, `{due:+Nm}`, `{time:HH:MM}`).
   - Terminal commands `:template`, `:use <name>`, `:template save <name>` and `TemplateModal.tsx` gallery & builder.
+- **Flagship Recurring Tasks System (`rec:`)**:
+  - Full `todo.txt` `rec:` tag parsing (`rec:1d`, `rec:2w`, `rec:1m`, `rec:1y`, `rec:weekday`, `rec:mwf`).
+  - Supports **Relative Recurrence** (from completion date) and **Strict Recurrence** (`rec:strict:1w` / `rec:+1w` from original due date).
+  - Automated Completion Spawning Engine: completing a task logs the historical instance and automatically spawns the next open occurrence with fresh subtask checklist (`[ ]`).
+  - Inspector Drawer Recurrence Control Card with presets, mode toggles, `:skip` cycle button, and `:rec <rule>` terminal commands.
+  - Calendar View Future Recurrence Projections (dimmed ghost chips on future dates).
 
 ---
 
@@ -27,40 +33,41 @@ Recently updated with:
 │   ├── api/
 │   │   ├── auth/route.ts
 │   │   ├── health/route.ts           # Diagnostic endpoint for DB & Vercel serverless health
-│   │   ├── tasks/route.ts & [id]/route.ts
-│   │   └── templates/route.ts, [id]/route.ts, [id]/instantiate/route.ts
+│   │   ├── recurring/route.ts        # Endpoint for listing recurring schedules
+│   │   ├── tasks/
+│   │   │   ├── route.ts
+│   │   │   └── [id]/
+│   │   │       ├── route.ts
+│   │   │       ├── complete/route.ts # Complete & spawn next recurrence instance
+│   │   │       └── skip/route.ts     # Skip occurrence cycle
+│   │   └── templates/
 │   ├── globals.css
 │   ├── layout.tsx
 │   └── page.tsx
 ├── components/
-│   ├── CalendarView.tsx
-│   ├── CommandInput.tsx
+│   ├── CalendarView.tsx              # Includes future recurrence projections
+│   ├── CommandInput.tsx              # :rec, :skip, :recurring terminal commands
 │   ├── ConfirmModal.tsx
 │   ├── FormattedText.tsx
 │   ├── LoginScreen.tsx
 │   ├── Sidebar.tsx
 │   ├── StatusBar.tsx
 │   ├── SubtaskProgressBar.tsx
-│   ├── SyntaxGuideModal.tsx
-│   ├── TaskDetails.tsx
-│   ├── TaskList.tsx
+│   ├── SyntaxGuideModal.tsx          # rec: syntax guide documentation
+│   ├── TaskDetails.tsx              # Recurrence pattern control card & presets
+│   ├── TaskList.tsx                 # Visual terminal recurrence badges ([🔄 rec:1w], [⚡ strict:3d])
 │   └── TemplateModal.tsx
 ├── lib/
 │   ├── auth.ts
-│   └── db.ts                         # Turso DB / LibSQL client with /tmp/todo.db serverless fallback
+│   └── db.ts                         # Turso DB client with recurrence schema migrations
 ├── public/
-│   ├── apple-touch-icon.png
-│   ├── favicon.ico
-│   ├── icon-192.png
-│   ├── icon-512.png
-│   ├── icon.jpg
-│   ├── manifest.json
-│   └── sw.js
 ├── types/
-│   └── todo.ts
+│   └── todo.ts                       # Extended with RecurrenceRule & Task recurrence types
 ├── utils/
 │   ├── dateUtils.ts
+│   ├── recurrenceEngine.ts           # Recurrence rule parser, due date math & spawning engine
 │   ├── templateEngine.ts
-│   └── todoParser.ts
-└── HANDOFF.md
+│   └── todoParser.ts                 # Extended todo.txt rec: tag parser
+├── HANDOFF.md
+└── RECURRING_TASKS_FEATURE_PLAN.md
 ```

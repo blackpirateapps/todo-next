@@ -5,6 +5,7 @@ export interface ParsedTaskMeta {
   completionDate?: string;
   dueDate?: string;
   dueTime?: string;
+  recurrence?: string;
   completed: boolean;
   projects: string[];
   contexts: string[];
@@ -19,6 +20,7 @@ export function parseRawToStructured(raw: string, fallbackCreation?: string): Pa
   let completionDate: string | undefined = undefined;
   let dueDate: string | undefined = undefined;
   let dueTime: string | undefined = undefined;
+  let recurrence: string | undefined = undefined;
   const projects: string[] = [];
   const contexts: string[] = [];
   const titleWords: string[] = [];
@@ -68,6 +70,9 @@ export function parseRawToStructured(raw: string, fallbackCreation?: string): Pa
     } else if (/\btime:(\d{1,2}:\d{2})\b/i.test(word)) {
       const match = word.match(/\btime:(\d{1,2}:\d{2})\b/i);
       if (match) dueTime = match[1].padStart(5, '0');
+    } else if (/\brec:(?:strict:|\+)?(?:\d+[dwmy]|weekday|mwf)\b/i.test(word)) {
+      const match = word.match(/\brec:((?:strict:|\+)?(?:\d+[dwmy]|weekday|mwf))\b/i);
+      if (match) recurrence = match[1];
     } else {
       titleWords.push(word);
     }
@@ -82,6 +87,7 @@ export function parseRawToStructured(raw: string, fallbackCreation?: string): Pa
     completionDate,
     dueDate,
     dueTime,
+    recurrence,
     completed,
     projects,
     contexts,
@@ -95,6 +101,7 @@ export function buildRawFromStructured(meta: {
   completionDate?: string;
   dueDate?: string;
   dueTime?: string;
+  recurrence?: string;
   completed: boolean;
   projects?: string[];
   contexts?: string[];
@@ -139,6 +146,11 @@ export function buildRawFromStructured(meta: {
     parts.push(`time:${meta.dueTime}`);
   }
 
+  if (meta.recurrence) {
+    const recStr = meta.recurrence.startsWith('rec:') ? meta.recurrence : `rec:${meta.recurrence}`;
+    parts.push(recStr);
+  }
+
   return parts.join(' ');
 }
 
@@ -149,6 +161,7 @@ export function parseDatesFromRaw(raw: string, fallbackCreation?: string) {
     completionDate: parsed.completionDate,
     dueDate: parsed.dueDate,
     time: parsed.dueTime,
+    recurrence: parsed.recurrence,
   };
 }
 
@@ -167,6 +180,7 @@ export function updateRawDates(
     creationDate: newCreationDate || parsed.creationDate,
     dueDate: newDueDate !== undefined ? (newDueDate || undefined) : parsed.dueDate,
     dueTime: newTime !== undefined ? (newTime || undefined) : parsed.dueTime,
+    recurrence: parsed.recurrence,
     projects: parsed.projects,
     contexts: parsed.contexts,
   });

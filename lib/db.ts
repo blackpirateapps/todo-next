@@ -122,7 +122,9 @@ export async function initDb() {
         completion_date TEXT,
         due_date TEXT,
         due_time TEXT,
-        description TEXT DEFAULT ''
+        description TEXT DEFAULT '',
+        recurrence TEXT DEFAULT NULL,
+        parent_recurring_id TEXT DEFAULT NULL
       );
     `);
 
@@ -285,6 +287,16 @@ export async function initDb() {
 
       await db.execute('DROP TABLE tasks;');
       await db.execute('ALTER TABLE tasks_normalized RENAME TO tasks;');
+    }
+
+    const currentCols = await db.execute("PRAGMA table_info(tasks)");
+    const hasRecurrenceCol = currentCols.rows.some(row => row.name === 'recurrence');
+    if (!hasRecurrenceCol) {
+      await db.execute("ALTER TABLE tasks ADD COLUMN recurrence TEXT DEFAULT NULL;");
+    }
+    const hasParentRecurringCol = currentCols.rows.some(row => row.name === 'parent_recurring_id');
+    if (!hasParentRecurringCol) {
+      await db.execute("ALTER TABLE tasks ADD COLUMN parent_recurring_id TEXT DEFAULT NULL;");
     }
 
     // Initial Seed for Tasks
@@ -460,6 +472,9 @@ export async function getAllTasks(): Promise<Task[]> {
     const subtasks = subtasksMap.get(id) || [];
     const comments = commentsMap.get(id) || [];
 
+    const recurrence = row.recurrence ? String(row.recurrence) : undefined;
+    const parentRecurringId = row.parent_recurring_id ? String(row.parent_recurring_id) : undefined;
+
     const raw = buildRawFromStructured({
       title,
       priority,
@@ -467,6 +482,7 @@ export async function getAllTasks(): Promise<Task[]> {
       completionDate,
       dueDate,
       dueTime,
+      recurrence,
       completed,
       projects,
       contexts
@@ -484,6 +500,8 @@ export async function getAllTasks(): Promise<Task[]> {
       dueDate,
       dueTime,
       description,
+      recurrence,
+      parentRecurringId,
       projects,
       contexts,
       subtasks,
@@ -503,11 +521,13 @@ export async function insertTask(task: Task): Promise<Task> {
   const completionDate = parsed.completionDate || task.completionDate || null;
   const dueDate = parsed.dueDate || task.dueDate || null;
   const dueTime = parsed.dueTime || task.dueTime || null;
+  const recurrence = task.recurrence || parsed.recurrence || null;
+  const parentRecurringId = task.parentRecurringId || null;
   const description = task.description || '';
 
   await db.execute({
-    sql: `INSERT INTO tasks (id, title, status, priority, creation_date, completion_date, due_date, due_time, description)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    sql: `INSERT INTO tasks (id, title, status, priority, creation_date, completion_date, due_date, due_time, description, recurrence, parent_recurring_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       task.id,
       title,
@@ -517,7 +537,9 @@ export async function insertTask(task: Task): Promise<Task> {
       completionDate,
       dueDate,
       dueTime,
-      description
+      description,
+      recurrence,
+      parentRecurringId
     ]
   });
 
@@ -558,6 +580,7 @@ export async function insertTask(task: Task): Promise<Task> {
     completionDate: completionDate || undefined,
     dueDate: dueDate || undefined,
     dueTime: dueTime || undefined,
+    recurrence: recurrence || undefined,
     completed: status === 'completed',
     projects,
     contexts
@@ -574,6 +597,8 @@ export async function insertTask(task: Task): Promise<Task> {
     completionDate: completionDate || undefined,
     dueDate: dueDate || undefined,
     dueTime: dueTime || undefined,
+    recurrence: recurrence || undefined,
+    parentRecurringId: parentRecurringId || undefined,
     projects,
     contexts
   };
@@ -626,6 +651,14 @@ export async function updateTaskInDb(id: string, updates: Partial<Task>): Promis
     ? updates.description
     : String(existingRow.description || '');
 
+  const newRecurrence = updates.recurrence !== undefined
+    ? updates.recurrence
+    : (parsed?.recurrence !== undefined ? parsed.recurrence : (existingRow.recurrence ? String(existingRow.recurrence) : null));
+
+  const newParentRecurringId = updates.parentRecurringId !== undefined
+    ? updates.parentRecurringId
+    : (existingRow.parent_recurring_id ? String(existingRow.parent_recurring_id) : null);
+
   const updateArgs: InValue[] = [
     newTitle,
     newStatus,
@@ -635,11 +668,13 @@ export async function updateTaskInDb(id: string, updates: Partial<Task>): Promis
     newDueDate || null,
     newDueTime || null,
     newDescription,
+    newRecurrence || null,
+    newParentRecurringId || null,
     id
   ];
 
   await db.execute({
-    sql: `UPDATE tasks SET title = ?, status = ?, priority = ?, creation_date = ?, completion_date = ?, due_date = ?, due_time = ?, description = ?
+    sql: `UPDATE tasks SET title = ?, status = ?, priority = ?, creation_date = ?, completion_date = ?, due_date = ?, due_time = ?, description = ?, recurrence = ?, parent_recurring_id = ?
           WHERE id = ?`,
     args: updateArgs
   });
@@ -720,6 +755,7 @@ export async function updateTaskInDb(id: string, updates: Partial<Task>): Promis
     completionDate: newCompletionDate || undefined,
     dueDate: newDueDate || undefined,
     dueTime: newDueTime || undefined,
+    recurrence: newRecurrence || undefined,
     completed: newStatus === 'completed',
     projects: newProjects,
     contexts: newContexts
@@ -737,6 +773,8 @@ export async function updateTaskInDb(id: string, updates: Partial<Task>): Promis
     dueDate: newDueDate || undefined,
     dueTime: newDueTime || undefined,
     description: newDescription,
+    recurrence: newRecurrence || undefined,
+    parentRecurringId: newParentRecurringId || undefined,
     projects: newProjects,
     contexts: newContexts,
     subtasks: finalSubtasks,
