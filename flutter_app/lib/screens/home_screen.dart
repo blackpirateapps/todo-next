@@ -5,6 +5,7 @@ import '../models/subtask.dart';
 import '../models/comment.dart';
 import '../models/template.dart';
 import '../services/storage_service.dart';
+import '../services/api_service.dart';
 import '../utils/todo_parser.dart';
 import '../utils/template_engine.dart';
 import '../utils/recurrence_engine.dart';
@@ -16,6 +17,7 @@ import '../widgets/inspector_drawer.dart';
 import '../widgets/template_modal.dart';
 import '../widgets/syntax_guide_modal.dart';
 import '../widgets/confirm_dialog.dart';
+import '../widgets/login_dialog.dart';
 import '../widgets/status_bar.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -41,6 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Task? _selectedTask;
   String _activeFilter = '';
   String _activeView = 'list'; // 'list' | 'calendar'
+  String _syncStatus = 'synced'; // 'synced' | 'syncing' | 'offline'
   bool _isLoading = true;
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -48,31 +51,66 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _initAndLoadData();
   }
 
-  Future<void> _loadData() async {
-    final tasks = await _storageService.loadTasks();
-    final templates = await _storageService.loadTemplates();
-    setState(() {
-      _tasks = tasks;
-      _templates = templates;
-      if (_tasks.isNotEmpty && _selectedTask == null) {
-        _selectedTask = _tasks.first;
+  Future<void> _initAndLoadData() async {
+    await ApiService.init();
+
+    final authStatus = await ApiService.checkAuthStatus();
+    if (authStatus['authRequired'] == true && authStatus['authenticated'] != true) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => LoginDialogWidget(
+            isLight: widget.isLight,
+            onLoginSuccess: () {
+              _loadDataFromWebOrCache();
+            },
+          ),
+        );
       }
-      _isLoading = false;
-    });
+    } else {
+      await _loadDataFromWebOrCache();
+    }
   }
 
-  Future<void> _saveTasks() async {
-    await _storageService.saveTasks(_tasks);
+  Future<void> _loadDataFromWebOrCache() async {
+    setState(() => _syncStatus = 'syncing');
+
+    final remoteTasks = await ApiService.fetchTasks();
+    final remoteTemplates = await ApiService.fetchTemplates();
+
+    if (remoteTasks != null) {
+      setState(() {
+        _tasks = remoteTasks;
+        if (remoteTemplates != null) _templates = remoteTemplates;
+        if (_tasks.isNotEmpty && _selectedTask == null) {
+          _selectedTask = _tasks.first;
+        }
+        _syncStatus = 'synced';
+        _isLoading = false;
+      });
+      await _storageService.saveTasks(_tasks);
+      if (remoteTemplates != null) await _storageService.saveTemplates(_templates);
+    } else {
+      // Offline fallback
+      final localTasks = await _storageService.loadTasks();
+      final localTemplates = await _storageService.loadTemplates();
+      setState(() {
+        _tasks = localTasks;
+        _templates = localTemplates;
+        if (_tasks.isNotEmpty && _selectedTask == null) {
+          _selectedTask = _tasks.first;
+        }
+        _syncStatus = 'offline';
+        _isLoading = false;
+      });
+    }
   }
 
-  Future<void> _saveTemplates() async {
-    await _storageService.saveTemplates(_templates);
-  }
-
-  void _handleToggleTask(String id) {
+  Future<void> _handleToggleTask(String id) async {
     final idx = _tasks.indexWhere((t) => t.id == id);
     if (idx == -1) return;
 
@@ -102,6 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
       nextTaskInstance = spawnNextRecurrenceInstance(taskToUpdate, today);
     }
 
+    // Optimistic UI update
     setState(() {
       _tasks[idx] = updatedTask;
       if (nextTaskInstance != null) {
@@ -110,12 +149,25 @@ class _HomeScreenState extends State<HomeScreen> {
       if (_selectedTask?.id == id) {
         _selectedTask = updatedTask;
       }
+      _syncStatus = 'syncing';
     });
 
-    _saveTasks();
+    await _storageService.saveTasks(_tasks);
+
+    // Web API sync
+    bool ok = false;
+    if (isNowCompleted && taskToUpdate.recurrence != null && taskToUpdate.recurrence!.isNotEmpty) {
+      ok = await ApiService.completeTask(id, today);
+    } else {
+      ok = await ApiService.updateTask(id, updatedTask.toJson());
+    }
+
+    setState(() {
+      _syncStatus = ok ? 'synced' : 'offline';
+    });
   }
 
-  void _handleSkipRecurrence(String id) {
+  Future<void> _handleSkipRecurrence(String id) async {
     final idx = _tasks.indexWhere((t) => t.id == id);
     if (idx == -1) return;
 
@@ -129,12 +181,18 @@ class _HomeScreenState extends State<HomeScreen> {
       if (_selectedTask?.id == id) {
         _selectedTask = skipped;
       }
+      _syncStatus = 'syncing';
     });
 
-    _saveTasks();
+    await _storageService.saveTasks(_tasks);
+
+    final ok = await ApiService.skipTask(id);
+    setState(() {
+      _syncStatus = ok ? 'synced' : 'offline';
+    });
   }
 
-  void _handleUpdateTask(String id, Map<String, dynamic> updates) {
+  Future<void> _handleUpdateTask(String id, Map<String, dynamic> updates) async {
     final idx = _tasks.indexWhere((t) => t.id == id);
     if (idx == -1) return;
 
@@ -166,12 +224,18 @@ class _HomeScreenState extends State<HomeScreen> {
       if (_selectedTask?.id == id) {
         _selectedTask = updated;
       }
+      _syncStatus = 'syncing';
     });
 
-    _saveTasks();
+    await _storageService.saveTasks(_tasks);
+
+    final ok = await ApiService.updateTask(id, updates);
+    setState(() {
+      _syncStatus = ok ? 'synced' : 'offline';
+    });
   }
 
-  void _handleMoveTask(String taskId, String targetDate, String? targetTime) {
+  Future<void> _handleMoveTask(String taskId, String targetDate, String? targetTime) async {
     final idx = _tasks.indexWhere((t) => t.id == taskId);
     if (idx == -1) return;
 
@@ -190,9 +254,20 @@ class _HomeScreenState extends State<HomeScreen> {
       if (_selectedTask?.id == taskId) {
         _selectedTask = updated;
       }
+      _syncStatus = 'syncing';
     });
 
-    _saveTasks();
+    await _storageService.saveTasks(_tasks);
+
+    final ok = await ApiService.updateTask(taskId, {
+      'raw': newRaw,
+      'dueDate': parsed.dueDate,
+      'dueTime': parsed.dueTime,
+    });
+
+    setState(() {
+      _syncStatus = ok ? 'synced' : 'offline';
+    });
   }
 
   void _handleDeleteTask(Task task) {
@@ -202,32 +277,44 @@ class _HomeScreenState extends State<HomeScreen> {
         title: 'Delete Task',
         message: 'Are you sure you want to delete "${task.title}"?',
         isLight: widget.isLight,
-        onConfirm: () {
+        onConfirm: () async {
           setState(() {
             _tasks.removeWhere((t) => t.id == task.id);
             if (_selectedTask?.id == task.id) {
               _selectedTask = _tasks.isNotEmpty ? _tasks.first : null;
             }
+            _syncStatus = 'syncing';
           });
-          _saveTasks();
+          await _storageService.saveTasks(_tasks);
+
+          final ok = await ApiService.deleteTask(task.id);
+          setState(() {
+            _syncStatus = ok ? 'synced' : 'offline';
+          });
         },
       ),
     );
   }
 
-  void _handleInstantiateTemplate(String templateId) {
+  Future<void> _handleInstantiateTemplate(String templateId) async {
     final tmpl = _templates.firstWhere((t) => t.id == templateId || t.name.toLowerCase().contains(templateId.toLowerCase()));
     final newTask = instantiateTaskFromTemplate(tmpl);
 
     setState(() {
       _tasks.insert(0, newTask);
       _selectedTask = newTask;
+      _syncStatus = 'syncing';
     });
 
-    _saveTasks();
+    await _storageService.saveTasks(_tasks);
+
+    final created = await ApiService.createTask(newTask);
+    setState(() {
+      _syncStatus = created != null ? 'synced' : 'offline';
+    });
   }
 
-  void _handleSaveAsTemplate(Task task) {
+  Future<void> _handleSaveAsTemplate(Task task) async {
     final newTmpl = Template(
       id: 'tmpl-${DateTime.now().millisecondsSinceEpoch}',
       name: 'Template: ${task.title}',
@@ -246,40 +333,50 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       _templates.insert(0, newTmpl);
+      _syncStatus = 'syncing';
     });
 
-    _saveTemplates();
+    await _storageService.saveTemplates(_templates);
+
+    final ok = await ApiService.createTemplate(newTmpl);
+    setState(() {
+      _syncStatus = ok ? 'synced' : 'offline';
+    });
+
     _openTemplatesModal();
   }
 
-  void _handleDeleteTemplate(String templateId) {
+  Future<void> _handleDeleteTemplate(String templateId) async {
     setState(() {
       _templates.removeWhere((t) => t.id == templateId);
+      _syncStatus = 'syncing';
     });
-    _saveTemplates();
+    await _storageService.saveTemplates(_templates);
+
+    final ok = await ApiService.deleteTemplate(templateId);
+    setState(() {
+      _syncStatus = ok ? 'synced' : 'offline';
+    });
   }
 
-  void _handleCommandSubmit(String val) {
+  Future<void> _handleCommandSubmit(String val) async {
     final trimmed = val.trim();
     if (trimmed.isEmpty) return;
 
-    // Filter command
     if (trimmed == ':recurring') {
       setState(() => _activeFilter = 'rec:');
       _commandController.clear();
       return;
     }
 
-    // Skip command
     if (trimmed == ':skip') {
       if (_selectedTask != null) {
-        _handleSkipRecurrence(_selectedTask!.id);
+        await _handleSkipRecurrence(_selectedTask!.id);
         _commandController.clear();
       }
       return;
     }
 
-    // Recurrence command
     if (trimmed.startsWith(':rec ')) {
       final recVal = trimmed.substring(5).trim();
       if (_selectedTask != null) {
@@ -296,7 +393,7 @@ class _HomeScreenState extends State<HomeScreen> {
             projects: _selectedTask!.projects,
             contexts: _selectedTask!.contexts,
           );
-          _handleUpdateTask(_selectedTask!.id, {'recurrence': null, 'raw': newRaw});
+          await _handleUpdateTask(_selectedTask!.id, {'recurrence': null, 'raw': newRaw});
         } else {
           final cleanRec = recVal.startsWith('rec:') ? recVal.substring(4) : recVal;
           final newRaw = buildRawFromStructured(
@@ -311,14 +408,13 @@ class _HomeScreenState extends State<HomeScreen> {
             projects: _selectedTask!.projects,
             contexts: _selectedTask!.contexts,
           );
-          _handleUpdateTask(_selectedTask!.id, {'recurrence': cleanRec, 'raw': newRaw});
+          await _handleUpdateTask(_selectedTask!.id, {'recurrence': cleanRec, 'raw': newRaw});
         }
         _commandController.clear();
       }
       return;
     }
 
-    // Template command
     if (trimmed == ':template') {
       _openTemplatesModal();
       _commandController.clear();
@@ -327,20 +423,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (trimmed.startsWith(':use ')) {
       final tmplName = trimmed.substring(5).trim();
-      _handleInstantiateTemplate(tmplName);
+      await _handleInstantiateTemplate(tmplName);
       _commandController.clear();
       return;
     }
 
     if (trimmed.startsWith(':template save ')) {
       if (_selectedTask != null) {
-        _handleSaveAsTemplate(_selectedTask!);
+        await _handleSaveAsTemplate(_selectedTask!);
       }
       _commandController.clear();
       return;
     }
 
-    // :add ... or search filter
     if (trimmed.startsWith(':add ')) {
       final newTaskRaw = trimmed.substring(5);
       final parsed = parseRawToStructured(newTaskRaw);
@@ -367,11 +462,16 @@ class _HomeScreenState extends State<HomeScreen> {
         _tasks.insert(0, newTask);
         _selectedTask = newTask;
         _commandController.clear();
+        _syncStatus = 'syncing';
       });
 
-      _saveTasks();
+      await _storageService.saveTasks(_tasks);
+
+      final created = await ApiService.createTask(newTask);
+      setState(() {
+        _syncStatus = created != null ? 'synced' : 'offline';
+      });
     } else {
-      // Treat as live search filter
       setState(() {
         _activeFilter = trimmed;
       });
@@ -385,9 +485,14 @@ class _HomeScreenState extends State<HomeScreen> {
         templates: _templates,
         isLight: widget.isLight,
         onInstantiateTemplate: _handleInstantiateTemplate,
-        onCreateTemplate: (tmpl) {
-          setState(() => _templates.insert(0, tmpl));
-          _saveTemplates();
+        onCreateTemplate: (tmpl) async {
+          setState(() {
+            _templates.insert(0, tmpl);
+            _syncStatus = 'syncing';
+          });
+          await _storageService.saveTemplates(_templates);
+          final ok = await ApiService.createTemplate(tmpl);
+          setState(() => _syncStatus = ok ? 'synced' : 'offline');
         },
         onDeleteTemplate: _handleDeleteTemplate,
       ),
@@ -422,13 +527,13 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: widget.isLight ? Colors.white : Colors.black,
-        body: const Center(child: Text('Loading Todo Next System...')),
+        body: const Center(child: Text('Connecting to Todo Next Server...')),
       );
     }
 
     final filteredTasks = _getFilteredTasks();
     final screenWidth = MediaQuery.of(context).size.width;
-    final isTablet = screenWidth >= 600; // Tablet threshold
+    final isTablet = screenWidth >= 600;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -448,7 +553,6 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Top Command Bar
             CommandInputWidget(
               controller: _commandController,
               onSubmit: _handleCommandSubmit,
@@ -464,11 +568,9 @@ class _HomeScreenState extends State<HomeScreen> {
               isLight: widget.isLight,
             ),
 
-            // Main Body Area
             Expanded(
               child: Row(
                 children: [
-                  // Column 1: Left Sidebar (Tablet Only)
                   if (isTablet)
                     SidebarWidget(
                       tasks: _tasks,
@@ -477,7 +579,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       onFilterClick: (filter) => setState(() => _activeFilter = filter),
                     ),
 
-                  // Column 2: Center Workspace (List or Calendar)
                   Expanded(
                     child: _activeView == 'list'
                         ? TaskListWidget(
@@ -502,7 +603,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                   ),
 
-                  // Column 3: Right Inspector Drawer (Tablet Only or Mobile Selected Overlay)
                   if (isTablet)
                     InspectorDrawerWidget(
                       task: _selectedTask,
@@ -516,19 +616,19 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // Bottom Status Bar
             StatusBarWidget(
               filteredCount: filteredTasks.length,
               totalCount: _tasks.length,
               activeFilter: _activeFilter,
+              syncStatus: _syncStatus,
               isLight: widget.isLight,
               onToggleTheme: widget.onToggleTheme,
+              onForceSync: _loadDataFromWebOrCache,
             ),
           ],
         ),
       ),
 
-      // Mobile Inspector Drawer (Bottom Sheet)
       endDrawer: (!isTablet && _selectedTask != null)
           ? Drawer(
               width: screenWidth * 0.85,

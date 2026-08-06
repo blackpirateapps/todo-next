@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, token: expectedToken });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Authentication failed' }, { status: 500 });
   }

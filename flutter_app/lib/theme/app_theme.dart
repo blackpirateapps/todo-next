@@ -23,9 +23,33 @@ class AppTheme {
   static const Color duePurple = Color(0xFFA855F7);
   static const Color recPurple = Color(0xFF9333EA);
 
+  static TextStyle monoStyle({
+    double fontSize = 12.0,
+    FontWeight fontWeight = FontWeight.normal,
+    Color? color,
+    TextDecoration? decoration,
+    FontStyle fontStyle = FontStyle.normal,
+  }) {
+    return GoogleFonts.jetBrainsMono(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      decoration: decoration,
+      fontStyle: fontStyle,
+    );
+  }
+
   static ThemeData darkTheme() {
+    final baseTextTheme = ThemeData.dark().textTheme;
+    final monoTextTheme = GoogleFonts.jetBrainsMonoTextTheme(baseTextTheme).apply(
+      bodyColor: darkText,
+      displayColor: darkText,
+    );
+
     return ThemeData(
       brightness: Brightness.dark,
+      fontFamily: 'monospace',
+      fontFamilyFallback: const ['monospace', 'Courier', 'Roboto Mono'],
       scaffoldBackgroundColor: darkBg,
       cardColor: darkCard,
       dividerColor: darkBorder,
@@ -34,16 +58,21 @@ class AppTheme {
         primary: projectCyan,
         secondary: contextGreen,
       ),
-      textTheme: GoogleFonts.jetBrainsMonoTextTheme(ThemeData.dark().textTheme).apply(
-        bodyColor: darkText,
-        displayColor: darkText,
-      ),
+      textTheme: monoTextTheme,
     );
   }
 
   static ThemeData lightTheme() {
+    final baseTextTheme = ThemeData.light().textTheme;
+    final monoTextTheme = GoogleFonts.jetBrainsMonoTextTheme(baseTextTheme).apply(
+      bodyColor: lightText,
+      displayColor: lightText,
+    );
+
     return ThemeData(
       brightness: Brightness.light,
+      fontFamily: 'monospace',
+      fontFamilyFallback: const ['monospace', 'Courier', 'Roboto Mono'],
       scaffoldBackgroundColor: lightBg,
       cardColor: lightCard,
       dividerColor: lightBorder,
@@ -52,10 +81,7 @@ class AppTheme {
         primary: projectCyan,
         secondary: contextGreen,
       ),
-      textTheme: GoogleFonts.jetBrainsMonoTextTheme(ThemeData.light().textTheme).apply(
-        bodyColor: lightText,
-        displayColor: lightText,
-      ),
+      textTheme: monoTextTheme,
     );
   }
 }

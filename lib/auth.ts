@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import crypto from 'crypto';
 
 export function getExpectedSessionToken(): string | null {
@@ -14,6 +14,13 @@ export function isAuthRequired(): boolean {
 export async function isAuthenticated(): Promise<boolean> {
   const expectedToken = getExpectedSessionToken();
   if (!expectedToken) return true; // Password not set, open access
+
+  const headerStore = await headers();
+  const bearerToken = headerStore.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
+  const customHeaderToken = headerStore.get('x-app-session')?.trim();
+  if (bearerToken === expectedToken || customHeaderToken === expectedToken) {
+    return true;
+  }
 
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get('app_session')?.value;

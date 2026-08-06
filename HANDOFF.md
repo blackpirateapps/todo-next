@@ -28,6 +28,12 @@ Recently updated with:
   - Multi-column adaptive tablet dashboard layout (≥600dp) rendering Sidebar + Task Workspace + Inspector Drawer side-by-side.
   - Full `todo.txt` syntax parser, recurrence spawning engine, template token generator, calendar view, inspector drawer, and terminal command bar.
   - Passes `flutter analyze` with **0 issues found**.
+- **Bi-directional Web Sync & Header Authentication**:
+  - Live bi-directional sync between Android app and web backend (`https://todo-next-five-mu.vercel.app/api`).
+  - Extended Next.js backend (`lib/auth.ts` & `app/api/auth/route.ts`) with `Authorization: Bearer <token>` and `x-app-session` headers.
+  - Native password login modal (`LoginDialogWidget`) in Flutter for protected instances.
+- **Native Monospace Font Stack Fix**:
+  - Added `fontFamily: 'monospace'` with fallback `['monospace', 'Courier', 'Roboto Mono']` and `GoogleFonts.config.allowRuntimeFetching = true` to guarantee crisp terminal font rendering offline and online.
 - **Automated GitHub Actions CI/CD (`build-flutter-apk.yml`)**:
   - Automatically compiles release `.apk` packages on every push/PR to `main`.
   - Attaches generated APK artifacts (`todo-next-android-app`) directly to GitHub Actions build runs.
