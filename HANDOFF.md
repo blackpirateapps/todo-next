@@ -17,11 +17,26 @@ Recently updated with:
 - **First-Class Task Templates System**:
   - Relational tables & dynamic token engine (`{today}`, `{due:+Nd}`, `{due:+Nw}`, `{due:+Nm}`, `{time:HH:MM}`).
   - Terminal commands `:template`, `:use <name>`, `:template save <name>` and `TemplateModal.tsx` gallery & builder.
+- **Flagship Recurring Tasks System (`rec:`)**:
+  - Full `todo.txt` `rec:` tag parsing (`rec:1d`, `rec:2w`, `rec:1m`, `rec:1y`, `rec:weekday`, `rec:mwf`).
+  - Supports **Relative Recurrence** (from completion date) and **Strict Recurrence** (`rec:strict:1w` / `rec:+1w` from original due date).
+  - Automated Completion Spawning Engine: completing a task logs the historical instance and automatically spawns the next open occurrence with fresh subtask checklist (`[ ]`).
+  - Inspector Drawer Recurrence Control Card with presets, mode toggles, `:skip` cycle button, and `:rec <rule>` terminal commands.
+  - Calendar View Future Recurrence Projections (dimmed ghost chips on future dates).
 - **Native Android & Tablet Application (`flutter_app/`)**:
   - Built with **Flutter 3.44+ & Dart** for native Android performance on phones and tablets.
   - Multi-column adaptive tablet dashboard layout (≥600dp) rendering Sidebar + Task Workspace + Inspector Drawer side-by-side.
   - Full `todo.txt` syntax parser, recurrence spawning engine, template token generator, calendar view, inspector drawer, and terminal command bar.
-  - Automated GitHub Actions workflow (`.github/workflows/build-flutter-apk.yml`) building release APK artifacts on push.
+  - Passes `flutter analyze` with **0 issues found**.
+- **Automated GitHub Actions CI/CD (`build-flutter-apk.yml`)**:
+  - Automatically compiles release `.apk` packages on every push/PR to `main`.
+  - Attaches generated APK artifacts (`todo-next-android-app`) directly to GitHub Actions build runs.
+
+---
+
+## 📌 Standard Operating Rule for AI Assistant
+> [!IMPORTANT]
+> **Always update `HANDOFF.md` whenever significant code, feature, schema, architecture, or workflow changes are completed, and commit & push the updated handoff document.**
 
 ---
 
@@ -37,11 +52,28 @@ Recently updated with:
 │   │   ├── health/route.ts           # Diagnostic endpoint for DB & Vercel serverless health
 │   │   ├── recurring/route.ts        # Endpoint for listing recurring schedules
 │   │   ├── tasks/
+│   │   │   ├── route.ts
+│   │   │   └── [id]/
+│   │   │       ├── route.ts
+│   │   │       ├── complete/route.ts # Complete & spawn next recurrence instance
+│   │   │       └── skip/route.ts     # Skip occurrence cycle
 │   │   └── templates/
 │   ├── globals.css
 │   ├── layout.tsx
 │   └── page.tsx
 ├── components/
+│   ├── CalendarView.tsx              # Includes future recurrence projections
+│   ├── CommandInput.tsx              # :rec, :skip, :recurring terminal commands
+│   ├── ConfirmModal.tsx
+│   ├── FormattedText.tsx
+│   ├── LoginScreen.tsx
+│   ├── Sidebar.tsx
+│   ├── StatusBar.tsx
+│   ├── SubtaskProgressBar.tsx
+│   ├── SyntaxGuideModal.tsx          # rec: syntax guide documentation
+│   ├── TaskDetails.tsx              # Recurrence pattern control card & presets
+│   ├── TaskList.tsx                 # Visual terminal recurrence badges ([🔄 rec:1w], [⚡ strict:3d])
+│   └── TemplateModal.tsx
 ├── flutter_app/                       # Native Flutter Android Application
 │   ├── android/                      # Native Android Gradle configuration
 │   ├── lib/
@@ -53,9 +85,16 @@ Recently updated with:
 │   │   └── widgets/                  # FormattedText, TaskList, CalendarView, InspectorDrawer, CommandInput
 │   └── pubspec.yaml
 ├── lib/
+│   ├── auth.ts
+│   └── db.ts                         # Turso DB client with recurrence schema migrations
 ├── public/
 ├── types/
+│   └── todo.ts                       # Extended with RecurrenceRule & Task recurrence types
 ├── utils/
+│   ├── dateUtils.ts
+│   ├── recurrenceEngine.ts           # Recurrence rule parser, due date math & spawning engine
+│   ├── templateEngine.ts
+│   └── todoParser.ts                 # Extended todo.txt rec: tag parser
 ├── ANDROID_APP_FEATURE_PLAN.md
 ├── HANDOFF.md
 └── RECURRING_TASKS_FEATURE_PLAN.md
