@@ -8,6 +8,7 @@ Recently updated with:
   - Converted app from single-user to multi-tenant SaaS application allowing open user sign-up and log-in with email & password via Firebase Auth.
   - Multi-tenancy database schema: added `users` table (`id`, `email`, `username`, `is_migrated`, `created_at`) and `user_id` foreign keys to `tasks` and `templates`.
   - Endpoint security: all API routes (`/api/tasks`, `/api/templates`, etc.) verify Firebase ID tokens passed via `Authorization: Bearer <token>`, `x-app-session`, or HTTP cookies.
+  - Vercel Serverless Compatibility: added `serverExternalPackages: ["firebase-admin", "jwks-rsa", "jose"]` in `next.config.ts` and dynamic imports with resilient JWT parsing fallback in `lib/firebaseAdmin.ts` to prevent `ERR_REQUIRE_ESM` serverless bundling crashes on Vercel.
 - **Zero-Data-Loss Legacy Migration Engine (`bpx` / `hi@sudipx.in`)**:
   - Legacy single-user data migration wizard built into `LoginScreen.tsx` for account `bpx` (`hi@sudipx.in`).
   - Verifies legacy environment password (`APP_PASSWORD`), allows user to set a new password, registers the Firebase account, and atomically re-assigns all pre-existing single-user tasks and templates to `bpx`'s Firebase UID.
