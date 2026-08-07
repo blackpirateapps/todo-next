@@ -79,7 +79,7 @@ class _LoginDialogWidgetState extends State<LoginDialogWidget> {
                   child: InkWell(
                     onTap: () => setState(() { _isSignUp = false; _error = null; }),
                     child: Container(
-                      padding: const EdgeInsets.vertical(8),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         border: Border(bottom: BorderSide(color: !_isSignUp ? Colors.cyan : Colors.transparent, width: 2)),
@@ -92,7 +92,7 @@ class _LoginDialogWidgetState extends State<LoginDialogWidget> {
                   child: InkWell(
                     onTap: () => setState(() { _isSignUp = true; _error = null; }),
                     child: Container(
-                      padding: const EdgeInsets.vertical(8),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         border: Border(bottom: BorderSide(color: _isSignUp ? Colors.cyan : Colors.transparent, width: 2)),
