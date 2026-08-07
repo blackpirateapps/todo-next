@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/task.dart';
 import '../models/subtask.dart';
@@ -478,6 +479,108 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _openAddTaskModal() {
+    final TextEditingController inputController = TextEditingController();
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final bg = widget.isLight ? Colors.white : const Color(0xFF09090B);
+          final border = widget.isLight ? const Color(0xFFE4E4E7) : const Color(0xFF27272A);
+
+          return Dialog(
+            backgroundColor: bg,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero, side: BorderSide(color: border)),
+            child: Container(
+              width: 450,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text('[CREATE NEW TASK]', style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.cyan)),
+                      const Spacer(),
+                      IconButton(icon: const Icon(Icons.close, size: 18), onPressed: () => Navigator.of(context).pop()),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text('Enter task in todo.txt format:', style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[500])),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: inputController,
+                    style: GoogleFonts.jetBrainsMono(fontSize: 12),
+                    autofocus: true,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      hintText: '(A) $todayStr Task description +project @context due:$todayStr',
+                      hintStyle: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[600]),
+                      border: OutlineInputBorder(borderSide: BorderSide(color: border)),
+                      contentPadding: const EdgeInsets.all(10),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Quick Token Chips
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      ActionChip(
+                        label: Text('(A)', style: GoogleFonts.jetBrainsMono(fontSize: 10, color: Colors.red[300], fontWeight: FontWeight.bold)),
+                        backgroundColor: bg,
+                        side: BorderSide(color: border),
+                        onPressed: () {
+                          inputController.text = '(A) ${inputController.text}';
+                        },
+                      ),
+                      ActionChip(
+                        label: Text('(B)', style: GoogleFonts.jetBrainsMono(fontSize: 10, color: Colors.amber[300], fontWeight: FontWeight.bold)),
+                        backgroundColor: bg,
+                        side: BorderSide(color: border),
+                        onPressed: () {
+                          inputController.text = '(B) ${inputController.text}';
+                        },
+                      ),
+                      ActionChip(
+                        label: Text('due:today', style: GoogleFonts.jetBrainsMono(fontSize: 10, color: Colors.purple[300])),
+                        backgroundColor: bg,
+                        side: BorderSide(color: border),
+                        onPressed: () {
+                          inputController.text = '${inputController.text} due:$todayStr'.trim();
+                        },
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.cyan[700]),
+                      onPressed: () {
+                        final val = inputController.text.trim();
+                        if (val.isNotEmpty) {
+                          final taskCmd = val.startsWith(':add ') ? val : ':add $val';
+                          _handleCommandSubmit(taskCmd);
+                          Navigator.of(context).pop();
+                        }
+                      },
+                      child: Text('Create Task', style: GoogleFonts.jetBrainsMono(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   void _openTemplatesModal() {
     showDialog(
       context: context,
@@ -522,6 +625,13 @@ class _HomeScreenState extends State<HomeScreen> {
     }).toList();
   }
 
+  void _selectTaskAndOpenInspector(Task task, bool isTablet) {
+    setState(() => _selectedTask = task);
+    if (!isTablet) {
+      _scaffoldKey.currentState?.openEndDrawer();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -539,17 +649,26 @@ class _HomeScreenState extends State<HomeScreen> {
       key: _scaffoldKey,
       drawer: !isTablet
           ? Drawer(
-              child: SidebarWidget(
-                tasks: _tasks,
-                activeFilter: _activeFilter,
-                isLight: widget.isLight,
-                onFilterClick: (filter) {
-                  setState(() => _activeFilter = filter);
-                  Navigator.of(context).pop();
-                },
+              child: SafeArea(
+                child: SidebarWidget(
+                  tasks: _tasks,
+                  activeFilter: _activeFilter,
+                  isLight: widget.isLight,
+                  onFilterClick: (filter) {
+                    setState(() => _activeFilter = filter);
+                    Navigator.of(context).pop();
+                  },
+                ),
               ),
             )
           : null,
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: Colors.cyan[700],
+        elevation: 4,
+        icon: const Icon(Icons.add, color: Colors.white, size: 20),
+        label: Text('NEW TASK', style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+        onPressed: _openAddTaskModal,
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -585,7 +704,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             tasks: filteredTasks,
                             selectedTaskId: _selectedTask?.id,
                             isLight: widget.isLight,
-                            onSelectTask: (t) => setState(() => _selectedTask = t),
+                            onSelectTask: (t) => _selectTaskAndOpenInspector(t, isTablet),
                             onToggleTask: _handleToggleTask,
                             onDeleteTask: _handleDeleteTask,
                           )
@@ -593,7 +712,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             tasks: filteredTasks,
                             selectedTaskId: _selectedTask?.id,
                             isLight: widget.isLight,
-                            onSelectTask: (t) => setState(() => _selectedTask = t),
+                            onSelectTask: (t) => _selectTaskAndOpenInspector(t, isTablet),
                             onToggleTask: _handleToggleTask,
                             onMoveTask: _handleMoveTask,
                             onCreateTaskAtDate: (dateISO, timeStr) {
@@ -631,14 +750,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
       endDrawer: (!isTablet && _selectedTask != null)
           ? Drawer(
-              width: screenWidth * 0.85,
-              child: InspectorDrawerWidget(
-                task: _selectedTask,
-                isLight: widget.isLight,
-                onClose: () => Navigator.of(context).pop(),
-                onUpdateTask: _handleUpdateTask,
-                onSaveAsTemplate: _handleSaveAsTemplate,
-                onSkipRecurrence: _handleSkipRecurrence,
+              width: screenWidth * 0.88,
+              child: SafeArea(
+                child: InspectorDrawerWidget(
+                  task: _selectedTask,
+                  isLight: widget.isLight,
+                  onClose: () => Navigator.of(context).pop(),
+                  onUpdateTask: _handleUpdateTask,
+                  onSaveAsTemplate: _handleSaveAsTemplate,
+                  onSkipRecurrence: _handleSkipRecurrence,
+                ),
               ),
             )
           : null,

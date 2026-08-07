@@ -27,6 +27,89 @@ class CommandInputWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final bg = isLight ? const Color(0xFFF4F4F5) : const Color(0xFF09090B);
     final border = isLight ? const Color(0xFFE4E4E7) : const Color(0xFF27272A);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isCompact = screenWidth < 600;
+
+    Widget navButtons = Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        InkWell(
+          onTap: () => onChangeView('list'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: activeView == 'list'
+                  ? (isLight ? Colors.grey[300] : Colors.grey[800])
+                  : Colors.transparent,
+              border: Border.all(color: border),
+            ),
+            child: Text('[List]', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold)),
+          ),
+        ),
+        InkWell(
+          onTap: () => onChangeView('calendar'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: activeView == 'calendar'
+                  ? (isLight ? Colors.grey[300] : Colors.grey[800])
+                  : Colors.transparent,
+              border: Border.all(color: border),
+            ),
+            child: Text('[Calendar]', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold)),
+          ),
+        ),
+        InkWell(
+          onTap: onOpenTemplates,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(border: Border.all(color: border)),
+            child: Text('[Templates]', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.cyan)),
+          ),
+        ),
+        InkWell(
+          onTap: onOpenSyntax,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(border: Border.all(color: border)),
+            child: Text('[?] Syntax', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green)),
+          ),
+        ),
+      ],
+    );
+
+    Widget searchField = Row(
+      children: [
+        Text('>', style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green)),
+        const SizedBox(width: 6),
+        Expanded(
+          child: TextField(
+            controller: controller,
+            style: GoogleFonts.jetBrainsMono(fontSize: 12),
+            decoration: InputDecoration(
+              hintText: 'Filter... or :add (A) Task... or :use Template',
+              hintStyle: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[600]),
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 6),
+            ),
+            onSubmitted: onSubmit,
+          ),
+        ),
+        if (controller.text.isNotEmpty)
+          IconButton(
+            icon: const Icon(Icons.clear, size: 16),
+            onPressed: () {
+              controller.clear();
+              onSubmit('');
+            },
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+      ],
+    );
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -34,87 +117,56 @@ class CommandInputWidget extends StatelessWidget {
         color: bg,
         border: Border(bottom: BorderSide(color: border)),
       ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.menu, size: 20),
-            onPressed: onToggleSidebar,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-          ),
-          const SizedBox(width: 8),
-
-          Row(
-            children: [
-              InkWell(
-                onTap: () => onChangeView('list'),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                  color: activeView == 'list' ? (isLight ? Colors.grey[300] : Colors.grey[800]) : Colors.transparent,
-                  child: Text('[List]', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold)),
-                ),
-              ),
-              InkWell(
-                onTap: () => onChangeView('calendar'),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                  color: activeView == 'calendar' ? (isLight ? Colors.grey[300] : Colors.grey[800]) : Colors.transparent,
-                  child: Text('[Calendar]', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(width: 8),
-
-          InkWell(
-            onTap: onOpenTemplates,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-              decoration: BoxDecoration(border: Border.all(color: border)),
-              child: Text('[Templates]', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.cyan)),
-            ),
-          ),
-
-          const SizedBox(width: 6),
-
-          InkWell(
-            onTap: onOpenSyntax,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-              decoration: BoxDecoration(border: Border.all(color: border)),
-              child: Text('[?] Syntax', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green)),
-            ),
-          ),
-
-          const SizedBox(width: 10),
-
-          Expanded(
-            child: Row(
+      child: isCompact
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('>', style: GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.green)),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: TextField(
-                    controller: controller,
-                    style: GoogleFonts.jetBrainsMono(fontSize: 12),
-                    decoration: InputDecoration(
-                      hintText: 'Filter... or :add (A) Task... or :use Sprint Release',
-                      hintStyle: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[600]),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.menu, size: 22),
+                      onPressed: onToggleSidebar,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
-                    onSubmitted: (val) {
-                      onSubmit(val);
-                    },
+                    const SizedBox(width: 8),
+                    Expanded(child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: navButtons)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: border),
+                    color: isLight ? Colors.white : Colors.black,
+                  ),
+                  child: searchField,
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.menu, size: 22),
+                  onPressed: onToggleSidebar,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+                const SizedBox(width: 8),
+                navButtons,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: border),
+                      color: isLight ? Colors.white : Colors.black,
+                    ),
+                    child: searchField,
                   ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -34,6 +34,12 @@ Recently updated with:
 - **Native Android & Tablet Application (`flutter_app/`)**:
   - Built with **Flutter 3.44+ & Dart** for native Android performance on phones and tablets.
   - Multi-column adaptive tablet dashboard layout (≥600dp) rendering Sidebar + Task Workspace + Inspector Drawer side-by-side.
+  - Mobile UI/UX Optimizations:
+    - Fixed top bar overflow on phone screens with responsive 2-line layout in `CommandInputWidget`.
+    - Added retro terminal `FloatingActionButton` (`+ NEW TASK`) and quick task creation modal (`_openAddTaskModal`).
+    - Fixed task tap interaction to automatically slide open the Inspector Drawer on mobile phones.
+    - Wrapped `SidebarWidget` in `SafeArea` to prevent status bar/notch overlap.
+    - Responsive `TemplateModalWidget` gallery preventing button clipping on narrow displays.
   - Full `todo.txt` syntax parser, recurrence spawning engine, template token generator, calendar view, inspector drawer, and terminal command bar.
   - Passes `flutter analyze` with **0 issues found**.
 - **Bi-directional Web Sync & Header Authentication**:
