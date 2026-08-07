@@ -55,6 +55,7 @@ Recently updated with:
 - **Automated CircleCI CI/CD Pipeline (`.circleci/config.yml`)**:
   - CircleCI workflow automated on push to `main` & `master`.
   - Runs environment check (`flutter doctor -v`), static code analysis (`flutter analyze`), and compiles release `.apk` packages.
+  - Custom Keystore Support: automatically decodes `KEYSTORE_BASE64` and generates `key.properties` dynamically when CircleCI environment variables (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`) are present.
   - Automatically stores generated release APK artifacts (`todo-next-android-app/app-release.apk`) in CircleCI artifact storage.
 
 ---
