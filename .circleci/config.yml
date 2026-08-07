@@ -1,20 +1,34 @@
 version: 2.1
 
 executors:
-  flutter-executor:
+  android-executor:
     docker:
-      - image: cirrusci/flutter:stable
+      - image: cimg/android:2024.04-node
     working_directory: ~/repo
 
 jobs:
   build-apk:
-    executor: flutter-executor
+    executor: android-executor
     steps:
       - checkout
+      - restore_cache:
+          keys:
+            - flutter-sdk-v1-{{ checksum "flutter_app/pubspec.yaml" }}
+            - flutter-sdk-v1-
       - run:
-          name: Verify Flutter & Android Environment
+          name: Install Flutter SDK
           command: |
-            flutter doctor -v
+            if [ ! -d ~/flutter ]; then
+              git clone https://github.com/flutter/flutter.git -b stable --depth 1 ~/flutter
+            fi
+            echo 'export PATH="$HOME/flutter/bin:$PATH"' >> $BASH_ENV
+      - save_cache:
+          key: flutter-sdk-v1-{{ checksum "flutter_app/pubspec.yaml" }}
+          paths:
+            - ~/flutter
+      - run:
+          name: Verify Flutter Doctor
+          command: flutter doctor -v
       - run:
           name: Install Dependencies
           command: |
