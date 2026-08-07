@@ -47,10 +47,10 @@ Recently updated with:
   - Extended Next.js backend (`lib/auth.ts` & `app/api/auth/route.ts`) with `Authorization: Bearer <token>` and `x-app-session` headers.
   - Native password login modal (`LoginDialogWidget`) in Flutter for protected instances.
 - **F-Droid Open-Source Submission Package (`fastlane/` & `fdroid/`)**:
-  - Application ID updated to `in.sudipx.todonext` in `build.gradle.kts`.
-  - Created open-source FOSS [`LICENSE`](file:///home/dog/git/todo-next/LICENSE) file (MIT License).
+  - Application ID updated to `com.blackpiratex.todo` in `build.gradle.kts`.
+  - Created open-source FOSS [`LICENSE`](file:///home/dog/git/todo-next/LICENSE) file (MIT License, Copyright BlackPirateX).
   - Configured Fastlane metadata under `fastlane/metadata/android/en-US/`: `short_description.txt`, `full_description.txt`, `changelogs/1.txt`, `icon.png`, and high-res phone screenshots (`1.png`, `2.png`, `3.png`).
-  - Generated F-Droid build metadata specification file [`fdroid/in.sudipx.todonext.yml`](file:///home/dog/git/todo-next/fdroid/in.sudipx.todonext.yml) ready for direct submission to `fdroiddata` repository via Merge Request.
+  - Generated F-Droid build metadata specification file [`fdroid/com.blackpiratex.todo.yml`](file:///home/dog/git/todo-next/fdroid/com.blackpiratex.todo.yml) ready for direct submission to `fdroiddata` repository via Merge Request.
   - Tagged Git release `v1.0.0` matching `versionName` and `versionCode: 1`.
 - **Automated CircleCI CI/CD Pipeline (`.circleci/config.yml`)**:
   - CircleCI workflow automated on push to `main` & `master`.
