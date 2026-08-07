@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'subtask.dart';
 import 'comment.dart';
 
@@ -103,24 +104,61 @@ class Task {
   }
 
   factory Task.fromJson(Map<String, dynamic> json) {
+    List<dynamic> subtasksRaw = [];
+    if (json['subtasks'] != null) {
+      if (json['subtasks'] is List) {
+        subtasksRaw = json['subtasks'] as List;
+      } else if (json['subtasks'] is String) {
+        try {
+          final decoded = jsonDecode(json['subtasks'] as String);
+          if (decoded is List) subtasksRaw = decoded;
+        } catch (_) {}
+      }
+    }
+
+    List<dynamic> commentsRaw = [];
+    if (json['comments'] != null) {
+      if (json['comments'] is List) {
+        commentsRaw = json['comments'] as List;
+      } else if (json['comments'] is String) {
+        try {
+          final decoded = jsonDecode(json['comments'] as String);
+          if (decoded is List) commentsRaw = decoded;
+        } catch (_) {}
+      }
+    }
+
+    List<String> parseStringList(dynamic val) {
+      if (val is List) return val.map((e) => e.toString()).toList();
+      if (val is String && val.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(val);
+          if (decoded is List) return decoded.map((e) => e.toString()).toList();
+        } catch (_) {}
+      }
+      return [];
+    }
+
+    final isCompleted = json['completed'] == true || json['completed'] == 1 || json['status'] == 'completed';
+
     return Task(
-      id: json['id'] as String,
-      title: json['title'] as String? ?? '',
-      raw: json['raw'] as String? ?? '',
-      status: json['status'] as String? ?? (json['completed'] == true ? 'completed' : 'open'),
-      completed: json['completed'] as bool? ?? false,
-      priority: json['priority'] as String?,
-      creationDate: json['creationDate'] as String? ?? '',
-      completionDate: json['completionDate'] as String?,
-      dueDate: json['dueDate'] as String?,
-      dueTime: json['dueTime'] as String?,
-      description: json['description'] as String? ?? '',
-      recurrence: json['recurrence'] as String?,
-      parentRecurringId: json['parentRecurringId'] as String?,
-      projects: (json['projects'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
-      contexts: (json['contexts'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
-      subtasks: (json['subtasks'] as List<dynamic>?)?.map((e) => Subtask.fromJson(e as Map<String, dynamic>)).toList() ?? [],
-      comments: (json['comments'] as List<dynamic>?)?.map((e) => Comment.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      id: (json['id'] ?? 't-${DateTime.now().millisecondsSinceEpoch}').toString(),
+      title: (json['title'] ?? '').toString(),
+      raw: (json['raw'] ?? '').toString(),
+      status: (json['status'] ?? (isCompleted ? 'completed' : 'open')).toString(),
+      completed: isCompleted,
+      priority: json['priority']?.toString(),
+      creationDate: (json['creationDate'] ?? '').toString(),
+      completionDate: json['completionDate']?.toString(),
+      dueDate: json['dueDate']?.toString(),
+      dueTime: json['dueTime']?.toString(),
+      description: (json['description'] ?? '').toString(),
+      recurrence: json['recurrence']?.toString(),
+      parentRecurringId: json['parentRecurringId']?.toString(),
+      projects: parseStringList(json['projects']),
+      contexts: parseStringList(json['contexts']),
+      subtasks: subtasksRaw.whereType<Map>().map((e) => Subtask.fromJson(Map<String, dynamic>.from(e))).toList(),
+      comments: commentsRaw.whereType<Map>().map((e) => Comment.fromJson(Map<String, dynamic>.from(e))).toList(),
     );
   }
 }

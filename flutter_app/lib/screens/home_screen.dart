@@ -60,18 +60,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final authStatus = await ApiService.checkAuthStatus();
     if (authStatus['authRequired'] == true && authStatus['authenticated'] != true) {
-      if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => LoginDialogWidget(
-            isLight: widget.isLight,
-            onLoginSuccess: () {
-              _loadDataFromWebOrCache();
-            },
-          ),
-        );
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => LoginDialogWidget(
+              isLight: widget.isLight,
+              onLoginSuccess: () {
+                _loadDataFromWebOrCache();
+              },
+            ),
+          );
+        }
+      });
     } else {
       await _loadDataFromWebOrCache();
     }

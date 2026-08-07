@@ -40,12 +40,14 @@ class Subtask {
   }
 
   factory Subtask.fromJson(Map<String, dynamic> json) {
+    final isCompleted = json['completed'] == true || json['completed'] == 1;
+
     return Subtask(
-      id: json['id'] as String,
-      taskId: json['taskId'] as String?,
-      title: json['title'] as String? ?? json['raw'] as String? ?? '',
-      raw: json['raw'] as String? ?? json['title'] as String? ?? '',
-      completed: json['completed'] as bool? ?? false,
+      id: (json['id'] ?? 's-${DateTime.now().millisecondsSinceEpoch}').toString(),
+      taskId: json['taskId']?.toString(),
+      title: (json['title'] ?? json['raw'] ?? '').toString(),
+      raw: (json['raw'] ?? json['title'] ?? '').toString(),
+      completed: isCompleted,
     );
   }
 }

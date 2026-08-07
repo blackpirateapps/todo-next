@@ -34,7 +34,10 @@ Recently updated with:
 - **Native Android & Tablet Application (`flutter_app/`)**:
   - Built with **Flutter 3.44+ & Dart** for native Android performance on phones and tablets.
   - Multi-column adaptive tablet dashboard layout (≥600dp) rendering Sidebar + Task Workspace + Inspector Drawer side-by-side.
-  - Mobile UI/UX Optimizations:
+  - Mobile UI/UX Optimizations & App Launch Stability:
+    - Fixed launch crash by adding defensive type parsing (`(json['id'] ?? '').toString()`) in `Task.fromJson`, `Subtask.fromJson`, `Comment.fromJson`, `Template.fromJson`, and `TemplateSubtask.fromJson` to handle numeric IDs from DB gracefully.
+    - Deferred `showDialog()` in `_initAndLoadData()` using `WidgetsBinding.instance.addPostFrameCallback` to prevent framework initialization assertion crashes.
+    - Added offline font loading try-catch fallbacks in `AppTheme` to prevent startup exceptions when offline.
     - Fixed top bar overflow on phone screens with responsive 2-line layout in `CommandInputWidget`.
     - Added retro terminal `FloatingActionButton` (`+ NEW TASK`) and quick task creation modal (`_openAddTaskModal`).
     - Fixed task tap interaction to automatically slide open the Inspector Drawer on mobile phones.
