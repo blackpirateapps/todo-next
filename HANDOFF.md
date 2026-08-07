@@ -52,11 +52,10 @@ Recently updated with:
   - Configured Fastlane metadata under `fastlane/metadata/android/en-US/`: `short_description.txt`, `full_description.txt`, `changelogs/1.txt`, `icon.png`, and high-res phone screenshots (`1.png`, `2.png`, `3.png`).
   - Generated F-Droid build metadata specification file [`fdroid/com.blackpiratex.todo.yml`](file:///home/dog/git/todo-next/fdroid/com.blackpiratex.todo.yml) ready for direct submission to `fdroiddata` repository via Merge Request.
   - Tagged Git release `v1.0.0` matching `versionName` and `versionCode: 1`.
-- **Automated CircleCI CI/CD Pipeline (`.circleci/config.yml`)**:
-  - CircleCI workflow automated on push to `main` & `master`.
-  - Runs environment check (`flutter doctor -v`), static code analysis (`flutter analyze`), and compiles release `.apk` packages.
-  - Custom Keystore Support: automatically decodes `KEYSTORE_BASE64` and generates `key.properties` dynamically when CircleCI environment variables (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`) are present.
-  - Automatically stores generated release APK artifacts (`todo-next-android-app/app-release.apk`) in CircleCI artifact storage.
+- **Automated CircleCI CI/CD Multi-Platform Pipeline (`.circleci/config.yml`)**:
+  - Parallel CircleCI workflow automated on push to `main` & `master`.
+  - Android Build (`build-apk`): compiles release `.apk` packages with custom keystore signing support and attaches `app-release.apk` artifact.
+  - Linux Desktop Build (`build-linux`): compiles native Linux desktop binary (`flutter build linux --release`), compresses release bundle into `todo-next-linux-x64.tar.gz`, and attaches Linux binary artifact to CircleCI runs.
 
 ---
 
