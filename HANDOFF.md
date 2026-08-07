@@ -42,9 +42,10 @@ Recently updated with:
   - Native password login modal (`LoginDialogWidget`) in Flutter for protected instances.
 - **Native Monospace Font Stack Fix**:
   - Added `fontFamily: 'monospace'` with fallback `['monospace', 'Courier', 'Roboto Mono']` and `GoogleFonts.config.allowRuntimeFetching = true` to guarantee crisp terminal font rendering offline and online.
-- **Automated GitHub Actions CI/CD (`build-flutter-apk.yml`)**:
-  - Automatically compiles release `.apk` packages on every push/PR to `main`.
-  - Attaches generated APK artifacts (`todo-next-android-app`) directly to GitHub Actions build runs.
+- **Automated CircleCI CI/CD Pipeline (`.circleci/config.yml`)**:
+  - CircleCI workflow automated on push to `main` & `master`.
+  - Runs environment check (`flutter doctor -v`), static code analysis (`flutter analyze`), and compiles release `.apk` packages.
+  - Automatically stores generated release APK artifacts (`todo-next-android-app/app-release.apk`) in CircleCI artifact storage.
 
 ---
 
