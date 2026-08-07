@@ -3,7 +3,7 @@ version: 2.1
 executors:
   flutter-executor:
     docker:
-      - image: ghcr.io/cirrusci/flutter:stable
+      - image: cirrusci/flutter:stable
     working_directory: ~/repo
 
 jobs:
