@@ -1,0 +1,1 @@
+Initial release v1.0.0 featuring full todo.txt syntax support, interactive list and calendar views, advanced recurring task spawning engine, workflow templates, subtask checklists, and cloud sync.

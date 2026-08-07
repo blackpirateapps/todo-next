@@ -46,8 +46,12 @@ Recently updated with:
   - Live bi-directional sync between Android app and web backend (`https://todo-next-five-mu.vercel.app/api`).
   - Extended Next.js backend (`lib/auth.ts` & `app/api/auth/route.ts`) with `Authorization: Bearer <token>` and `x-app-session` headers.
   - Native password login modal (`LoginDialogWidget`) in Flutter for protected instances.
-- **Native Monospace Font Stack Fix**:
-  - Added `fontFamily: 'monospace'` with fallback `['monospace', 'Courier', 'Roboto Mono']` and `GoogleFonts.config.allowRuntimeFetching = true` to guarantee crisp terminal font rendering offline and online.
+- **F-Droid Open-Source Submission Package (`fastlane/` & `fdroid/`)**:
+  - Application ID updated to `in.sudipx.todonext` in `build.gradle.kts`.
+  - Created open-source FOSS [`LICENSE`](file:///home/dog/git/todo-next/LICENSE) file (MIT License).
+  - Configured Fastlane metadata under `fastlane/metadata/android/en-US/`: `short_description.txt`, `full_description.txt`, `changelogs/1.txt`, `icon.png`, and high-res phone screenshots (`1.png`, `2.png`, `3.png`).
+  - Generated F-Droid build metadata specification file [`fdroid/in.sudipx.todonext.yml`](file:///home/dog/git/todo-next/fdroid/in.sudipx.todonext.yml) ready for direct submission to `fdroiddata` repository via Merge Request.
+  - Tagged Git release `v1.0.0` matching `versionName` and `versionCode: 1`.
 - **Automated CircleCI CI/CD Pipeline (`.circleci/config.yml`)**:
   - CircleCI workflow automated on push to `main` & `master`.
   - Runs environment check (`flutter doctor -v`), static code analysis (`flutter analyze`), and compiles release `.apk` packages.

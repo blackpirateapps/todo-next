@@ -1,0 +1,1 @@
+Lightweight, terminal-styled task manager inspired by todo.txt & Unix philosophy

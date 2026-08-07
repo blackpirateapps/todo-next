@@ -1,0 +1,11 @@
+Todo Next is a lightweight, terminal-styled task manager heavily influenced by the todo.txt format and Unix philosophy. It provides a fast, minimalist interface with keyboard navigation, syntax highlighting, and full List & Calendar views.
+
+Key Features:
+- **todo.txt Standard**: Full support for priorities ((A), (B), (C)), project tags (+project), context tags (@context), due dates (due:YYYY-MM-DD), and time stamps (time:HH:MM).
+- **Interactive Calendar View**: Full monthly calendar view projecting due tasks and future recurring task instances.
+- **Flagship Recurring Tasks (rec:)**: Advanced recurrence engine supporting relative (rec:1d, rec:2w, rec:1m, rec:weekday) and strict recurrence rules. Automatically spawns fresh open task instances upon completion.
+- **Workflow Templates Engine**: Instantiate recurring task templates with dynamic date tokens ({today}, {due:+3d}, {due:+1w}, {time:HH:MM}).
+- **Subtask Checklist**: Visual progress bar tracking subtask completions.
+- **Terminal Command Line**: Full command interface supporting commands like :add, :template, :rec, :skip, and :use.
+- **Dual Terminal Themes**: Monospace Dark and Light modes optimized for phones and tablets.
+- **Cloud & Offline Sync**: Bi-directional API synchronization with offline local database caching.
