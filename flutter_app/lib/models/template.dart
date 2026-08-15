@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 class TemplateSubtask {
   final String id;
   final String? templateId;
@@ -23,18 +21,11 @@ class TemplateSubtask {
   }
 
   factory TemplateSubtask.fromJson(Map<String, dynamic> json) {
-    int parsedPos = 0;
-    if (json['position'] is int) {
-      parsedPos = json['position'] as int;
-    } else if (json['position'] != null) {
-      parsedPos = int.tryParse(json['position'].toString()) ?? 0;
-    }
-
     return TemplateSubtask(
-      id: (json['id'] ?? 'tmpls-${DateTime.now().millisecondsSinceEpoch}').toString(),
-      templateId: json['templateId']?.toString(),
-      title: (json['title'] ?? '').toString(),
-      position: parsedPos,
+      id: json['id'] as String,
+      templateId: json['templateId'] as String?,
+      title: json['title'] as String? ?? '',
+      position: json['position'] as int? ?? 0,
     );
   }
 }
@@ -77,39 +68,16 @@ class Template {
   }
 
   factory Template.fromJson(Map<String, dynamic> json) {
-    List<dynamic> subtasksRaw = [];
-    if (json['subtasks'] != null) {
-      if (json['subtasks'] is List) {
-        subtasksRaw = json['subtasks'] as List;
-      } else if (json['subtasks'] is String) {
-        try {
-          final decoded = jsonDecode(json['subtasks'] as String);
-          if (decoded is List) subtasksRaw = decoded;
-        } catch (_) {}
-      }
-    }
-
-    List<String> parseStringList(dynamic val) {
-      if (val is List) return val.map((e) => e.toString()).toList();
-      if (val is String && val.isNotEmpty) {
-        try {
-          final decoded = jsonDecode(val);
-          if (decoded is List) return decoded.map((e) => e.toString()).toList();
-        } catch (_) {}
-      }
-      return [];
-    }
-
     return Template(
-      id: (json['id'] ?? 'tmpl-${DateTime.now().millisecondsSinceEpoch}').toString(),
-      name: (json['name'] ?? '').toString(),
-      rawTemplate: (json['rawTemplate'] ?? '').toString(),
-      description: (json['description'] ?? '').toString(),
-      createdAt: (json['createdAt'] ?? '').toString(),
-      updatedAt: (json['updatedAt'] ?? '').toString(),
-      projects: parseStringList(json['projects']),
-      contexts: parseStringList(json['contexts']),
-      subtasks: subtasksRaw.whereType<Map>().map((e) => TemplateSubtask.fromJson(Map<String, dynamic>.from(e))).toList(),
+      id: json['id'] as String,
+      name: json['name'] as String? ?? '',
+      rawTemplate: json['rawTemplate'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      createdAt: json['createdAt'] as String? ?? '',
+      updatedAt: json['updatedAt'] as String? ?? '',
+      projects: (json['projects'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      contexts: (json['contexts'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      subtasks: (json['subtasks'] as List<dynamic>?)?.map((e) => TemplateSubtask.fromJson(e as Map<String, dynamic>)).toList() ?? [],
     );
   }
 }

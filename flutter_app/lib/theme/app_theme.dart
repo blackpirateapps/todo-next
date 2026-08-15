@@ -30,39 +30,21 @@ class AppTheme {
     TextDecoration? decoration,
     FontStyle fontStyle = FontStyle.normal,
   }) {
-    try {
-      return GoogleFonts.jetBrainsMono(
-        fontSize: fontSize,
-        fontWeight: fontWeight,
-        color: color,
-        decoration: decoration,
-        fontStyle: fontStyle,
-      );
-    } catch (_) {
-      return TextStyle(
-        fontFamily: 'monospace',
-        fontSize: fontSize,
-        fontWeight: fontWeight,
-        color: color,
-        decoration: decoration,
-        fontStyle: fontStyle,
-      );
-    }
+    return GoogleFonts.jetBrainsMono(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      decoration: decoration,
+      fontStyle: fontStyle,
+    );
   }
 
   static ThemeData darkTheme() {
-    TextTheme textTheme;
-    try {
-      textTheme = GoogleFonts.jetBrainsMonoTextTheme(ThemeData.dark().textTheme).apply(
-        bodyColor: darkText,
-        displayColor: darkText,
-      );
-    } catch (_) {
-      textTheme = ThemeData.dark().textTheme.apply(
-        bodyColor: darkText,
-        displayColor: darkText,
-      );
-    }
+    final baseTextTheme = ThemeData.dark().textTheme;
+    final monoTextTheme = GoogleFonts.jetBrainsMonoTextTheme(baseTextTheme).apply(
+      bodyColor: darkText,
+      displayColor: darkText,
+    );
 
     return ThemeData(
       brightness: Brightness.dark,
@@ -76,23 +58,16 @@ class AppTheme {
         primary: projectCyan,
         secondary: contextGreen,
       ),
-      textTheme: textTheme,
+      textTheme: monoTextTheme,
     );
   }
 
   static ThemeData lightTheme() {
-    TextTheme textTheme;
-    try {
-      textTheme = GoogleFonts.jetBrainsMonoTextTheme(ThemeData.light().textTheme).apply(
-        bodyColor: lightText,
-        displayColor: lightText,
-      );
-    } catch (_) {
-      textTheme = ThemeData.light().textTheme.apply(
-        bodyColor: lightText,
-        displayColor: lightText,
-      );
-    }
+    final baseTextTheme = ThemeData.light().textTheme;
+    final monoTextTheme = GoogleFonts.jetBrainsMonoTextTheme(baseTextTheme).apply(
+      bodyColor: lightText,
+      displayColor: lightText,
+    );
 
     return ThemeData(
       brightness: Brightness.light,
@@ -106,7 +81,7 @@ class AppTheme {
         primary: projectCyan,
         secondary: contextGreen,
       ),
-      textTheme: textTheme,
+      textTheme: monoTextTheme,
     );
   }
 }
