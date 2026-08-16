@@ -452,11 +452,13 @@ export async function getAllTasks(userId?: string): Promise<Task[]> {
     args.push(userId);
   }
 
-  const tasksRes = await db.execute({ sql, args });
-  const projectsRes = await db.execute('SELECT * FROM task_projects');
-  const contextsRes = await db.execute('SELECT * FROM task_contexts');
-  const subtasksRes = await db.execute('SELECT * FROM subtasks');
-  const commentsRes = await db.execute('SELECT * FROM comments');
+  const [tasksRes, projectsRes, contextsRes, subtasksRes, commentsRes] = await db.batch([
+    { sql, args },
+    'SELECT * FROM task_projects',
+    'SELECT * FROM task_contexts',
+    'SELECT * FROM subtasks',
+    'SELECT * FROM comments'
+  ]);
 
   const projectsMap = new Map<string, string[]>();
   projectsRes.rows.forEach(row => {
@@ -859,10 +861,12 @@ export async function getAllTemplates(userId?: string): Promise<Template[]> {
     args.push(userId);
   }
 
-  const tmplRes = await db.execute({ sql, args });
-  const projRes = await db.execute('SELECT * FROM template_projects');
-  const ctxRes = await db.execute('SELECT * FROM template_contexts');
-  const subRes = await db.execute('SELECT * FROM template_subtasks ORDER BY position ASC');
+  const [tmplRes, projRes, ctxRes, subRes] = await db.batch([
+    { sql, args },
+    'SELECT * FROM template_projects',
+    'SELECT * FROM template_contexts',
+    'SELECT * FROM template_subtasks ORDER BY position ASC'
+  ]);
 
   const projMap = new Map<string, string[]>();
   projRes.rows.forEach(r => {

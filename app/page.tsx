@@ -160,24 +160,27 @@ export default function UtilitarianTodoPage() {
     };
   }, [pendingQueue.length, flushSyncQueue]);
 
-  // Fetch Tasks & Templates for authenticated user
+  // Fetch Tasks & Templates for authenticated user concurrently
   const fetchTasksAndTemplates = useCallback(async () => {
     try {
       const headers = await getAuthHeaders();
 
-      const tasksRes = await fetch('/api/tasks', { headers });
+      const [tasksRes, templatesRes] = await Promise.all([
+        fetch('/api/tasks', { headers }),
+        fetch('/api/templates', { headers })
+      ]);
+
       if (tasksRes.ok) {
         const tasksData = await tasksRes.json();
         if (Array.isArray(tasksData)) {
           setTasks(tasksData);
           localStorage.setItem('todo_next_cached_tasks', JSON.stringify(tasksData));
           if (tasksData.length > 0) {
-            setSelectedTask(tasksData[0]);
+            setSelectedTask(prev => prev || tasksData[0]);
           }
         }
       }
 
-      const templatesRes = await fetch('/api/templates', { headers });
       if (templatesRes.ok) {
         const templatesData = await templatesRes.json();
         if (Array.isArray(templatesData)) {
@@ -191,7 +194,7 @@ export default function UtilitarianTodoPage() {
       if (cachedTasks) {
         const parsed = JSON.parse(cachedTasks);
         setTasks(parsed);
-        if (parsed.length > 0) setSelectedTask(parsed[0]);
+        if (parsed.length > 0) setSelectedTask(prev => prev || parsed[0]);
       }
       const cachedTmpls = localStorage.getItem('todo_next_cached_templates');
       if (cachedTmpls) {
@@ -209,13 +212,30 @@ export default function UtilitarianTodoPage() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
-        const token = await getIdToken(user);
-        await fetch('/api/auth', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token })
+        // Hydrate from localStorage immediately if available for instant 0ms load
+        try {
+          const cachedTasks = localStorage.getItem('todo_next_cached_tasks');
+          if (cachedTasks) {
+            const parsed = JSON.parse(cachedTasks);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setTasks(parsed);
+              setSelectedTask(prev => prev || parsed[0]);
+              setLoading(false);
+            }
+          }
+        } catch {}
+
+        // Non-blocking background session sync
+        getIdToken(user).then(token => {
+          fetch('/api/auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token })
+          }).catch(() => {});
         });
-        await fetchTasksAndTemplates();
+
+        // Parallel background data sync
+        fetchTasksAndTemplates();
       } else {
         setTasks([]);
         setTemplates([]);

@@ -28,10 +28,10 @@ export const TaskList: React.FC<TaskListProps> = ({
 }) => {
   // Sorting State
   const [sortField, setSortField] = useState<SortField>('creationDate');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
   // Filtering State
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('open');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [periodFilter, setPeriodFilter] = useState<string>('all');
 

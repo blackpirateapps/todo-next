@@ -58,6 +58,14 @@ Recently updated with:
   - Custom Keystore Support: automatically decodes `KEYSTORE_BASE64` and generates `key.properties` dynamically when CircleCI environment variables (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`) are present.
   - Fixed YAML syntax error in `.circleci/config.yml` caused by unindented lines inside multiline command block for `key.properties` generation.
   - Automatically stores generated release APK artifacts (`todo-next-android-app/app-release.apk`) in CircleCI artifact storage.
+- **Web Default Sorting, Filters & Initial Load Performance Optimizations**:
+  - Default Task Sorting: default sort set to **Creation Date Descending** (`creationDate` `desc`).
+  - Default Task Filtering: default status filter set to **Open** (`open`), priority filter to **All** (`all`), and period filter to **All** (`all`).
+  - Initial Load Acceleration:
+    - Hydrates UI instantly (0ms load lag) from `localStorage` cached tasks/templates on mount.
+    - Executed `/api/tasks` and `/api/templates` API requests concurrently via `Promise.all`.
+    - Made `/api/auth` session sync non-blocking.
+    - Implemented database batching via `db.batch()` in `lib/db.ts` for `getAllTasks()` and `getAllTemplates()`, reducing server-side Turso DB roundtrips from 5 down to 1 single request.
 
 ---
 
