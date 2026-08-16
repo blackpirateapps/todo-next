@@ -64,6 +64,12 @@ Recently updated with:
   - Custom Keystore Support: automatically decodes `KEYSTORE_BASE64` and generates `key.properties` dynamically when CircleCI environment variables (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`) are present.
   - Fixed YAML syntax error in `.circleci/config.yml` caused by unindented lines inside multiline command block for `key.properties` generation.
   - Automatically stores generated release APK artifacts (`todo-next-android-app/app-release.apk`) in CircleCI artifact storage.
+- **GitHub Actions Android APK Build & Test Workflow (`.github/workflows/build-flutter-apk.yml`)**:
+  - Triggered on `push` and `pull_request` to `main` / `master`, plus manual dispatch (`workflow_dispatch`).
+  - Sets up Java 17 (`actions/setup-java@v4`) and stable Flutter SDK with dependency caching (`subosito/flutter-action@v2`).
+  - Runs `flutter doctor -v`, `flutter analyze --no-fatal-infos`, and `flutter test`.
+  - Dynamically decodes `KEYSTORE_BASE64` into `upload-keystore.jks` and writes `flutter_app/android/key.properties` if repository secrets are provided, falling back to debug signing if omitted.
+  - Compiles release APK (`flutter build apk --release --no-tree-shake-icons`) and uploads artifacts (`actions/upload-artifact@v4`) under artifact name `todo-next-android-apk`.
 - **Web Default Sorting, Filters & Initial Load Performance Optimizations**:
   - Default Task Sorting: default sort set to **Creation Date Descending** (`creationDate` `desc`).
   - Default Task Filtering: default status filter set to **Open** (`open`), priority filter to **All** (`all`), and period filter to **All** (`all`).
