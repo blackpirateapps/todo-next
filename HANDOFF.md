@@ -66,6 +66,12 @@ Recently updated with:
     - Executed `/api/tasks` and `/api/templates` API requests concurrently via `Promise.all`.
     - Made `/api/auth` session sync non-blocking.
     - Implemented database batching via `db.batch()` in `lib/db.ts` for `getAllTasks()` and `getAllTemplates()`, reducing server-side Turso DB roundtrips from 5 down to 1 single request.
+- **Unified Settings & Preferences Modal (`SettingsModal.tsx`)**:
+  - Added dedicated Settings Modal containing:
+    - **Theme Switcher Tab**: Interactive Dark Mode (Pitch Black) vs Light Mode (Clean White) visual selection cards.
+    - **Task Templates Manager & Editor Tab**: Full template gallery with search, `[ Use ]` button, `[ Edit ]` button (enabling inline editing of template name, raw template string, description, and subtasks), `[ + New Template ]` builder, and delete confirmation.
+    - **Syntax Guide Tab**: Complete `todo.txt` syntax reference covering priorities `(A)`, projects `+proj`, contexts `@ctx`, due dates `due:YYYY-MM-DD`, times `time:HH:MM`, recurrence rules `rec:`, and terminal commands.
+  - Header Navigation: Removed `[?] Syntax` button from homepage header (`CommandInput.tsx`) and added `[⚙️ Settings]` button next to `[Templates]`. `[Templates]` button remains accessible on the homepage header. Added `:settings` terminal command.
 
 ---
 

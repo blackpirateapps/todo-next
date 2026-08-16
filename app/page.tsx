@@ -10,6 +10,7 @@ import { CommandInput } from '@/components/CommandInput';
 import { StatusBar, SyncStatus } from '@/components/StatusBar';
 import { LoginScreen } from '@/components/LoginScreen';
 import { TemplateModal } from '@/components/TemplateModal';
+import { SettingsModal } from '@/components/SettingsModal';
 import { updateRawDates, parseRawToStructured, buildRawFromStructured } from '@/utils/todoParser';
 import { instantiateTaskFromTemplate } from '@/utils/templateEngine';
 import { spawnNextRecurrenceInstance, skipRecurrenceOccurrence } from '@/utils/recurrenceEngine';
@@ -17,7 +18,7 @@ import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, getIdToken, User } from 'firebase/auth';
 
 interface PendingMutation {
-  type: 'CREATE' | 'UPDATE' | 'DELETE' | 'CREATE_TEMPLATE' | 'DELETE_TEMPLATE';
+  type: 'CREATE' | 'UPDATE' | 'DELETE' | 'CREATE_TEMPLATE' | 'UPDATE_TEMPLATE' | 'DELETE_TEMPLATE';
   id: string;
   data?: any;
 }
@@ -35,8 +36,10 @@ export default function UtilitarianTodoPage() {
   const [isLightMode, setIsLightMode] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
-  // Template Modal State
+  // Template & Settings Modal State
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [settingsInitialTab, setSettingsInitialTab] = useState<'theme' | 'templates' | 'syntax'>('theme');
 
   // Sync & Offline State
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('synced');
@@ -113,6 +116,13 @@ export default function UtilitarianTodoPage() {
         } else if (item.type === 'CREATE_TEMPLATE') {
           const res = await fetch('/api/templates', {
             method: 'POST',
+            headers,
+            body: JSON.stringify(item.data),
+          });
+          if (!res.ok) remaining.push(item);
+        } else if (item.type === 'UPDATE_TEMPLATE') {
+          const res = await fetch(`/api/templates/${item.id}`, {
+            method: 'PATCH',
             headers,
             body: JSON.stringify(item.data),
           });
@@ -539,6 +549,31 @@ export default function UtilitarianTodoPage() {
     }
   };
 
+  const handleUpdateTemplate = async (id: string, updates: Partial<Template>) => {
+    setTemplates(prev => {
+      const updated = prev.map(t => t.id === id ? { ...t, ...updates } : t);
+      localStorage.setItem('todo_next_cached_templates', JSON.stringify(updated));
+      return updated;
+    });
+
+    setSyncStatus('syncing');
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/templates/${id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(updates),
+      });
+      if (res.ok && pendingQueue.length === 0) {
+        setSyncStatus('synced');
+      } else {
+        queueMutation({ type: 'UPDATE_TEMPLATE', id, data: updates });
+      }
+    } catch {
+      queueMutation({ type: 'UPDATE_TEMPLATE', id, data: updates });
+    }
+  };
+
   const handleDeleteTemplate = async (templateId: string) => {
     setTemplates(prev => {
       const updated = prev.filter(t => t.id !== templateId);
@@ -583,6 +618,14 @@ export default function UtilitarianTodoPage() {
 
   const handleCommandSubmit = async (val: string) => {
     const trimmed = val.trim();
+
+    // Command: :settings -> Open Settings & Preferences Modal
+    if (trimmed === ':settings') {
+      setSettingsInitialTab('theme');
+      setIsSettingsModalOpen(true);
+      setCommandQuery('');
+      return;
+    }
 
     // Command: :recurring -> Filter by rec:
     if (trimmed === ':recurring') {
@@ -765,6 +808,10 @@ export default function UtilitarianTodoPage() {
         activeView={activeView}
         onChangeView={setActiveView}
         onOpenTemplates={() => setIsTemplateModalOpen(true)}
+        onOpenSettings={(tab) => {
+          if (tab) setSettingsInitialTab(tab);
+          setIsSettingsModalOpen(true);
+        }}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -830,8 +877,26 @@ export default function UtilitarianTodoPage() {
         templates={templates}
         onInstantiateTemplate={handleInstantiateTemplate}
         onCreateTemplate={handleCreateTemplate}
+        onUpdateTemplate={handleUpdateTemplate}
         onDeleteTemplate={handleDeleteTemplate}
         isLight={isLightMode}
+      />
+
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        isLight={isLightMode}
+        onToggleTheme={() => setIsLightMode(!isLightMode)}
+        templates={templates}
+        onInstantiateTemplate={handleInstantiateTemplate}
+        onCreateTemplate={handleCreateTemplate}
+        onUpdateTemplate={handleUpdateTemplate}
+        onDeleteTemplate={handleDeleteTemplate}
+        userEmail={currentUser.email}
+        syncStatus={syncStatus}
+        onForceSync={flushSyncQueue}
+        onLogout={handleLogout}
+        initialTab={settingsInitialTab}
       />
     </div>
   );

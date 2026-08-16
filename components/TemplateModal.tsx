@@ -10,6 +10,7 @@ interface TemplateModalProps {
   templates: Template[];
   onInstantiateTemplate: (templateId: string, varOverrides?: Record<string, string>) => void;
   onCreateTemplate: (template: Template) => void;
+  onUpdateTemplate?: (id: string, updates: Partial<Template>) => void;
   onDeleteTemplate: (templateId: string) => void;
   isLight: boolean;
 }
@@ -20,11 +21,13 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
   templates,
   onInstantiateTemplate,
   onCreateTemplate,
+  onUpdateTemplate,
   onDeleteTemplate,
   isLight
 }) => {
   const [activeTab, setActiveTab] = useState<'gallery' | 'builder'>('gallery');
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
 
   // Delete Confirmation State
   const [deletingTemplate, setDeletingTemplate] = useState<Template | null>(null);
@@ -36,6 +39,15 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
   const [builderSubtasksText, setBuilderSubtasksText] = useState('');
 
   if (!isOpen) return null;
+
+  const startEditTemplate = (tmpl: Template) => {
+    setEditingTemplate(tmpl);
+    setBuilderName(tmpl.name);
+    setBuilderRaw(tmpl.rawTemplate);
+    setBuilderDesc(tmpl.description || '');
+    setBuilderSubtasksText(tmpl.subtasks ? tmpl.subtasks.map(s => s.title).join('\n') : '');
+    setActiveTab('builder');
+  };
 
   const filteredTemplates = templates.filter(t =>
     t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -69,21 +81,31 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
         position: idx
       }));
 
-    const newTmpl: Template = {
-      id: `tmpl-${Date.now()}`,
-      name: builderName.trim(),
-      rawTemplate: builderRaw.trim(),
-      description: builderDesc.trim(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      projects: [],
-      contexts: [],
-      subtasks: subtasksList
-    };
-
-    onCreateTemplate(newTmpl);
+    if (editingTemplate && onUpdateTemplate) {
+      onUpdateTemplate(editingTemplate.id, {
+        name: builderName.trim(),
+        rawTemplate: builderRaw.trim(),
+        description: builderDesc.trim(),
+        subtasks: subtasksList,
+        updatedAt: new Date().toISOString()
+      });
+    } else {
+      const newTmpl: Template = {
+        id: `tmpl-${Date.now()}`,
+        name: builderName.trim(),
+        rawTemplate: builderRaw.trim(),
+        description: builderDesc.trim(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        projects: [],
+        contexts: [],
+        subtasks: subtasksList
+      };
+      onCreateTemplate(newTmpl);
+    }
 
     // Reset builder form
+    setEditingTemplate(null);
     setBuilderName('');
     setBuilderRaw('');
     setBuilderDesc('');
@@ -178,6 +200,15 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
                           }`}
                         >
                           [ Use Template ]
+                        </button>
+                        <button
+                          onClick={() => startEditTemplate(tmpl)}
+                          className={`px-2.5 py-1 font-bold border text-xs ${
+                            isLight ? 'border-gray-300 bg-gray-200 hover:bg-gray-300 text-gray-800' : 'border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-200'
+                          }`}
+                          title="Edit template fields"
+                        >
+                          [ Edit ]
                         </button>
                         <button
                           onClick={() => setDeletingTemplate(tmpl)}
