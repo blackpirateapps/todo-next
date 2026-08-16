@@ -24,6 +24,7 @@ class _TemplateFormDialogState extends State<TemplateFormDialog> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _rawCtrl;
   late final TextEditingController _descCtrl;
+  bool _isSubmitting = false;
 
   bool get _isEditing => widget.template != null;
 
@@ -46,11 +47,15 @@ class _TemplateFormDialogState extends State<TemplateFormDialog> {
   }
 
   void _submit() {
+    if (_isSubmitting) return;
+
     final name = _nameCtrl.text.trim();
     final raw = _rawCtrl.text.trim();
     final desc = _descCtrl.text.trim();
 
     if (name.isEmpty || raw.isEmpty) return;
+
+    setState(() => _isSubmitting = true);
 
     if (_isEditing) {
       if (widget.onUpdate != null) {
@@ -85,7 +90,9 @@ class _TemplateFormDialogState extends State<TemplateFormDialog> {
     final title = _isEditing
         ? '[Edit Template: ${widget.template!.name}]'
         : '[Create New Template]';
-    final actionText = _isEditing ? '[Update Template]' : '[Save Template]';
+    final actionText = _isEditing
+        ? (_isSubmitting ? '[Updating...]' : '[Update Template]')
+        : (_isSubmitting ? '[Saving...]' : '[Save Template]');
 
     return AlertDialog(
       backgroundColor: widget.isLight ? Colors.white : const Color(0xFF18181B),
@@ -153,13 +160,13 @@ class _TemplateFormDialogState extends State<TemplateFormDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
           child: Text('[Cancel]', style: AppTheme.monoStyle(fontSize: 11, color: Colors.grey)),
         ),
         ElevatedButton(
-          onPressed: _submit,
+          onPressed: _isSubmitting ? null : _submit,
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.cyan[800],
+            backgroundColor: _isSubmitting ? Colors.grey[800] : Colors.cyan[800],
             shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
           ),
           child: Text(

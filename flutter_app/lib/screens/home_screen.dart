@@ -51,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _activeView = 'list'; // 'list' | 'calendar'
   String _syncStatus = 'synced'; // 'synced' | 'syncing' | 'offline'
   bool _isLoading = true;
+  bool _isSavingTemplate = false;
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -67,59 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _initAndLoadData() async {
-    try {
-      await ApiService.init();
-
-      final authStatus = await ApiService.checkAuthStatus();
-      if (authStatus['authRequired'] == true && authStatus['authenticated'] != true) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) => LoginDialogWidget(
-                isLight: widget.isLight,
-                onLoginSuccess: () {
-                  _loadDataFromWebOrCache();
-                },
-              ),
-            );
-          }
-        });
-      } else {
-        await _loadDataFromWebOrCache();
-      }
-    } catch (_) {
-      await _loadDataFromWebOrCache();
-    }
-  }
-
-  Future<void> _loadDataFromWebOrCache() async {
-    if (mounted) setState(() => _syncStatus = 'syncing');
-
-    try {
-      final remoteTasks = await ApiService.fetchTasks();
-      final remoteTemplates = await ApiService.fetchTemplates();
-
-      if (remoteTasks != null) {
-        if (mounted) {
-          setState(() {
-            _tasks = remoteTasks;
-            if (remoteTemplates != null) _templates = remoteTemplates;
-            if (_tasks.isNotEmpty && _selectedTask == null) {
-              _selectedTask = _tasks.first;
-            }
-            _syncStatus = 'synced';
-            _isLoading = false;
-          });
-        }
-        await _storageService.saveTasks(_tasks);
-        if (remoteTemplates != null) await _storageService.saveTemplates(_templates);
-        return;
-      }
-    } catch (_) {}
-
-    // Offline fallback
+    // 1. Instant Offline-First Hydration (0ms load time)
     try {
       final localTasks = await _storageService.loadTasks();
       final localTemplates = await _storageService.loadTemplates();
@@ -130,19 +79,73 @@ class _HomeScreenState extends State<HomeScreen> {
           if (_tasks.isNotEmpty && _selectedTask == null) {
             _selectedTask = _tasks.first;
           }
-          _syncStatus = 'offline';
           _isLoading = false;
         });
       }
     } catch (_) {
       if (mounted) {
-        setState(() {
-          _tasks = [];
-          _templates = [];
-          _syncStatus = 'offline';
-          _isLoading = false;
+        setState(() => _isLoading = false);
+      }
+    }
+
+    // 2. Non-blocking Background API Sync & Auth Check
+    _syncRemoteData();
+  }
+
+  Future<void> _syncRemoteData() async {
+    if (mounted) setState(() => _syncStatus = 'syncing');
+
+    try {
+      await ApiService.init();
+
+      // Check auth and fetch tasks/templates in parallel
+      final authFuture = ApiService.checkAuthStatus();
+      final dataFuture = Future.wait([
+        ApiService.fetchTasks(),
+        ApiService.fetchTemplates(),
+      ]);
+
+      final authStatus = await authFuture;
+      if (authStatus['authRequired'] == true && authStatus['authenticated'] != true) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => LoginDialogWidget(
+                isLight: widget.isLight,
+                onLoginSuccess: () {
+                  _syncRemoteData();
+                },
+              ),
+            );
+          }
         });
       }
+
+      final results = await dataFuture;
+      final remoteTasks = results[0] as List<Task>?;
+      final remoteTemplates = results[1] as List<Template>?;
+
+      if (remoteTasks != null) {
+        if (mounted) {
+          setState(() {
+            _tasks = remoteTasks;
+            if (remoteTemplates != null) _templates = remoteTemplates;
+            if (_tasks.isNotEmpty) {
+              final stillExists = _tasks.any((t) => t.id == _selectedTask?.id);
+              if (!stillExists) _selectedTask = _tasks.first;
+            }
+            _syncStatus = 'synced';
+          });
+        }
+        await _storageService.saveTasks(remoteTasks);
+        if (remoteTemplates != null) await _storageService.saveTemplates(remoteTemplates);
+      } else {
+        if (mounted) setState(() => _syncStatus = 'offline');
+      }
+    } catch (_) {
+      if (mounted) setState(() => _syncStatus = 'offline');
     }
   }
 
@@ -190,7 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     await _storageService.saveTasks(_tasks);
 
-    // Web API sync
+    // Web API sync in background
     bool ok = false;
     if (isNowCompleted && taskToUpdate.recurrence != null && taskToUpdate.recurrence!.isNotEmpty) {
       ok = await ApiService.completeTask(id, today);
@@ -198,9 +201,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ok = await ApiService.updateTask(id, updatedTask.toJson());
     }
 
-    setState(() {
-      _syncStatus = ok ? 'synced' : 'offline';
-    });
+    if (mounted) {
+      setState(() {
+        _syncStatus = ok ? 'synced' : 'offline';
+      });
+    }
   }
 
   Future<void> _handleSkipRecurrence(String id) async {
@@ -223,9 +228,11 @@ class _HomeScreenState extends State<HomeScreen> {
     await _storageService.saveTasks(_tasks);
 
     final ok = await ApiService.skipTask(id);
-    setState(() {
-      _syncStatus = ok ? 'synced' : 'offline';
-    });
+    if (mounted) {
+      setState(() {
+        _syncStatus = ok ? 'synced' : 'offline';
+      });
+    }
   }
 
   Future<void> _handleUpdateTask(String id, Map<String, dynamic> updates) async {
@@ -266,9 +273,11 @@ class _HomeScreenState extends State<HomeScreen> {
     await _storageService.saveTasks(_tasks);
 
     final ok = await ApiService.updateTask(id, updates);
-    setState(() {
-      _syncStatus = ok ? 'synced' : 'offline';
-    });
+    if (mounted) {
+      setState(() {
+        _syncStatus = ok ? 'synced' : 'offline';
+      });
+    }
   }
 
   Future<void> _handleMoveTask(String taskId, String targetDate, String? targetTime) async {
@@ -301,9 +310,11 @@ class _HomeScreenState extends State<HomeScreen> {
       'dueTime': parsed.dueTime,
     });
 
-    setState(() {
-      _syncStatus = ok ? 'synced' : 'offline';
-    });
+    if (mounted) {
+      setState(() {
+        _syncStatus = ok ? 'synced' : 'offline';
+      });
+    }
   }
 
   void _handleDeleteTask(Task task) {
@@ -324,9 +335,11 @@ class _HomeScreenState extends State<HomeScreen> {
           await _storageService.saveTasks(_tasks);
 
           final ok = await ApiService.deleteTask(task.id);
-          setState(() {
-            _syncStatus = ok ? 'synced' : 'offline';
-          });
+          if (mounted) {
+            setState(() {
+              _syncStatus = ok ? 'synced' : 'offline';
+            });
+          }
         },
       ),
     );
@@ -347,12 +360,25 @@ class _HomeScreenState extends State<HomeScreen> {
     await _storageService.saveTasks(_tasks);
 
     final created = await ApiService.createTask(newTask);
-    setState(() {
-      _syncStatus = created != null ? 'synced' : 'offline';
-    });
+    if (mounted) {
+      setState(() {
+        _syncStatus = created != null ? 'synced' : 'offline';
+      });
+    }
   }
 
   Future<void> _handleSaveAsTemplate(Task task) async {
+    if (_isSavingTemplate) return;
+    _isSavingTemplate = true;
+
+    // Check if duplicate template was already created recently with same raw
+    final existingIdx = _templates.indexWhere((t) => t.rawTemplate == task.raw && t.name == 'Template: ${task.title}');
+    if (existingIdx != -1) {
+      _isSavingTemplate = false;
+      _openTemplatesModal();
+      return;
+    }
+
     final newTmpl = Template(
       id: 'tmpl-${DateTime.now().millisecondsSinceEpoch}',
       name: 'Template: ${task.title}',
@@ -369,19 +395,23 @@ class _HomeScreenState extends State<HomeScreen> {
       )).toList(),
     );
 
+    // Instant local save and instant modal opening (no waiting!)
     setState(() {
       _templates.insert(0, newTmpl);
       _syncStatus = 'syncing';
     });
 
     await _storageService.saveTemplates(_templates);
-
-    final ok = await ApiService.createTemplate(newTmpl);
-    setState(() {
-      _syncStatus = ok ? 'synced' : 'offline';
-    });
-
     _openTemplatesModal();
+
+    // Async background API creation
+    ApiService.createTemplate(newTmpl).then((ok) {
+      if (mounted) {
+        setState(() => _syncStatus = ok ? 'synced' : 'offline');
+      }
+    }).whenComplete(() {
+      _isSavingTemplate = false;
+    });
   }
 
   Future<void> _handleDeleteTemplate(String templateId) async {
@@ -392,9 +422,11 @@ class _HomeScreenState extends State<HomeScreen> {
     await _storageService.saveTemplates(_templates);
 
     final ok = await ApiService.deleteTemplate(templateId);
-    setState(() {
-      _syncStatus = ok ? 'synced' : 'offline';
-    });
+    if (mounted) {
+      setState(() {
+        _syncStatus = ok ? 'synced' : 'offline';
+      });
+    }
   }
 
   Future<void> _handleCommandSubmit(String val) async {
@@ -499,9 +531,11 @@ class _HomeScreenState extends State<HomeScreen> {
       await _storageService.saveTasks(_tasks);
 
       final created = await ApiService.createTask(newTask);
-      setState(() {
-        _syncStatus = created != null ? 'synced' : 'offline';
-      });
+      if (mounted) {
+        setState(() {
+          _syncStatus = created != null ? 'synced' : 'offline';
+        });
+      }
       return;
     }
 
@@ -539,7 +573,7 @@ class _HomeScreenState extends State<HomeScreen> {
           });
           await _storageService.saveTemplates(_templates);
           final ok = await ApiService.createTemplate(tmpl);
-          setState(() => _syncStatus = ok ? 'synced' : 'offline');
+          if (mounted) setState(() => _syncStatus = ok ? 'synced' : 'offline');
         },
         onUpdateTemplate: (id, updates) async {
           final idx = _templates.indexWhere((t) => t.id == id);
@@ -562,12 +596,12 @@ class _HomeScreenState extends State<HomeScreen> {
             });
             await _storageService.saveTemplates(_templates);
             final ok = await ApiService.updateTemplate(id, updates);
-            setState(() => _syncStatus = ok ? 'synced' : 'offline');
+            if (mounted) setState(() => _syncStatus = ok ? 'synced' : 'offline');
           }
         },
         onDeleteTemplate: _handleDeleteTemplate,
         syncStatus: _syncStatus,
-        onForceSync: _loadDataFromWebOrCache,
+        onForceSync: _syncRemoteData,
       ),
     );
   }
@@ -604,7 +638,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: widget.isLight ? Colors.white : Colors.black,
-        body: const Center(child: Text('Connecting to Todo Next Server...')),
+        body: const Center(child: Text('Loading Todo Next...')),
       );
     }
 
@@ -709,7 +743,7 @@ class _HomeScreenState extends State<HomeScreen> {
               isLight: widget.isLight,
               currentTheme: widget.currentTheme,
               onToggleTheme: widget.onToggleTheme,
-              onForceSync: _loadDataFromWebOrCache,
+              onForceSync: _syncRemoteData,
             ),
           ],
         ),
