@@ -107,9 +107,19 @@ Recently updated with:
     - `:syntax` -> Open Syntax Guide.
   - Default Sorting & Filtering:
     - Updated `TaskListWidget` defaults to **Creation Date Descending** (`SortOrder.desc`) and **Open** tasks (`StatusFilter.open`).
-  - Code Quality & Tests:
-    - 0 issues found on `flutter analyze`.
-    - Added 5-theme verification tests in `flutter_app/test/app_launch_test.dart` (all tests passing).
+- **Flutter Codebase Modularization & Refactoring for Maintainability**:
+  - Modularized large monolithic widget files (>25-30KB) into focused, single-responsibility sub-components under organized domain directories:
+    - `flutter_app/lib/widgets/settings/`: `theme_settings_tab.dart`, `templates_settings_tab.dart`, `syntax_guide_tab.dart`, and `template_form_dialog.dart` (reduced `settings_modal.dart` from 29KB down to 6.0KB).
+    - `flutter_app/lib/widgets/inspector/`: `inspector_header.dart`, `inspector_title_section.dart`, `inspector_metadata_section.dart`, `inspector_recurrence_card.dart`, `inspector_tags_section.dart`, `inspector_description_section.dart`, `inspector_subtasks_section.dart`, and `inspector_comments_section.dart` (reduced `inspector_drawer.dart` from 27KB down to 4.5KB).
+    - `flutter_app/lib/widgets/calendar/`: `calendar_header.dart`, `calendar_weekday_header.dart`, and `calendar_day_cell.dart` (reduced `calendar_view.dart` from 20KB down to 4.9KB).
+    - `flutter_app/lib/widgets/task_list/`: `task_list_toolbar.dart`, `task_list_header.dart`, and `task_list_item.dart` (reduced `task_list.dart` from 16KB down to 5.2KB).
+    - `flutter_app/lib/widgets/modals/`: `add_task_dialog.dart` (extracted from `home_screen.dart`).
+    - `flutter_app/lib/utils/command_parser.dart`: Extracted sealed command hierarchy and parser (`CommandParser`) for `:settings`, `:theme`, `:syntax`, `:recurring`, `:skip`, `:rec`, `:template`, `:use`, `:template save`, `:add`, and filter queries.
+  - Zero-feature loss: 100% of UI styles, shortcuts, drag & drop, formatting, recurrence rules, dialogs, and token behaviors preserved.
+  - Code Quality & Automated Tests:
+    - Added comprehensive unit tests in `flutter_app/test/command_parser_test.dart`.
+    - Added full component widget tests in `flutter_app/test/components_test.dart`.
+    - `flutter analyze` passes with **0 issues found** and all 18 test suites pass in `flutter test`.
 
 ---
 
@@ -161,10 +171,26 @@ Recently updated with:
 │   ├── lib/
 │   │   ├── models/                   # Task, Subtask, Comment, Template, RecurrenceRule
 │   │   ├── screens/                  # HomeScreen (Adaptive Phone & Tablet layout)
-│   │   ├── services/                 # StorageService (Offline-first SharedPreferences & SQLite)
-│   │   ├── theme/                    # AppTheme (Terminal Dark & Light typography)
-│   │   ├── utils/                    # todo_parser, recurrence_engine, template_engine, date_utils
-│   │   └── widgets/                  # FormattedText, TaskList, CalendarView, InspectorDrawer, CommandInput
+│   │   ├── services/                 # ApiService, StorageService
+│   │   ├── theme/                    # AppTheme (5 Developer & Terminal Themes)
+│   │   ├── utils/                    # command_parser, todo_parser, recurrence_engine, template_engine, date_utils
+│   │   └── widgets/
+│   │       ├── calendar/             # CalendarHeader, CalendarWeekdayHeader, CalendarDayCell
+│   │       ├── inspector/            # Header, Title, Metadata, Recurrence, Tags, Desc, Subtasks, Comments
+│   │       ├── modals/               # AddTaskDialog
+│   │       ├── settings/             # ThemeSettingsTab, TemplatesSettingsTab, SyntaxGuideTab, TemplateFormDialog
+│   │       ├── task_list/            # TaskListToolbar, TaskListHeader, TaskListItem
+│   │       ├── calendar_view.dart    # Calendar View coordinator
+│   │       ├── command_input.dart    # Command Bar & quick action buttons
+│   │       ├── confirm_dialog.dart   # Universal Confirmation dialog
+│   │       ├── formatted_text.dart   # todo.txt syntax highlight renderer
+│   │       ├── inspector_drawer.dart # Inspector Drawer coordinator
+│   │       ├── login_dialog.dart     # Authentication modal
+│   │       ├── settings_modal.dart   # Unified Settings coordinator
+│   │       ├── sidebar.dart          # Tag & filter navigation sidebar
+│   │       ├── status_bar.dart       # Status and sync indicator
+│   │       └── subtask_progress_bar.dart # Progress bar [2/4]
+│   ├── test/                         # widget_test, app_launch_test, command_parser_test, components_test
 │   └── pubspec.yaml
 ├── lib/
 │   ├── auth.ts

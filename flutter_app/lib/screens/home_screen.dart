@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/task.dart';
 import '../models/subtask.dart';
@@ -10,6 +9,7 @@ import '../services/api_service.dart';
 import '../utils/todo_parser.dart';
 import '../utils/template_engine.dart';
 import '../utils/recurrence_engine.dart';
+import '../utils/command_parser.dart';
 import '../theme/app_theme.dart';
 import '../widgets/command_input.dart';
 import '../widgets/sidebar.dart';
@@ -20,6 +20,7 @@ import '../widgets/settings_modal.dart';
 import '../widgets/confirm_dialog.dart';
 import '../widgets/login_dialog.dart';
 import '../widgets/status_bar.dart';
+import '../widgets/modals/add_task_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   final AppThemeId currentTheme;
@@ -57,6 +58,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _initAndLoadData();
+  }
+
+  @override
+  void dispose() {
+    _commandController.dispose();
+    super.dispose();
   }
 
   Future<void> _initAndLoadData() async {
@@ -326,7 +333,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _handleInstantiateTemplate(String templateId) async {
-    final tmpl = _templates.firstWhere((t) => t.id == templateId || t.name.toLowerCase().contains(templateId.toLowerCase()));
+    final tmpl = _templates.firstWhere(
+      (t) => t.id == templateId || t.name.toLowerCase().contains(templateId.toLowerCase()),
+    );
     final newTask = instantiateTaskFromTemplate(tmpl);
 
     setState(() {
@@ -389,36 +398,29 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _handleCommandSubmit(String val) async {
-    final trimmed = val.trim();
-    if (trimmed.isEmpty) return;
+    final cmd = CommandParser.parse(val);
+    if (cmd == null) return;
 
-    if (trimmed == ':settings' || trimmed == ':theme') {
-      _openSettingsModal(0);
+    if (cmd is OpenSettingsCommand) {
+      _openSettingsModal(cmd.tabIndex);
       _commandController.clear();
       return;
     }
 
-    if (trimmed.startsWith(':theme ')) {
-      final target = trimmed.substring(7).trim().toLowerCase();
-      final mappedTheme = AppTheme.fromKey(target);
+    if (cmd is ChangeThemeCommand) {
+      final mappedTheme = AppTheme.fromKey(cmd.themeKey);
       widget.onSelectTheme(mappedTheme);
       _commandController.clear();
       return;
     }
 
-    if (trimmed == ':syntax') {
-      _openSettingsModal(2);
-      _commandController.clear();
-      return;
-    }
-
-    if (trimmed == ':recurring') {
+    if (cmd is FilterRecurringCommand) {
       setState(() => _activeFilter = 'rec:');
       _commandController.clear();
       return;
     }
 
-    if (trimmed == ':skip') {
+    if (cmd is SkipRecurrenceCommand) {
       if (_selectedTask != null) {
         await _handleSkipRecurrence(_selectedTask!.id);
         _commandController.clear();
@@ -426,58 +428,39 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    if (trimmed.startsWith(':rec ')) {
-      final recVal = trimmed.substring(5).trim();
+    if (cmd is SetRecurrenceCommand) {
       if (_selectedTask != null) {
-        if (recVal == 'off' || recVal == 'none' || recVal == 'clear') {
-          final newRaw = buildRawFromStructured(
-            title: _selectedTask!.title,
-            priority: _selectedTask!.priority,
-            creationDate: _selectedTask!.creationDate,
-            completionDate: _selectedTask!.completionDate,
-            dueDate: _selectedTask!.dueDate,
-            dueTime: _selectedTask!.dueTime,
-            recurrence: null,
-            completed: _selectedTask!.completed,
-            projects: _selectedTask!.projects,
-            contexts: _selectedTask!.contexts,
-          );
-          await _handleUpdateTask(_selectedTask!.id, {'recurrence': null, 'raw': newRaw});
-        } else {
-          final cleanRec = recVal.startsWith('rec:') ? recVal.substring(4) : recVal;
-          final newRaw = buildRawFromStructured(
-            title: _selectedTask!.title,
-            priority: _selectedTask!.priority,
-            creationDate: _selectedTask!.creationDate,
-            completionDate: _selectedTask!.completionDate,
-            dueDate: _selectedTask!.dueDate,
-            dueTime: _selectedTask!.dueTime,
-            recurrence: cleanRec,
-            completed: _selectedTask!.completed,
-            projects: _selectedTask!.projects,
-            contexts: _selectedTask!.contexts,
-          );
-          await _handleUpdateTask(_selectedTask!.id, {'recurrence': cleanRec, 'raw': newRaw});
-        }
+        final newRaw = buildRawFromStructured(
+          title: _selectedTask!.title,
+          priority: _selectedTask!.priority,
+          creationDate: _selectedTask!.creationDate,
+          completionDate: _selectedTask!.completionDate,
+          dueDate: _selectedTask!.dueDate,
+          dueTime: _selectedTask!.dueTime,
+          recurrence: cmd.rule,
+          completed: _selectedTask!.completed,
+          projects: _selectedTask!.projects,
+          contexts: _selectedTask!.contexts,
+        );
+        await _handleUpdateTask(_selectedTask!.id, {'recurrence': cmd.rule, 'raw': newRaw});
         _commandController.clear();
       }
       return;
     }
 
-    if (trimmed == ':template') {
+    if (cmd is OpenTemplatesCommand) {
       _openTemplatesModal();
       _commandController.clear();
       return;
     }
 
-    if (trimmed.startsWith(':use ')) {
-      final tmplName = trimmed.substring(5).trim();
-      await _handleInstantiateTemplate(tmplName);
+    if (cmd is UseTemplateCommand) {
+      await _handleInstantiateTemplate(cmd.templateName);
       _commandController.clear();
       return;
     }
 
-    if (trimmed.startsWith(':template save ')) {
+    if (cmd is SaveTemplateCommand) {
       if (_selectedTask != null) {
         await _handleSaveAsTemplate(_selectedTask!);
       }
@@ -485,14 +468,13 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    if (trimmed.startsWith(':add ')) {
-      final newTaskRaw = trimmed.substring(5);
-      final parsed = parseRawToStructured(newTaskRaw);
+    if (cmd is AddTaskCommand) {
+      final parsed = parseRawToStructured(cmd.rawTask);
 
       final newTask = Task(
         id: 't${DateTime.now().millisecondsSinceEpoch}',
         title: parsed.title,
-        raw: newTaskRaw,
+        raw: cmd.rawTask,
         status: parsed.completed ? 'completed' : 'open',
         completed: parsed.completed,
         priority: parsed.priority,
@@ -520,111 +502,22 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _syncStatus = created != null ? 'synced' : 'offline';
       });
-    } else {
+      return;
+    }
+
+    if (cmd is SetFilterCommand) {
       setState(() {
-        _activeFilter = trimmed;
+        _activeFilter = cmd.filterQuery;
       });
     }
   }
 
   void _openAddTaskModal() {
-    final TextEditingController inputController = TextEditingController();
-    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          final bg = widget.isLight ? Colors.white : const Color(0xFF09090B);
-          final border = widget.isLight ? const Color(0xFFE4E4E7) : const Color(0xFF27272A);
-
-          return Dialog(
-            backgroundColor: bg,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero, side: BorderSide(color: border)),
-            child: Container(
-              width: 450,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text('[CREATE NEW TASK]', style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.cyan)),
-                      const Spacer(),
-                      IconButton(icon: const Icon(Icons.close, size: 18), onPressed: () => Navigator.of(context).pop()),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text('Enter task in todo.txt format:', style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[500])),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: inputController,
-                    style: GoogleFonts.jetBrainsMono(fontSize: 12),
-                    autofocus: true,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      hintText: '(A) $todayStr Task description +project @context due:$todayStr',
-                      hintStyle: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[600]),
-                      border: OutlineInputBorder(borderSide: BorderSide(color: border)),
-                      contentPadding: const EdgeInsets.all(10),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Quick Token Chips
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      ActionChip(
-                        label: Text('(A)', style: GoogleFonts.jetBrainsMono(fontSize: 10, color: Colors.red[300], fontWeight: FontWeight.bold)),
-                        backgroundColor: bg,
-                        side: BorderSide(color: border),
-                        onPressed: () {
-                          inputController.text = '(A) ${inputController.text}';
-                        },
-                      ),
-                      ActionChip(
-                        label: Text('(B)', style: GoogleFonts.jetBrainsMono(fontSize: 10, color: Colors.amber[300], fontWeight: FontWeight.bold)),
-                        backgroundColor: bg,
-                        side: BorderSide(color: border),
-                        onPressed: () {
-                          inputController.text = '(B) ${inputController.text}';
-                        },
-                      ),
-                      ActionChip(
-                        label: Text('due:today', style: GoogleFonts.jetBrainsMono(fontSize: 10, color: Colors.purple[300])),
-                        backgroundColor: bg,
-                        side: BorderSide(color: border),
-                        onPressed: () {
-                          inputController.text = '${inputController.text} due:$todayStr'.trim();
-                        },
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.cyan[700]),
-                      onPressed: () {
-                        final val = inputController.text.trim();
-                        if (val.isNotEmpty) {
-                          final taskCmd = val.startsWith(':add ') ? val : ':add $val';
-                          _handleCommandSubmit(taskCmd);
-                          Navigator.of(context).pop();
-                        }
-                      },
-                      child: Text('Create Task', style: GoogleFonts.jetBrainsMono(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+      builder: (context) => AddTaskDialog(
+        isLight: widget.isLight,
+        onCommandSubmit: _handleCommandSubmit,
       ),
     );
   }
@@ -740,7 +633,10 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.cyan[700],
         elevation: 4,
         icon: const Icon(Icons.add, color: Colors.white, size: 20),
-        label: Text('NEW TASK', style: AppTheme.monoStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+        label: Text(
+          'NEW TASK',
+          style: AppTheme.monoStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
         onPressed: _openAddTaskModal,
       ),
       body: SafeArea(
@@ -760,7 +656,6 @@ class _HomeScreenState extends State<HomeScreen> {
               activeView: _activeView,
               isLight: widget.isLight,
             ),
-
             Expanded(
               child: Row(
                 children: [
@@ -771,7 +666,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       isLight: widget.isLight,
                       onFilterClick: (filter) => setState(() => _activeFilter = filter),
                     ),
-
                   Expanded(
                     child: _activeView == 'list'
                         ? TaskListWidget(
@@ -795,7 +689,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                           ),
                   ),
-
                   if (isTablet)
                     InspectorDrawerWidget(
                       task: _selectedTask,
@@ -808,7 +701,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-
             StatusBarWidget(
               filteredCount: filteredTasks.length,
               totalCount: _tasks.length,
@@ -822,7 +714,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-
       endDrawer: (!isTablet && _selectedTask != null)
           ? Drawer(
               width: screenWidth * 0.88,

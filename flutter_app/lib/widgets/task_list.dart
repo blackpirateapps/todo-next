@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/task.dart';
-import 'formatted_text.dart';
-import 'subtask_progress_bar.dart';
+import 'task_list/task_list_toolbar.dart';
+import 'task_list/task_list_header.dart';
+import 'task_list/task_list_item.dart';
 
-enum SortField { creationDate, dueDate, title, priority }
-enum SortOrder { asc, desc }
-enum StatusFilter { all, open, completed }
-enum PriorityFilter { all, A, B, C, none }
+export 'task_list/task_list_toolbar.dart';
+export 'task_list/task_list_header.dart';
+export 'task_list/task_list_item.dart';
 
 class TaskListWidget extends StatefulWidget {
   final List<Task> tasks;
@@ -96,116 +96,28 @@ class _TaskListWidgetState extends State<TaskListWidget> {
     final periodOptions = _getPeriodOptions();
 
     final bg = widget.isLight ? Colors.white : Colors.black;
-    final headerBg = widget.isLight ? const Color(0xFFF4F4F5) : const Color(0xFF09090B);
-    final border = widget.isLight ? const Color(0xFFE4E4E7) : const Color(0xFF27272A);
 
     return Container(
       color: bg,
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            decoration: BoxDecoration(
-              color: headerBg,
-              border: Border(bottom: BorderSide(color: border)),
+          TaskListToolbar(
+            sortField: _sortField,
+            sortOrder: _sortOrder,
+            statusFilter: _statusFilter,
+            priorityFilter: _priorityFilter,
+            periodFilter: _periodFilter,
+            periodOptions: periodOptions,
+            onSortFieldChanged: (field) => setState(() => _sortField = field),
+            onToggleSortOrder: () => setState(
+              () => _sortOrder = _sortOrder == SortOrder.asc ? SortOrder.desc : SortOrder.asc,
             ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  Text('Sort: ', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[500])),
-                  DropdownButton<SortField>(
-                    value: _sortField,
-                    isDense: true,
-                    dropdownColor: headerBg,
-                    underline: const SizedBox.shrink(),
-                    style: GoogleFonts.jetBrainsMono(fontSize: 11, color: widget.isLight ? Colors.black : Colors.white),
-                    onChanged: (val) => setState(() => _sortField = val!),
-                    items: const [
-                      DropdownMenuItem(value: SortField.creationDate, child: Text('Creation Date')),
-                      DropdownMenuItem(value: SortField.dueDate, child: Text('Due Date')),
-                      DropdownMenuItem(value: SortField.title, child: Text('Title')),
-                      DropdownMenuItem(value: SortField.priority, child: Text('Priority')),
-                    ],
-                  ),
-                  const SizedBox(width: 4),
-                  InkWell(
-                    onTap: () => setState(() => _sortOrder = _sortOrder == SortOrder.asc ? SortOrder.desc : SortOrder.asc),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(border: Border.all(color: border)),
-                      child: Text(
-                        _sortOrder == SortOrder.asc ? '[ASC ↑]' : '[DESC ↓]',
-                        style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 12),
-                  Text('Filter: ', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[500])),
-                  DropdownButton<StatusFilter>(
-                    value: _statusFilter,
-                    isDense: true,
-                    dropdownColor: headerBg,
-                    underline: const SizedBox.shrink(),
-                    style: GoogleFonts.jetBrainsMono(fontSize: 11, color: widget.isLight ? Colors.black : Colors.white),
-                    onChanged: (val) => setState(() => _statusFilter = val!),
-                    items: const [
-                      DropdownMenuItem(value: StatusFilter.all, child: Text('Status: All')),
-                      DropdownMenuItem(value: StatusFilter.open, child: Text('Open')),
-                      DropdownMenuItem(value: StatusFilter.completed, child: Text('Completed')),
-                    ],
-                  ),
-                  const SizedBox(width: 4),
-                  DropdownButton<PriorityFilter>(
-                    value: _priorityFilter,
-                    isDense: true,
-                    dropdownColor: headerBg,
-                    underline: const SizedBox.shrink(),
-                    style: GoogleFonts.jetBrainsMono(fontSize: 11, color: widget.isLight ? Colors.black : Colors.white),
-                    onChanged: (val) => setState(() => _priorityFilter = val!),
-                    items: const [
-                      DropdownMenuItem(value: PriorityFilter.all, child: Text('Pri: All')),
-                      DropdownMenuItem(value: PriorityFilter.A, child: Text('(A)')),
-                      DropdownMenuItem(value: PriorityFilter.B, child: Text('(B)')),
-                      DropdownMenuItem(value: PriorityFilter.C, child: Text('(C)')),
-                      DropdownMenuItem(value: PriorityFilter.none, child: Text('None')),
-                    ],
-                  ),
-                  const SizedBox(width: 4),
-                  DropdownButton<String>(
-                    value: _periodFilter,
-                    isDense: true,
-                    dropdownColor: headerBg,
-                    underline: const SizedBox.shrink(),
-                    style: GoogleFonts.jetBrainsMono(fontSize: 11, color: widget.isLight ? Colors.black : Colors.white),
-                    onChanged: (val) => setState(() => _periodFilter = val!),
-                    items: [
-                      const DropdownMenuItem(value: 'all', child: Text('Period: All')),
-                      ...periodOptions.map((p) => DropdownMenuItem(value: p, child: Text(p))),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            onStatusFilterChanged: (status) => setState(() => _statusFilter = status),
+            onPriorityFilterChanged: (pri) => setState(() => _priorityFilter = pri),
+            onPeriodFilterChanged: (period) => setState(() => _periodFilter = period),
+            isLight: widget.isLight,
           ),
-
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: widget.isLight ? Colors.grey[200] : const Color(0xFF18181B),
-              border: Border(bottom: BorderSide(color: border)),
-            ),
-            child: Row(
-              children: [
-                SizedBox(width: 40, child: Text('St', textAlign: TextAlign.center, style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[500]))),
-                SizedBox(width: 32, child: Text('Pr', textAlign: TextAlign.center, style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[500]))),
-                Expanded(child: Text('Task', style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[500]))),
-                SizedBox(width: 44, child: Text('Del', textAlign: TextAlign.center, style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[500]))),
-              ],
-            ),
-          ),
-
+          TaskListHeader(isLight: widget.isLight),
           Expanded(
             child: processed.isEmpty
                 ? Center(
@@ -220,97 +132,13 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                       final task = processed[index];
                       final isSelected = widget.selectedTaskId == task.id;
 
-                      final rowBg = isSelected
-                          ? (widget.isLight ? Colors.grey[300] : Colors.grey[800])
-                          : Colors.transparent;
-
-                      return InkWell(
-                        onTap: () => widget.onSelectTask(task),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: rowBg,
-                            border: Border(bottom: BorderSide(color: border)),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(
-                                width: 40,
-                                child: InkWell(
-                                  onTap: () => widget.onToggleTask(task.id),
-                                  child: Text(
-                                    task.completed ? '[x]' : '[ ]',
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.jetBrainsMono(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: widget.isLight ? Colors.grey[700] : Colors.grey[400],
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                              SizedBox(
-                                width: 32,
-                                child: Text(
-                                  task.priority ?? '-',
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.jetBrainsMono(fontSize: 12, color: Colors.grey[500]),
-                                ),
-                              ),
-
-                              Expanded(
-                                child: Wrap(
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  spacing: 6,
-                                  runSpacing: 4,
-                                  children: [
-                                    FormattedText(text: task.raw, isCompleted: task.completed, isLight: widget.isLight),
-                                    if (task.recurrence != null && task.recurrence!.isNotEmpty)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                        decoration: BoxDecoration(
-                                          color: (task.recurrence!.contains('strict:') || task.recurrence!.contains('+'))
-                                              ? (widget.isLight ? Colors.purple[100] : Colors.purple[950])
-                                              : (widget.isLight ? Colors.cyan[100] : Colors.cyan[950]),
-                                          border: Border.all(
-                                            color: (task.recurrence!.contains('strict:') || task.recurrence!.contains('+'))
-                                                ? (widget.isLight ? Colors.purple[300]! : Colors.purple[800]!)
-                                                : (widget.isLight ? Colors.cyan[300]! : Colors.cyan[800]!),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          '${(task.recurrence!.contains('strict:') || task.recurrence!.contains('+')) ? '⚡' : '🔄'} ${task.recurrence!.startsWith('rec:') ? task.recurrence : 'rec:${task.recurrence}'}',
-                                          style: GoogleFonts.jetBrainsMono(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: (task.recurrence!.contains('strict:') || task.recurrence!.contains('+'))
-                                                ? (widget.isLight ? Colors.purple[900] : Colors.purple[300])
-                                                : (widget.isLight ? Colors.cyan[900] : Colors.cyan[300]),
-                                          ),
-                                        ),
-                                      ),
-                                    if (task.subtasks.isNotEmpty)
-                                      SubtaskProgressBar(subtasks: task.subtasks, isLight: widget.isLight, compact: true, showText: true),
-                                  ],
-                                ),
-                              ),
-
-                              SizedBox(
-                                width: 44,
-                                child: InkWell(
-                                  onTap: () => widget.onDeleteTask(task),
-                                  child: Text(
-                                    '[del]',
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[600]),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      return TaskListItem(
+                        task: task,
+                        isSelected: isSelected,
+                        onSelectTask: widget.onSelectTask,
+                        onToggleTask: widget.onToggleTask,
+                        onDeleteTask: widget.onDeleteTask,
+                        isLight: widget.isLight,
                       );
                     },
                   ),
