@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/task.dart';
-import '../../theme/app_theme.dart';
 
 class InspectorHeader extends StatefulWidget {
   final Task task;
   final VoidCallback onClose;
   final Function(Task task) onSaveAsTemplate;
   final bool isLight;
-  final AppThemeId? currentTheme;
 
   const InspectorHeader({
     super.key,
@@ -16,7 +14,6 @@ class InspectorHeader extends StatefulWidget {
     required this.onClose,
     required this.onSaveAsTemplate,
     required this.isLight,
-    this.currentTheme,
   });
 
   @override
@@ -41,13 +38,13 @@ class _InspectorHeaderState extends State<InspectorHeader> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = AppTheme.getDefinition(widget.currentTheme ?? (widget.isLight ? AppThemeId.light : AppThemeId.mocha));
+    final border = widget.isLight ? const Color(0xFFE4E4E7) : const Color(0xFF27272A);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: theme.card,
-        border: Border(bottom: BorderSide(color: theme.border, width: 1)),
+        color: widget.isLight ? Colors.grey[200] : const Color(0xFF18181B),
+        border: Border(bottom: BorderSide(color: border)),
       ),
       child: Row(
         children: [
@@ -55,36 +52,24 @@ class _InspectorHeaderState extends State<InspectorHeader> {
             child: Text(
               'INSPECTOR',
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.jetBrainsMono(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-                color: theme.subtext,
-              ),
+              style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(width: 8),
           InkWell(
             onTap: _isSaving ? null : _handleSave,
-            borderRadius: BorderRadius.circular(4),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: _isSaving
-                    ? theme.context.withValues(alpha: 0.15)
-                    : theme.accent.withValues(alpha: 0.1),
-                border: Border.all(
-                  color: _isSaving ? theme.context : theme.accent.withValues(alpha: 0.4),
-                  width: 1,
-                ),
-                borderRadius: BorderRadius.circular(4),
+                color: _isSaving ? (widget.isLight ? Colors.cyan[50] : Colors.cyan[950]) : Colors.transparent,
+                border: Border.all(color: _isSaving ? Colors.cyan : border),
               ),
               child: Text(
                 _isSaving ? '[Saved ✓]' : '[Save Template]',
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
-                  color: _isSaving ? theme.context : theme.accent,
+                  color: _isSaving ? Colors.green : Colors.cyan,
                 ),
               ),
             ),
@@ -92,22 +77,10 @@ class _InspectorHeaderState extends State<InspectorHeader> {
           const SizedBox(width: 6),
           InkWell(
             onTap: widget.onClose,
-            borderRadius: BorderRadius.circular(4),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: theme.surface.withValues(alpha: 0.6),
-                border: Border.all(color: theme.border, width: 1),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                '[← Back]',
-                style: GoogleFonts.jetBrainsMono(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: theme.subtext,
-                ),
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(border: Border.all(color: border)),
+              child: Text('[← Back]', style: GoogleFonts.jetBrainsMono(fontSize: 11)),
             ),
           ),
         ],

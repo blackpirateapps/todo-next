@@ -2,21 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/task.dart';
 import '../../utils/todo_parser.dart';
-import '../../theme/app_theme.dart';
 import '../formatted_text.dart';
 
 class InspectorTitleSection extends StatefulWidget {
   final Task task;
   final Function(String taskId, Map<String, dynamic> updates) onUpdateTask;
   final bool isLight;
-  final AppThemeId? currentTheme;
 
   const InspectorTitleSection({
     super.key,
     required this.task,
     required this.onUpdateTask,
     required this.isLight,
-    this.currentTheme,
   });
 
   @override
@@ -71,102 +68,56 @@ class _InspectorTitleSectionState extends State<InspectorTitleSection> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = AppTheme.getDefinition(widget.currentTheme ?? (widget.isLight ? AppThemeId.light : AppThemeId.mocha));
+    final border = widget.isLight ? const Color(0xFFE4E4E7) : const Color(0xFF27272A);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               'TASK NAME',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-                color: theme.subtext,
+                color: Colors.grey[500],
               ),
             ),
+            const Spacer(),
             InkWell(
-              onTap: () {
-                if (_isEditingTitle) {
-                  _saveRawText();
-                } else {
-                  setState(() => _isEditingTitle = true);
-                }
-              },
-              borderRadius: BorderRadius.circular(4),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: theme.accent.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: theme.accent.withValues(alpha: 0.3), width: 1),
-                ),
-                child: Text(
-                  _isEditingTitle ? '[Save]' : '[Edit]',
-                  style: GoogleFonts.jetBrainsMono(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: theme.accent,
-                  ),
-                ),
+              onTap: () => setState(() => _isEditingTitle = !_isEditingTitle),
+              child: Text(
+                _isEditingTitle ? '[Save]' : '[Edit]',
+                style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.cyan),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         if (_isEditingTitle) ...[
-          Container(
-            decoration: BoxDecoration(
-              color: theme.surface,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: theme.border, width: 1),
-            ),
-            child: TextField(
-              controller: _titleController,
-              maxLines: 3,
-              style: GoogleFonts.jetBrainsMono(fontSize: 12, color: theme.text),
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.all(10),
-                hintText: 'Edit raw task string...',
-                hintStyle: GoogleFonts.jetBrainsMono(fontSize: 11, color: theme.subtext.withValues(alpha: 0.6)),
-              ),
+          TextField(
+            controller: _titleController,
+            maxLines: 3,
+            style: GoogleFonts.jetBrainsMono(fontSize: 12),
+            decoration: InputDecoration(
+              border: OutlineInputBorder(borderSide: BorderSide(color: border)),
+              contentPadding: const EdgeInsets.all(8),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Align(
             alignment: Alignment.centerRight,
             child: ElevatedButton(
               onPressed: _saveRawText,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.accent,
-                foregroundColor: theme.isLight ? Colors.white : const Color(0xFF11111B),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
-              child: Text(
-                'Update Task Raw',
-                style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold),
-              ),
+              child: const Text('Update Task Raw'),
             ),
           ),
         ] else ...[
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: theme.surface.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: FormattedText(
-              text: widget.task.raw,
-              isCompleted: widget.task.completed,
-              isLight: widget.isLight,
-              fontSize: 13,
-            ),
+          FormattedText(
+            text: widget.task.raw,
+            isCompleted: widget.task.completed,
+            isLight: widget.isLight,
+            fontSize: 13,
           ),
         ],
       ],
