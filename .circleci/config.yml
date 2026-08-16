@@ -58,13 +58,16 @@ jobs:
               echo "No KEYSTORE_BASE64 environment variable found. Building with debug signing."
             fi
       - run:
-          name: Build Release Android APK
+          name: Build Release Android APKs (Split per ABI & Universal)
           command: |
             cd flutter_app
+            echo "Building split-per-abi APKs..."
+            flutter build apk --release --split-per-abi --no-tree-shake-icons
+            echo "Building universal fat APK..."
             flutter build apk --release --no-tree-shake-icons
       - store_artifacts:
-          path: flutter_app/build/app/outputs/flutter-apk/app-release.apk
-          destination: todo-next-android-app/app-release.apk
+          path: flutter_app/build/app/outputs/flutter-apk/
+          destination: todo-next-android-apks
 
 workflows:
   version: 2

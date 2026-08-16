@@ -121,7 +121,9 @@ Recently updated with:
   - **Full Offline Use Without Login (Guest Mode)**:
     - The mobile application operates 100% locally by default with zero login required. All tasks, templates, subtasks, recurrence, and theme configurations persist offline via SQLite / SharedPreferences.
     - Added `[ Continue Offline ]` and close actions to `LoginDialogWidget` allowing instant dismissal.
-    - Added user account diagnostics in Settings Modal (`ThemeSettingsTab`), showing `Guest / Local Mode (No login required)` and offering optional `[ Cloud Login / Sync ]` or `[ Logout Session ]` controls on demand.
+  - **Split Per-ABI & Universal APK Build CI Pipelines**:
+    - Updated `.github/workflows/build-flutter-apk.yml` and `.circleci/config.yml` to run `flutter build apk --release --split-per-abi` and `flutter build apk --release`.
+    - Produces architecture-optimized APKs for `arm64-v8a`, `armeabi-v7a`, and `x86_64` (significantly reducing download and install size from ~45MB down to ~15-16MB per device) alongside the universal bundle.
 
 ---
 

@@ -65,13 +65,17 @@ jobs:
             echo "No KEYSTORE_BASE64 secret found. Falling back to debug signing."
           fi
 
-      - name: Build Release APK
+      - name: Build Release APKs (Split per ABI & Universal)
         working-directory: flutter_app
-        run: flutter build apk --release --no-tree-shake-icons
+        run: |
+          echo "Building split-per-abi APKs..."
+          flutter build apk --release --split-per-abi --no-tree-shake-icons
+          echo "Building universal fat APK..."
+          flutter build apk --release --no-tree-shake-icons
 
-      - name: Upload APK Artifact
+      - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: todo-next-android-apk
+          name: todo-next-android-apks
           path: flutter_app/build/app/outputs/flutter-apk/*.apk
           if-no-files-found: error
