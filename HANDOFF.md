@@ -121,9 +121,13 @@ Recently updated with:
   - **Full Offline Use Without Login (Guest Mode)**:
     - The mobile application operates 100% locally by default with zero login required. All tasks, templates, subtasks, recurrence, and theme configurations persist offline via SQLite / SharedPreferences.
     - Added `[ Continue Offline ]` and close actions to `LoginDialogWidget` allowing instant dismissal.
-  - **Split Per-ABI & Universal APK Build CI Pipelines**:
-    - Updated `.github/workflows/build-flutter-apk.yml` and `.circleci/config.yml` to run `flutter build apk --release --split-per-abi` and `flutter build apk --release`.
-    - Produces architecture-optimized APKs for `arm64-v8a`, `armeabi-v7a`, and `x86_64` (significantly reducing download and install size from ~45MB down to ~15-16MB per device) alongside the universal bundle.
+  - **Catppuccin Mocha Theme Palette & Inspector UX Refinements**:
+    - **Mocha Color Scheme**: Implemented official low-contrast warm pastel palette: Base (`#1E1E2E`), Mantle (`#181825`), Surface0 (`#313244`), Surface1 (`#45475A`), Text (`#CDD6F4`), Subtext0 (`#A6ADC8`), Sapphire (`#74C7EC`), Mauve (`#CBA6F7`), and Green (`#A6E3A1`).
+    - **Inspector Metadata Grouping**: Grouped Task ID, Priority, Created, Due Date, and Status inside a unified card (`Surface0` `#313244`) with subtle borders and organized columns.
+    - **Softened Recurrence Box**: Styled `RECURRENCE (rec:)` with 1px Mauve border, subtle background tint, and filled active state presets with clear touch indicators.
+    - **Bounded Input Boxes with Internal Icons**: Replaced bare underlines across project (`+proj`), context (`@ctx`), subtask, and comment fields with bounded input boxes (`Surface0` fill) and embedded internal action icons.
+    - **Consistent Action Links**: Styled `[Save Template]`, `[← Back]`, and `[Edit]` with interactive Sapphire tokens and consistent padding.
+    - **FAB Scroll Clearance**: Added 96dp bottom padding to the inspector and task list scrollable areas, preventing the `+ NEW TASK` Floating Action Button from obstructing comment forms or bottom controls.
 
 ---
 

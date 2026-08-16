@@ -672,12 +672,20 @@ class _HomeScreenState extends State<HomeScreen> {
             )
           : null,
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: Colors.cyan[700],
+        backgroundColor: AppTheme.getDefinition(widget.currentTheme).accent,
         elevation: 4,
-        icon: const Icon(Icons.add, color: Colors.white, size: 20),
+        icon: Icon(
+          Icons.add,
+          color: AppTheme.getDefinition(widget.currentTheme).isLight ? Colors.white : const Color(0xFF11111B),
+          size: 20,
+        ),
         label: Text(
           'NEW TASK',
-          style: AppTheme.monoStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+          style: AppTheme.monoStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.getDefinition(widget.currentTheme).isLight ? Colors.white : const Color(0xFF11111B),
+          ),
         ),
         onPressed: _openAddTaskModal,
       ),
@@ -735,6 +743,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     InspectorDrawerWidget(
                       task: _selectedTask,
                       isLight: widget.isLight,
+                      currentTheme: widget.currentTheme,
                       onClose: () => setState(() => _selectedTask = null),
                       onUpdateTask: _handleUpdateTask,
                       onSaveAsTemplate: _handleSaveAsTemplate,
@@ -758,11 +767,12 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       endDrawer: (!isTablet && _selectedTask != null)
           ? Drawer(
-              width: screenWidth * 0.88,
+              width: (screenWidth * 0.90).clamp(280.0, 420.0),
               child: SafeArea(
                 child: InspectorDrawerWidget(
                   task: _selectedTask,
                   isLight: widget.isLight,
+                  currentTheme: widget.currentTheme,
                   onClose: () => Navigator.of(context).pop(),
                   onUpdateTask: _handleUpdateTask,
                   onSaveAsTemplate: _handleSaveAsTemplate,

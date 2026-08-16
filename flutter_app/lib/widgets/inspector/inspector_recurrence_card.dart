@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/task.dart';
 import '../../utils/todo_parser.dart';
+import '../../theme/app_theme.dart';
 
 class InspectorRecurrenceCard extends StatelessWidget {
   final Task task;
   final Function(String taskId, Map<String, dynamic> updates) onUpdateTask;
   final Function(String taskId) onSkipRecurrence;
   final bool isLight;
+  final AppThemeId? currentTheme;
 
   const InspectorRecurrenceCard({
     super.key,
@@ -15,6 +17,7 @@ class InspectorRecurrenceCard extends StatelessWidget {
     required this.onUpdateTask,
     required this.onSkipRecurrence,
     required this.isLight,
+    this.currentTheme,
   });
 
   void _setRecurrence(String rule) {
@@ -78,53 +81,69 @@ class InspectorRecurrenceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final border = isLight ? const Color(0xFFE4E4E7) : const Color(0xFF27272A);
+    final theme = AppTheme.getDefinition(currentTheme ?? (isLight ? AppThemeId.light : AppThemeId.mocha));
     final recStr = task.recurrence ?? '';
     final isStrict = recStr.contains('strict:') || recStr.contains('+');
+    final cleanCurrentRec = recStr.replaceAll('strict:', '').replaceAll('+', '').replaceAll('rec:', '').trim();
 
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isLight ? Colors.purple[50] : Colors.purple[950]?.withAlpha(80),
-        border: Border.all(color: isLight ? Colors.purple[200]! : Colors.purple[800]!),
+        color: theme.due.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: theme.due.withValues(alpha: 0.35), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'RECURRENCE (rec:)',
-                style: GoogleFonts.jetBrainsMono(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.purple[400],
-                ),
-              ),
-              const Spacer(),
-              if (task.recurrence != null)
-                InkWell(
-                  onTap: _clearRecurrence,
-                  child: Text(
-                    '[Remove]',
-                    style: GoogleFonts.jetBrainsMono(fontSize: 10, color: Colors.red[400]),
+              Flexible(
+                child: Text(
+                  'RECURRENCE (rec:)',
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                    color: theme.due,
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: [
-              _presetChip('Daily', '1d', border),
-              _presetChip('Weekdays', 'weekday', border),
-              _presetChip('Weekly', '1w', border),
-              _presetChip('Monthly', '1m', border),
+              ),
+              if (task.recurrence != null) ...[
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: _clearRecurrence,
+                  borderRadius: BorderRadius.circular(4),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    child: Text(
+                      '[Remove]',
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: theme.priA,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _presetChip('Daily', '1d', cleanCurrentRec == '1d', theme),
+              _presetChip('Weekdays', 'weekday', cleanCurrentRec == 'weekday', theme),
+              _presetChip('Weekly', '1w', cleanCurrentRec == '1w', theme),
+              _presetChip('Monthly', '1m', cleanCurrentRec == '1m', theme),
+            ],
+          ),
           if (task.recurrence != null) ...[
+            const SizedBox(height: 10),
             Wrap(
               spacing: 8,
               runSpacing: 6,
@@ -133,14 +152,22 @@ class InspectorRecurrenceCard extends StatelessWidget {
               children: [
                 InkWell(
                   onTap: _toggleStrictRecurrence,
+                  borderRadius: BorderRadius.circular(4),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    color: isStrict ? Colors.purple[700] : Colors.grey[800],
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isStrict ? theme.due.withValues(alpha: 0.25) : theme.surface,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: isStrict ? theme.due : theme.border,
+                        width: 1,
+                      ),
+                    ),
                     child: Text(
                       isStrict ? '⚡ Strict Mode' : '🔄 Relative Mode',
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 10,
-                        color: Colors.white,
+                        color: isStrict ? theme.due : theme.subtext,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -148,14 +175,19 @@ class InspectorRecurrenceCard extends StatelessWidget {
                 ),
                 InkWell(
                   onTap: () => onSkipRecurrence(task.id),
+                  borderRadius: BorderRadius.circular(4),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(border: Border.all(color: Colors.amber)),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: theme.priB.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: theme.priB.withValues(alpha: 0.5), width: 1),
+                    ),
                     child: Text(
                       '[Skip Cycle]',
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 10,
-                        color: Colors.amber,
+                        color: theme.priB,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -169,13 +201,28 @@ class InspectorRecurrenceCard extends StatelessWidget {
     );
   }
 
-  Widget _presetChip(String label, String rule, Color border) {
+  Widget _presetChip(String label, String rule, bool isActive, ThemeDefinition theme) {
     return InkWell(
       onTap: () => _setRecurrence(rule),
+      borderRadius: BorderRadius.circular(4),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(border: Border.all(color: border)),
-        child: Text(label, style: GoogleFonts.jetBrainsMono(fontSize: 10)),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: isActive ? theme.due.withValues(alpha: 0.22) : theme.surface,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: isActive ? theme.due : theme.border,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.jetBrainsMono(
+            fontSize: 10,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            color: isActive ? theme.due : theme.subtext,
+          ),
+        ),
       ),
     );
   }

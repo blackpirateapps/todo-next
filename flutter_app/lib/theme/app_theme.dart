@@ -12,6 +12,7 @@ class ThemeDefinition {
   final String description;
   final Color bg;
   final Color card;
+  final Color surface;
   final Color border;
   final Color text;
   final Color subtext;
@@ -33,6 +34,7 @@ class ThemeDefinition {
     required this.description,
     required this.bg,
     required this.card,
+    required this.surface,
     required this.border,
     required this.text,
     required this.subtext,
@@ -50,6 +52,28 @@ class ThemeDefinition {
 class AppTheme {
   static const List<ThemeDefinition> availableThemes = [
     ThemeDefinition(
+      id: AppThemeId.mocha,
+      key: 'mocha',
+      name: 'Catppuccin Mocha',
+      badgeEmoji: '🐱',
+      isLight: false,
+      description: 'Soothing pastel dark palette with soft mauve, sapphire, and sky accents.',
+      bg: Color(0xFF1E1E2E), // Base
+      card: Color(0xFF181825), // Mantle
+      surface: Color(0xFF313244), // Surface0
+      border: Color(0xFF45475A), // Surface1
+      text: Color(0xFFCDD6F4), // Text
+      subtext: Color(0xFFA6ADC8), // Subtext0
+      accent: Color(0xFF74C7EC), // Sapphire
+      priA: Color(0xFFF38BA8), // Red
+      priB: Color(0xFFFAB387), // Peach
+      priC: Color(0xFF89B4FA), // Blue
+      project: Color(0xFF74C7EC), // Sapphire
+      context: Color(0xFFA6E3A1), // Green
+      due: Color(0xFFCBA6F7), // Mauve
+      dueBg: Color(0x33CBA6F7),
+    ),
+    ThemeDefinition(
       id: AppThemeId.dark,
       key: 'dark',
       name: 'Pitch Black',
@@ -58,6 +82,7 @@ class AppTheme {
       description: 'High contrast retro pitch black (#000000) terminal canvas with cyan accents.',
       bg: Color(0xFF000000),
       card: Color(0xFF09090B),
+      surface: Color(0xFF18181B),
       border: Color(0xFF27272A),
       text: Color(0xFFE4E4E7),
       subtext: Color(0xFFA1A1AA),
@@ -79,6 +104,7 @@ class AppTheme {
       description: 'Crisp minimal white (#FFFFFF) canvas tailored for daytime legibility and clean paper aesthetics.',
       bg: Color(0xFFFFFFFF),
       card: Color(0xFFF4F4F5),
+      surface: Color(0xFFE4E4E7),
       border: Color(0xFFE4E4E7),
       text: Color(0xFF18181B),
       subtext: Color(0xFF71717A),
@@ -92,27 +118,6 @@ class AppTheme {
       dueBg: Color(0xFFF3E8FF),
     ),
     ThemeDefinition(
-      id: AppThemeId.mocha,
-      key: 'mocha',
-      name: 'Catppuccin Mocha',
-      badgeEmoji: '🐱',
-      isLight: false,
-      description: 'Soothing pastel dark palette with soft mauve, sapphire, and sky accents.',
-      bg: Color(0xFF1E1E2E),
-      card: Color(0xFF181825),
-      border: Color(0xFF313244),
-      text: Color(0xFFCDD6F4),
-      subtext: Color(0xFFA6ADC8),
-      accent: Color(0xFF89DCEB),
-      priA: Color(0xFFF38BA8),
-      priB: Color(0xFFFAB387),
-      priC: Color(0xFF89B4FA),
-      project: Color(0xFF74C7EC),
-      context: Color(0xFFA6E3A1),
-      due: Color(0xFFCBA6F7),
-      dueBg: Color(0x26CBA6F7),
-    ),
-    ThemeDefinition(
       id: AppThemeId.gruvboxDark,
       key: 'gruvbox-dark',
       name: 'Gruvbox Dark',
@@ -121,6 +126,7 @@ class AppTheme {
       description: 'Warm retro groove palette with aqua, olive green, and earthy warm tones.',
       bg: Color(0xFF1D2021),
       card: Color(0xFF282828),
+      surface: Color(0xFF32302F),
       border: Color(0xFF3C3836),
       text: Color(0xFFEBDBB2),
       subtext: Color(0xFFA89984),
@@ -142,6 +148,7 @@ class AppTheme {
       description: 'Warm linen paper background with rich typewriter ink typography.',
       bg: Color(0xFFFBF8F2),
       card: Color(0xFFF2ECE0),
+      surface: Color(0xFFE8DFCD),
       border: Color(0xFFD5CAB6),
       text: Color(0xFF2C2621),
       subtext: Color(0xFF6B5D52),
@@ -164,13 +171,14 @@ class AppTheme {
   }
 
   static AppThemeId fromKey(String? key) {
-    if (key == null) return AppThemeId.dark;
+    if (key == null) return AppThemeId.mocha;
     final lower = key.trim().toLowerCase();
-    if (lower == 'light' || lower == 'white') return AppThemeId.light;
     if (lower == 'mocha' || lower == 'catppuccin' || lower == 'catppuccin-mocha') return AppThemeId.mocha;
+    if (lower == 'dark' || lower == 'pitch-black' || lower == 'black') return AppThemeId.dark;
+    if (lower == 'light' || lower == 'white') return AppThemeId.light;
     if (lower == 'gruvbox' || lower == 'gruvbox-dark' || lower == 'gruvbox_dark') return AppThemeId.gruvboxDark;
     if (lower == 'paper' || lower == 'sepia' || lower == 'paper-ink' || lower == 'paper_ink') return AppThemeId.paperInk;
-    return AppThemeId.dark;
+    return AppThemeId.mocha;
   }
 
   static String toKey(AppThemeId id) {
@@ -194,13 +202,13 @@ class AppTheme {
   static Color get lightText => getDefinition(AppThemeId.light).text;
   static Color get lightSubtext => getDefinition(AppThemeId.light).subtext;
 
-  static const Color priA = Color(0xFFEF4444);
-  static const Color priB = Color(0xFFF59E0B);
-  static const Color priC = Color(0xFF60A5FA);
-  static const Color projectCyan = Color(0xFF06B6D4);
-  static const Color contextGreen = Color(0xFF10B981);
-  static const Color duePurple = Color(0xFFA855F7);
-  static const Color recPurple = Color(0xFF9333EA);
+  static const Color priA = Color(0xFFF38BA8);
+  static const Color priB = Color(0xFFFAB387);
+  static const Color priC = Color(0xFF89B4FA);
+  static const Color projectCyan = Color(0xFF74C7EC);
+  static const Color contextGreen = Color(0xFFA6E3A1);
+  static const Color duePurple = Color(0xFFCBA6F7);
+  static const Color recPurple = Color(0xFFCBA6F7);
 
   static TextStyle monoStyle({
     double fontSize = 12.0,
@@ -258,7 +266,7 @@ class AppTheme {
       colorScheme: ColorScheme(
         brightness: brightness,
         primary: def.accent,
-        onPrimary: def.isLight ? Colors.white : Colors.black,
+        onPrimary: def.isLight ? Colors.white : const Color(0xFF11111B),
         secondary: def.context,
         onSecondary: Colors.white,
         error: def.priA,
