@@ -7,12 +7,26 @@ import '../models/template.dart';
 class ApiService {
   static const String baseUrl = 'https://todo-next-five-mu.vercel.app/api';
   static const String _authTokenKey = 'todo_next_session_token';
+  static const String _userEmailKey = 'todo_next_session_email';
 
   static String? _authToken;
+  static String? _userEmail;
+
+  static String? get userEmail => _userEmail;
+  static bool get isAuthenticated => _authToken != null && _authToken!.isNotEmpty;
 
   static Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     _authToken = prefs.getString(_authTokenKey);
+    _userEmail = prefs.getString(_userEmailKey);
+  }
+
+  static Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    _authToken = null;
+    _userEmail = null;
+    await prefs.remove(_authTokenKey);
+    await prefs.remove(_userEmailKey);
   }
 
   static Map<String, String> _getHeaders() {
@@ -31,7 +45,13 @@ class ApiService {
     try {
       final res = await http.get(Uri.parse('$baseUrl/auth'), headers: _getHeaders()).timeout(const Duration(seconds: 5));
       if (res.statusCode == 200) {
-        return jsonDecode(res.body) as Map<String, dynamic>;
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        if (data['user'] != null && data['user']['email'] != null) {
+          _userEmail = data['user']['email'] as String;
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(_userEmailKey, _userEmail!);
+        }
+        return data;
       }
     } catch (_) {}
     return {'authRequired': false, 'authenticated': true};
@@ -51,8 +71,10 @@ class ApiService {
           final token = body['token'] as String?;
           if (token != null && token.isNotEmpty) {
             _authToken = token;
+            _userEmail = email;
             final prefs = await SharedPreferences.getInstance();
             await prefs.setString(_authTokenKey, token);
+            await prefs.setString(_userEmailKey, email);
           }
           return true;
         }
@@ -75,8 +97,10 @@ class ApiService {
           final token = body['token'] as String?;
           if (token != null && token.isNotEmpty) {
             _authToken = token;
+            _userEmail = email;
             final prefs = await SharedPreferences.getInstance();
             await prefs.setString(_authTokenKey, token);
+            await prefs.setString(_userEmailKey, email);
           }
           return true;
         }

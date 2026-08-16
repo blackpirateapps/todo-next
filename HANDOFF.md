@@ -116,11 +116,12 @@ Recently updated with:
     - `flutter_app/lib/widgets/modals/`: `add_task_dialog.dart` (extracted from `home_screen.dart`).
     - `flutter_app/lib/utils/command_parser.dart`: Extracted sealed command hierarchy and parser (`CommandParser`) for `:settings`, `:theme`, `:syntax`, `:recurring`, `:skip`, `:rec`, `:template`, `:use`, `:template save`, `:add`, and filter queries.
   - Zero-feature loss: 100% of UI styles, shortcuts, drag & drop, formatting, recurrence rules, dialogs, and token behaviors preserved.
-- **Flutter Load Acceleration & Template Save Debouncing**:
-  - **Instant 0ms App Launch**: Replaced blocking sequential network calls during `initState` with instant offline-first hydration from `StorageService`. `_isLoading` is set to `false` immediately so users see their tasks in 0ms without waiting for network latency or timeouts.
-  - **Parallel Non-blocking Background Sync**: Concurrently runs `Future.wait([ApiService.fetchTasks(), ApiService.fetchTemplates()])` and auth status check in the background, updating UI state and local storage cache seamlessly.
-  - **Optimistic Template Saving**: When saving a task as a template, the template is saved locally and the template gallery modal opens immediately, while syncing to the backend API asynchronously in the background.
-  - **Multi-Click & Duplicate Prevention**: Added debouncing flags and duplicate template checks across `HomeScreen._handleSaveAsTemplate`, `InspectorHeader` (`[Saved ✓]` visual feedback), and `TemplateFormDialog` (`_isSubmitting` guard) to completely eliminate accidental duplicate templates.
+- **Android App Launcher Icons & Full Offline Support**:
+  - **Brand Launcher Icons**: Generated high-resolution Android launcher icons across all mipmap densities (`mipmap-mdpi` 48x48, `mipmap-hdpi` 72x72, `mipmap-xhdpi` 96x96, `mipmap-xxhdpi` 144x144, `mipmap-xxxhdpi` 192x192) using the official brand icon asset (`public/icon-512.png`), replacing the default Flutter icon.
+  - **Full Offline Use Without Login (Guest Mode)**:
+    - The mobile application operates 100% locally by default with zero login required. All tasks, templates, subtasks, recurrence, and theme configurations persist offline via SQLite / SharedPreferences.
+    - Added `[ Continue Offline ]` and close actions to `LoginDialogWidget` allowing instant dismissal.
+    - Added user account diagnostics in Settings Modal (`ThemeSettingsTab`), showing `Guest / Local Mode (No login required)` and offering optional `[ Cloud Login / Sync ]` or `[ Logout Session ]` controls on demand.
 
 ---
 

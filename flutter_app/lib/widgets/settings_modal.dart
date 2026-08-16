@@ -23,6 +23,7 @@ class SettingsModalWidget extends StatefulWidget {
   final String syncStatus;
   final VoidCallback? onForceSync;
   final VoidCallback? onLogout;
+  final VoidCallback? onLogin;
   final int initialTabIndex;
 
   const SettingsModalWidget({
@@ -39,6 +40,7 @@ class SettingsModalWidget extends StatefulWidget {
     this.syncStatus = 'synced',
     this.onForceSync,
     this.onLogout,
+    this.onLogin,
     this.initialTabIndex = 0,
   });
 
@@ -140,6 +142,7 @@ class _SettingsModalWidgetState extends State<SettingsModalWidget> {
                       syncStatus: widget.syncStatus,
                       onForceSync: widget.onForceSync,
                       onLogout: widget.onLogout,
+                      onLogin: widget.onLogin,
                     )
                   : _activeTabIndex == 1
                       ? TemplatesSettingsTab(

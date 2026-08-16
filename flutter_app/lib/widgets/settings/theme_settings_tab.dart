@@ -9,6 +9,7 @@ class ThemeSettingsTab extends StatelessWidget {
   final String syncStatus;
   final VoidCallback? onForceSync;
   final VoidCallback? onLogout;
+  final VoidCallback? onLogin;
 
   const ThemeSettingsTab({
     super.key,
@@ -19,10 +20,13 @@ class ThemeSettingsTab extends StatelessWidget {
     this.syncStatus = 'synced',
     this.onForceSync,
     this.onLogout,
+    this.onLogin,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isGuest = userEmail == null || userEmail!.isEmpty;
+
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 8),
       children: [
@@ -123,9 +127,10 @@ class ThemeSettingsTab extends StatelessWidget {
                 style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
               ),
               const SizedBox(height: 8),
-              _diagRow('User Account:', userEmail ?? 'Guest / Local', Colors.green),
-              _diagRow('Sync Status:', syncStatus.toUpperCase(), Colors.amber),
-              _diagRow('Database:', 'Turso DB / SQLite', null),
+              _diagRow('Mode:', isGuest ? 'Local / Offline Mode' : 'Cloud Sync Mode', Colors.cyan),
+              _diagRow('User Account:', isGuest ? 'Guest (No login required)' : userEmail!, Colors.green),
+              _diagRow('Sync Status:', syncStatus.toUpperCase(), syncStatus == 'synced' ? Colors.green : Colors.amber),
+              _diagRow('Local Storage:', 'SQLite / SharedPreferences', null),
               _diagRow('Format:', 'todo.txt utf-8', null),
               const SizedBox(height: 12),
               Wrap(
@@ -140,7 +145,19 @@ class ThemeSettingsTab extends StatelessWidget {
                       ),
                       child: Text('[ Force Database Sync ]', style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                     ),
-                  if (onLogout != null)
+                  if (isGuest && onLogin != null)
+                    ElevatedButton(
+                      onPressed: onLogin,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.cyan[800],
+                        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                      ),
+                      child: Text(
+                        '[ Cloud Login / Sync ]',
+                        style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  if (!isGuest && onLogout != null)
                     OutlinedButton(
                       onPressed: onLogout,
                       style: OutlinedButton.styleFrom(

@@ -88,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    // 2. Non-blocking Background API Sync & Auth Check
+    // 2. Non-blocking Background API Sync
     _syncRemoteData();
   }
 
@@ -98,31 +98,14 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       await ApiService.init();
 
-      // Check auth and fetch tasks/templates in parallel
+      // Parallel remote fetch
       final authFuture = ApiService.checkAuthStatus();
       final dataFuture = Future.wait([
         ApiService.fetchTasks(),
         ApiService.fetchTemplates(),
       ]);
 
-      final authStatus = await authFuture;
-      if (authStatus['authRequired'] == true && authStatus['authenticated'] != true) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) => LoginDialogWidget(
-                isLight: widget.isLight,
-                onLoginSuccess: () {
-                  _syncRemoteData();
-                },
-              ),
-            );
-          }
-        });
-      }
-
+      await authFuture;
       final results = await dataFuture;
       final remoteTasks = results[0] as List<Task>?;
       final remoteTemplates = results[1] as List<Template>?;
@@ -147,6 +130,19 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {
       if (mounted) setState(() => _syncStatus = 'offline');
     }
+  }
+
+  void _openLoginModal() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => LoginDialogWidget(
+        isLight: widget.isLight,
+        onLoginSuccess: () {
+          _syncRemoteData();
+        },
+      ),
+    );
   }
 
   Future<void> _handleToggleTask(String id) async {
@@ -565,7 +561,21 @@ class _HomeScreenState extends State<HomeScreen> {
         currentTheme: widget.currentTheme,
         onSelectTheme: widget.onSelectTheme,
         initialTabIndex: initialTab,
+        userEmail: ApiService.userEmail,
+        syncStatus: _syncStatus,
         onInstantiateTemplate: _handleInstantiateTemplate,
+        onForceSync: _syncRemoteData,
+        onLogin: () {
+          Navigator.of(context).pop();
+          _openLoginModal();
+        },
+        onLogout: () async {
+          Navigator.of(context).pop();
+          await ApiService.logout();
+          if (mounted) {
+            setState(() => _syncStatus = 'offline');
+          }
+        },
         onCreateTemplate: (tmpl) async {
           setState(() {
             _templates.insert(0, tmpl);
@@ -600,8 +610,6 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         },
         onDeleteTemplate: _handleDeleteTemplate,
-        syncStatus: _syncStatus,
-        onForceSync: _syncRemoteData,
       ),
     );
   }

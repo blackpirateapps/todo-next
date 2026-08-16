@@ -4,11 +4,13 @@ import '../services/api_service.dart';
 
 class LoginDialogWidget extends StatefulWidget {
   final VoidCallback onLoginSuccess;
+  final VoidCallback? onContinueOffline;
   final bool isLight;
 
   const LoginDialogWidget({
     super.key,
     required this.onLoginSuccess,
+    this.onContinueOffline,
     required this.isLight,
   });
 
@@ -22,6 +24,13 @@ class _LoginDialogWidgetState extends State<LoginDialogWidget> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
   String? _error;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _handleAuth() async {
     final email = _emailController.text.trim();
@@ -51,6 +60,13 @@ class _LoginDialogWidgetState extends State<LoginDialogWidget> {
     }
   }
 
+  void _handleOffline() {
+    if (widget.onContinueOffline != null) {
+      widget.onContinueOffline!();
+    }
+    if (mounted) Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final bg = widget.isLight ? Colors.white : const Color(0xFF09090B);
@@ -66,10 +82,25 @@ class _LoginDialogWidgetState extends State<LoginDialogWidget> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('TODO NEXT SYSTEM', style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.cyan)),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'TODO NEXT SYSTEM',
+                    style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.cyan),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 18),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: _handleOffline,
+                ),
+              ],
+            ),
             const SizedBox(height: 4),
             Text(
-              _isSignUp ? 'Create SaaS Workspace Account' : 'Authenticate SaaS Workspace',
+              _isSignUp ? 'Create Cloud Workspace Account' : 'Authenticate Cloud Sync Account',
               style: GoogleFonts.jetBrainsMono(fontSize: 12, color: Colors.grey[400]),
             ),
             const SizedBox(height: 12),
@@ -135,16 +166,25 @@ class _LoginDialogWidgetState extends State<LoginDialogWidget> {
             ],
 
             const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.cyan[700]),
-                onPressed: _isLoading ? null : _handleAuth,
-                child: Text(
-                  _isLoading ? 'Processing...' : (_isSignUp ? 'Create Account' : 'Authenticate'),
-                  style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  onPressed: _handleOffline,
+                  child: Text(
+                    '[ Continue Offline ]',
+                    style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[400]),
+                  ),
                 ),
-              ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.cyan[700]),
+                  onPressed: _isLoading ? null : _handleAuth,
+                  child: Text(
+                    _isLoading ? 'Processing...' : (_isSignUp ? 'Create Account' : 'Authenticate'),
+                    style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
