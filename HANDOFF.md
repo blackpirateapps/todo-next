@@ -126,8 +126,10 @@ Recently updated with:
     - **Inspector Metadata Grouping**: Grouped Task ID, Priority, Created, Due Date, and Status inside a unified card (`Surface0` `#313244`) with subtle borders and organized columns.
     - **Softened Recurrence Box**: Styled `RECURRENCE (rec:)` with 1px Mauve border, subtle background tint, and filled active state presets with clear touch indicators.
     - **Bounded Input Boxes with Internal Icons**: Replaced bare underlines across project (`+proj`), context (`@ctx`), subtask, and comment fields with bounded input boxes (`Surface0` fill) and embedded internal action icons.
-    - **Consistent Action Links**: Styled `[Save Template]`, `[← Back]`, and `[Edit]` with interactive Sapphire tokens and consistent padding.
-    - **FAB Scroll Clearance**: Added 96dp bottom padding to the inspector and task list scrollable areas, preventing the `+ NEW TASK` Floating Action Button from obstructing comment forms or bottom controls.
+  - **F-Droid Package Preparation & Fastlane Standardization**:
+    - **Fastlane Metadata**: Verified and configured complete metadata in `fastlane/metadata/android/en-US/`: `title.txt` ("Todo Next"), `short_description.txt` (80 chars), `full_description.txt` (detailing offline-first, 5 themes, todo.txt specs, recurrence, and templates), `icon.png` (512x512 PNG), and `featureGraphic.png` (1024x500 PNG).
+    - **F-Droid Build Recipe**: Created official metadata template in [`fdroid/com.blackpiratex.todo.yml`](file:///home/dog/git/todo-next/fdroid/com.blackpiratex.todo.yml) configured for automated `flutter: stable` builds.
+    - **Submission Guide**: Created comprehensive documentation in [`FDROID_SUBMISSION_GUIDE.md`](file:///home/dog/git/todo-next/FDROID_SUBMISSION_GUIDE.md) outlining both GitLab RFP issue submission and direct `fdroiddata` Merge Request procedures.
 
 ---
 

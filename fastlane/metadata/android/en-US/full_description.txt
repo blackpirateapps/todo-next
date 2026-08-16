@@ -1,11 +1,12 @@
-Todo Next is a lightweight, terminal-styled task manager heavily influenced by the todo.txt format and Unix philosophy. It provides a fast, minimalist interface with keyboard navigation, syntax highlighting, and full List & Calendar views.
+Todo Next is a fast, terminal-styled task manager heavily influenced by the todo.txt format and Unix philosophy. It provides a keyboard-centric, distraction-free interface with syntax highlighting, dynamic template tokens, recurring tasks engine, and full List & Calendar views.
 
 Key Features:
-- **todo.txt Standard**: Full support for priorities ((A), (B), (C)), project tags (+project), context tags (@context), due dates (due:YYYY-MM-DD), and time stamps (time:HH:MM).
-- **Interactive Calendar View**: Full monthly calendar view projecting due tasks and future recurring task instances.
-- **Flagship Recurring Tasks (rec:)**: Advanced recurrence engine supporting relative (rec:1d, rec:2w, rec:1m, rec:weekday) and strict recurrence rules. Automatically spawns fresh open task instances upon completion.
-- **Workflow Templates Engine**: Instantiate recurring task templates with dynamic date tokens ({today}, {due:+3d}, {due:+1w}, {time:HH:MM}).
-- **Subtask Checklist**: Visual progress bar tracking subtask completions.
-- **Terminal Command Line**: Full command interface supporting commands like :add, :template, :rec, :skip, and :use.
-- **Dual Terminal Themes**: Monospace Dark and Light modes optimized for phones and tablets.
-- **Cloud & Offline Sync**: Bi-directional API synchronization with offline local database caching.
+• 100% Offline-First & Privacy Focused: Works completely offline with zero account or login required. All tasks and templates persist securely on your device.
+• todo.txt Standard: Native support for priorities ((A), (B), (C)), project tags (+project), context tags (@context), due dates (due:YYYY-MM-DD), and time tags (time:HH:MM).
+• Interactive Calendar View: Monthly and weekly calendar view projecting due tasks and future recurring task projections with drag-and-drop scheduling.
+• Flagship Recurring Tasks (rec:): Advanced recurrence engine supporting relative (rec:1d, rec:1w, rec:1m, rec:weekday) and strict recurrence rules. Automatically spawns fresh open task instances upon completion.
+• Workflow Templates Engine: Instantiate reusable task templates with dynamic date tokens ({today}, {due:+3d}, {due:+1w}, {time:HH:MM}).
+• Subtask Checklist & Progress: Track subtasks with visual progress indicators.
+• Terminal Command Line: Execute commands like :add, :template, :rec, :skip, :theme, and :settings directly from the quick input bar.
+• 5 Developer Themes: Choose between Catppuccin Mocha, Pitch Black, Clean White, Gruvbox Dark, and Paper & Ink.
+• Optional Cloud Sync: Optional bi-directional sync with self-hosted or cloud Todo Next instances.
