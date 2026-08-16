@@ -1,8 +1,176 @@
 @import "tailwindcss";
 
-:root {
+/* -------------------------------------------------------------
+ * TODO-NEXT MULTI-THEME DESIGN SYSTEM
+ * Themes: dark (Pitch Black), light (Clean White),
+ *         mocha (Catppuccin Mocha), gruvbox-dark (Gruvbox Dark),
+ *         paper-ink (Paper & Ink / Sepia)
+ * ------------------------------------------------------------- */
+
+:root,
+[data-theme="dark"] {
+  --background: #000000;
+  --foreground: #e4e4e7;
+  --app-bg: #000000;
+  --app-card: #09090b;
+  --app-header: #09090b;
+  --app-sidebar: #09090b;
+  --app-border: #27272a;
+  --app-border-subtle: #18181b;
+  --app-text: #e4e4e7;
+  --app-subtext: #a1a1aa;
+  --app-muted: #71717a;
+  --app-accent: #06b6d4;
+  --app-accent-hover: #0891b2;
+  --app-accent-bg: rgba(6, 182, 212, 0.15);
+  --app-accent-border: rgba(6, 182, 212, 0.4);
+  --app-accent-text: #22d3ee;
+  --app-project: #22d3ee;
+  --app-context: #4ade80;
+  --app-due: #c084fc;
+  --app-due-bg: rgba(192, 132, 252, 0.15);
+  --app-due-border: rgba(192, 132, 252, 0.4);
+  --app-pri-a: #f87171;
+  --app-pri-b: #fbbf24;
+  --app-pri-c: #60a5fa;
+  --app-hover: rgba(255, 255, 255, 0.05);
+  --app-selected: #18181b;
+  --app-selected-border: #3f3f46;
+  --app-input-bg: #000000;
+  --app-selection-bg: #164e63;
+  --app-selection-text: #ffffff;
+}
+
+[data-theme="light"] {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #18181b;
+  --app-bg: #ffffff;
+  --app-card: #f4f4f5;
+  --app-header: #f4f4f5;
+  --app-sidebar: #f4f4f5;
+  --app-border: #e4e4e7;
+  --app-border-subtle: #f4f4f5;
+  --app-text: #18181b;
+  --app-subtext: #52525b;
+  --app-muted: #a1a1aa;
+  --app-accent: #0891b2;
+  --app-accent-hover: #0e7490;
+  --app-accent-bg: #cffafe;
+  --app-accent-border: #67e8f9;
+  --app-accent-text: #0e7490;
+  --app-project: #0891b2;
+  --app-context: #16a34a;
+  --app-due: #9333ea;
+  --app-due-bg: #f3e8ff;
+  --app-due-border: #d8b4fe;
+  --app-pri-a: #dc2626;
+  --app-pri-b: #d97706;
+  --app-pri-c: #2563eb;
+  --app-hover: #f4f4f5;
+  --app-selected: #e4e4e7;
+  --app-selected-border: #d4d4d8;
+  --app-input-bg: #ffffff;
+  --app-selection-bg: #cffafe;
+  --app-selection-text: #083344;
+}
+
+[data-theme="mocha"] {
+  --background: #1e1e2e;
+  --foreground: #cdd6f4;
+  --app-bg: #1e1e2e;
+  --app-card: #181825;
+  --app-header: #11111b;
+  --app-sidebar: #181825;
+  --app-border: #313244;
+  --app-border-subtle: #24273a;
+  --app-text: #cdd6f4;
+  --app-subtext: #a6adc8;
+  --app-muted: #6c7086;
+  --app-accent: #89dceb;
+  --app-accent-hover: #74c7ec;
+  --app-accent-bg: rgba(137, 220, 235, 0.15);
+  --app-accent-border: rgba(137, 220, 235, 0.4);
+  --app-accent-text: #89dceb;
+  --app-project: #74c7ec;
+  --app-context: #a6e3a1;
+  --app-due: #cba6f7;
+  --app-due-bg: rgba(203, 166, 247, 0.15);
+  --app-due-border: rgba(203, 166, 247, 0.4);
+  --app-pri-a: #f38ba8;
+  --app-pri-b: #fab387;
+  --app-pri-c: #89b4fa;
+  --app-hover: rgba(255, 255, 255, 0.05);
+  --app-selected: #313244;
+  --app-selected-border: #45475a;
+  --app-input-bg: #11111b;
+  --app-selection-bg: #45475a;
+  --app-selection-text: #cdd6f4;
+}
+
+[data-theme="gruvbox-dark"] {
+  --background: #1d2021;
+  --foreground: #ebdbb2;
+  --app-bg: #1d2021;
+  --app-card: #282828;
+  --app-header: #282828;
+  --app-sidebar: #282828;
+  --app-border: #3c3836;
+  --app-border-subtle: #32302f;
+  --app-text: #ebdbb2;
+  --app-subtext: #d5c4a1;
+  --app-muted: #928374;
+  --app-accent: #8ec07c;
+  --app-accent-hover: #689d6a;
+  --app-accent-bg: rgba(142, 192, 124, 0.15);
+  --app-accent-border: rgba(142, 192, 124, 0.4);
+  --app-accent-text: #8ec07c;
+  --app-project: #83a598;
+  --app-context: #b8bb26;
+  --app-due: #d3869b;
+  --app-due-bg: rgba(211, 134, 155, 0.15);
+  --app-due-border: rgba(211, 134, 155, 0.4);
+  --app-pri-a: #fb4934;
+  --app-pri-b: #fe8019;
+  --app-pri-c: #fabd2f;
+  --app-hover: rgba(255, 255, 255, 0.05);
+  --app-selected: #3c3836;
+  --app-selected-border: #504945;
+  --app-input-bg: #1d2021;
+  --app-selection-bg: #504945;
+  --app-selection-text: #ebdbb2;
+}
+
+[data-theme="paper-ink"] {
+  --background: #fbf8f2;
+  --foreground: #2c2621;
+  --app-bg: #fbf8f2;
+  --app-card: #f2ece0;
+  --app-header: #ede5d5;
+  --app-sidebar: #f2ece0;
+  --app-border: #d5cab6;
+  --app-border-subtle: #e5ded0;
+  --app-text: #2c2621;
+  --app-subtext: #574c43;
+  --app-muted: #8c7d70;
+  --app-accent: #0e7490;
+  --app-accent-hover: #155e75;
+  --app-accent-bg: rgba(14, 116, 144, 0.12);
+  --app-accent-border: rgba(14, 116, 144, 0.35);
+  --app-accent-text: #0e7490;
+  --app-project: #0284c7;
+  --app-context: #15803d;
+  --app-due: #7e22ce;
+  --app-due-bg: rgba(126, 34, 206, 0.1);
+  --app-due-border: rgba(126, 34, 206, 0.3);
+  --app-pri-a: #b91c1c;
+  --app-pri-b: #b45309;
+  --app-pri-c: #1d4ed8;
+  --app-hover: #eae2d3;
+  --app-selected: #e5ded0;
+  --app-selected-border: #c8bcab;
+  --app-input-bg: #ffffff;
+  --app-selection-bg: #d5cab6;
+  --app-selection-text: #2c2621;
 }
 
 @theme inline {
@@ -12,15 +180,13 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-family: Arial, Helvetica, sans-serif;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+::selection {
+  background-color: var(--app-selection-bg);
+  color: var(--app-selection-text);
 }

@@ -78,12 +78,24 @@ Recently updated with:
     - Executed `/api/tasks` and `/api/templates` API requests concurrently via `Promise.all`.
     - Made `/api/auth` session sync non-blocking.
     - Implemented database batching via `db.batch()` in `lib/db.ts` for `getAllTasks()` and `getAllTemplates()`, reducing server-side Turso DB roundtrips from 5 down to 1 single request.
+- **Multi-Theme System (Web App)**:
+  - Added support for 5 developer and terminal themes:
+    - **🌙 Pitch Black (`dark`)**: Retro pitch black canvas with cyan/green terminal syntax.
+    - **☀️ Clean White (`light`)**: Crisp minimal light canvas for daytime legibility.
+    - **🐱 Catppuccin Mocha (`mocha`)**: Soothing pastel dark theme with soft mauve, sapphire, and sky accents.
+    - **🌰 Gruvbox Dark (`gruvbox-dark`)**: Warm retro groove palette with aqua, olive green, and earthy warm tones.
+    - **📜 Paper & Ink (`paper-ink`)**: Warm linen paper background with rich typewriter ink typography.
+  - Implemented CSS variables and CSS custom properties in [`app/globals.css`](file:///home/dog/git/todo-next/app/globals.css) bound to `data-theme` attribute on the root container.
+  - Updated [`components/SettingsModal.tsx`](file:///home/dog/git/todo-next/components/SettingsModal.tsx) theme gallery with interactive cards, color palette swatches, and active indicators.
+  - Updated [`components/StatusBar.tsx`](file:///home/dog/git/todo-next/components/StatusBar.tsx) to display the active theme badge (e.g. `[🐱 Catppuccin Mocha]`) and cycle themes on click.
+  - Added terminal commands `:theme` and `:theme <name>` (`:theme mocha`, `:theme gruvbox`, `:theme paper`, `:theme dark`, `:theme light`) in `CommandInput`.
+  - Persisted user theme preference in `localStorage.setItem('todo_next_theme', theme)`.
 - **Unified Settings & Preferences Modal (`SettingsModal.tsx`)**:
   - Added dedicated Settings Modal containing:
-    - **Theme Switcher Tab**: Interactive Dark Mode (Pitch Black) vs Light Mode (Clean White) visual selection cards.
+    - **Theme Switcher Tab**: Interactive visual selection cards for all 5 themes with live palette swatches and 1-click activation.
     - **Task Templates Manager & Editor Tab**: Full template gallery with search, `[ Use ]` button, `[ Edit ]` button (enabling inline editing of template name, raw template string, description, and subtasks), `[ + New Template ]` builder, and delete confirmation.
     - **Syntax Guide Tab**: Complete `todo.txt` syntax reference covering priorities `(A)`, projects `+proj`, contexts `@ctx`, due dates `due:YYYY-MM-DD`, times `time:HH:MM`, recurrence rules `rec:`, and terminal commands.
-  - Header Navigation: Removed `[?] Syntax` button from homepage header (`CommandInput.tsx`) and added `[⚙️ Settings]` button next to `[Templates]`. `[Templates]` button remains accessible on the homepage header. Added `:settings` terminal command.
+  - Header Navigation: Removed `[?] Syntax` button from homepage header (`CommandInput.tsx`) and added `[⚙️ Settings]` button next to `[Templates]`. `[Templates]` button remains accessible on the homepage header. Added `:settings` and `:theme` terminal commands.
 
 ---
 

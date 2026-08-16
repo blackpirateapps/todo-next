@@ -1,4 +1,5 @@
 import React from 'react';
+import { AppTheme, AVAILABLE_THEMES } from '@/types/todo';
 
 export type SyncStatus = 'synced' | 'syncing' | 'unsaved' | 'offline';
 
@@ -7,6 +8,7 @@ interface StatusBarProps {
   totalCount: number;
   activeFilter: string;
   isLightMode: boolean;
+  currentTheme?: AppTheme;
   onToggleTheme: () => void;
   authRequired: boolean;
   userEmail?: string | null;
@@ -21,6 +23,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   totalCount,
   activeFilter,
   isLightMode,
+  currentTheme = 'dark',
   onToggleTheme,
   authRequired,
   userEmail,
@@ -29,6 +32,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   pendingCount,
   onForceSync
 }) => {
+  const currentThemeDef = AVAILABLE_THEMES.find(t => t.id === currentTheme) || AVAILABLE_THEMES[0];
+
   const getSyncIndicator = () => {
     switch (syncStatus) {
       case 'synced':
@@ -90,9 +95,10 @@ export const StatusBar: React.FC<StatusBarProps> = ({
 
         <button
           onClick={onToggleTheme}
-          className={`hover:underline focus:outline-none ${isLightMode ? 'text-gray-800 font-bold' : 'text-white'}`}
+          className={`hover:underline focus:outline-none flex items-center gap-1 font-bold ${isLightMode ? 'text-gray-800' : 'text-white'}`}
+          title={`Active Theme: ${currentThemeDef.name}. Click to cycle themes.`}
         >
-          [{isLightMode ? 'Dark' : 'Light'}]
+          <span>[{currentThemeDef.badgeEmoji} {currentThemeDef.name}]</span>
         </button>
 
         {authRequired && onLogout && (

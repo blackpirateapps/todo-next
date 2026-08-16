@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Task, Template } from '@/types/todo';
+import { Task, Template, AppTheme, AVAILABLE_THEMES, isLightTheme } from '@/types/todo';
 import { Sidebar } from '@/components/Sidebar';
 import { TaskList } from '@/components/TaskList';
 import { CalendarView } from '@/components/CalendarView';
@@ -33,7 +33,8 @@ export default function UtilitarianTodoPage() {
   const [commandQuery, setCommandQuery] = useState('');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeFilter, setActiveFilter] = useState('');
-  const [isLightMode, setIsLightMode] = useState(false);
+  const [theme, setTheme] = useState<AppTheme>('dark');
+  const isLightMode = isLightTheme(theme);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Template & Settings Modal State
@@ -45,9 +46,19 @@ export default function UtilitarianTodoPage() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('synced');
   const [pendingQueue, setPendingQueue] = useState<PendingMutation[]>([]);
 
-  // Load pending queue & cached templates from localStorage on client
+  // Load theme, pending queue & cached templates from localStorage on client
   useEffect(() => {
     try {
+      const savedTheme = localStorage.getItem('todo_next_theme') as AppTheme | null;
+      if (savedTheme && AVAILABLE_THEMES.some(t => t.id === savedTheme)) {
+        setTheme(savedTheme);
+      } else {
+        const legacyIsLight = localStorage.getItem('todo_next_is_light');
+        if (legacyIsLight === 'true') {
+          setTheme('light');
+        }
+      }
+
       const savedQueue = localStorage.getItem('todo_next_pending_queue');
       if (savedQueue) {
         const parsed = JSON.parse(savedQueue);
@@ -61,6 +72,20 @@ export default function UtilitarianTodoPage() {
       }
     } catch {}
   }, []);
+
+  const changeTheme = (newTheme: AppTheme) => {
+    setTheme(newTheme);
+    try {
+      localStorage.setItem('todo_next_theme', newTheme);
+      localStorage.setItem('todo_next_is_light', String(isLightTheme(newTheme)));
+    } catch {}
+  };
+
+  const cycleTheme = () => {
+    const currentIndex = AVAILABLE_THEMES.findIndex(t => t.id === theme);
+    const nextIndex = (currentIndex + 1) % AVAILABLE_THEMES.length;
+    changeTheme(AVAILABLE_THEMES[nextIndex].id);
+  };
 
   // Persist pending queue to localStorage
   useEffect(() => {
@@ -620,9 +645,27 @@ export default function UtilitarianTodoPage() {
     const trimmed = val.trim();
 
     // Command: :settings -> Open Settings & Preferences Modal
-    if (trimmed === ':settings') {
+    if (trimmed === ':settings' || trimmed === ':theme') {
       setSettingsInitialTab('theme');
       setIsSettingsModalOpen(true);
+      setCommandQuery('');
+      return;
+    }
+
+    // Command: :theme <theme-name>
+    if (trimmed.startsWith(':theme ')) {
+      const target = trimmed.replace(':theme ', '').trim().toLowerCase();
+      if (target === 'dark' || target === 'pitch' || target === 'black') {
+        changeTheme('dark');
+      } else if (target === 'light' || target === 'white') {
+        changeTheme('light');
+      } else if (target === 'mocha' || target === 'catppuccin' || target === 'catppuccin mocha') {
+        changeTheme('mocha');
+      } else if (target === 'gruvbox' || target === 'gruvbox-dark' || target === 'gruvbox dark') {
+        changeTheme('gruvbox-dark');
+      } else if (target === 'paper' || target === 'sepia' || target === 'paper-ink' || target === 'paper and ink') {
+        changeTheme('paper-ink');
+      }
       setCommandQuery('');
       return;
     }
@@ -776,12 +819,16 @@ export default function UtilitarianTodoPage() {
   };
 
   const rootThemeClass = isLightMode
-    ? 'bg-white text-gray-800 selection:bg-cyan-200 selection:text-black'
-    : 'bg-black text-gray-300 selection:bg-cyan-900 selection:text-white';
+    ? 'selection:bg-cyan-200 selection:text-black'
+    : 'selection:bg-cyan-900 selection:text-white';
 
   if (loading) {
     return (
-      <div className={`flex items-center justify-center h-screen font-mono text-sm ${rootThemeClass}`}>
+      <div
+        data-theme={theme}
+        style={{ backgroundColor: 'var(--app-bg)', color: 'var(--app-text)' }}
+        className={`flex items-center justify-center h-screen font-mono text-sm ${rootThemeClass}`}
+      >
         Loading Todo-Next SaaS System...
       </div>
     );
@@ -797,7 +844,11 @@ export default function UtilitarianTodoPage() {
   }
 
   return (
-    <div className={`flex flex-col h-screen text-xs font-mono overflow-hidden antialiased ${rootThemeClass}`}>
+    <div
+      data-theme={theme}
+      style={{ backgroundColor: 'var(--app-bg)', color: 'var(--app-text)' }}
+      className={`flex flex-col h-screen text-xs font-mono overflow-hidden antialiased ${rootThemeClass}`}
+    >
       <CommandInput
         commandQuery={commandQuery}
         setCommandQuery={setCommandQuery}
@@ -862,7 +913,8 @@ export default function UtilitarianTodoPage() {
         totalCount={tasks.length}
         activeFilter={activeFilter}
         isLightMode={isLightMode}
-        onToggleTheme={() => setIsLightMode(!isLightMode)}
+        currentTheme={theme}
+        onToggleTheme={cycleTheme}
         authRequired={true}
         userEmail={currentUser.email}
         onLogout={handleLogout}
@@ -886,7 +938,9 @@ export default function UtilitarianTodoPage() {
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         isLight={isLightMode}
-        onToggleTheme={() => setIsLightMode(!isLightMode)}
+        currentTheme={theme}
+        onSelectTheme={changeTheme}
+        onToggleTheme={cycleTheme}
         templates={templates}
         onInstantiateTemplate={handleInstantiateTemplate}
         onCreateTemplate={handleCreateTemplate}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Template } from '@/types/todo';
+import { Template, AppTheme, AVAILABLE_THEMES } from '@/types/todo';
 import { resolveTemplateTokens } from '@/utils/templateEngine';
 import { FormattedText } from './FormattedText';
 import { ConfirmModal } from './ConfirmModal';
@@ -8,6 +8,8 @@ interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   isLight: boolean;
+  currentTheme?: AppTheme;
+  onSelectTheme?: (theme: AppTheme) => void;
   onToggleTheme: () => void;
   templates: Template[];
   onInstantiateTemplate: (templateId: string, varOverrides?: Record<string, string>) => void;
@@ -25,6 +27,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
   isLight,
+  currentTheme = 'dark',
+  onSelectTheme,
   onToggleTheme,
   templates,
   onInstantiateTemplate,
@@ -188,44 +192,73 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="flex-1 overflow-y-auto space-y-4 pr-1">
             <div>
               <div className={`font-bold uppercase tracking-wider mb-2 border-b pb-1 ${isLight ? 'text-gray-600 border-gray-300' : 'text-gray-400 border-gray-800'}`}>
-                Visual Interface Theme
+                Visual Interface Themes
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Dark Theme Selection Card */}
-                <div
-                  onClick={() => { if (isLight) onToggleTheme(); }}
-                  className={`p-3 border cursor-pointer transition-all ${
-                    !isLight
-                      ? 'border-cyan-500 bg-gray-900 ring-1 ring-cyan-500'
-                      : 'border-gray-300 bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  }`}
-                >
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-bold text-sm text-cyan-400">🌙 Terminal Dark Mode</span>
-                    {!isLight && <span className="text-[10px] bg-cyan-950 border border-cyan-800 text-cyan-300 px-1.5 py-0.5 font-bold">[ Active ]</span>}
-                  </div>
-                  <p className="text-xs opacity-75">
-                    High contrast pitch black (#000000) retro terminal canvas with neon green and cyan syntax highlighting.
-                  </p>
-                </div>
+                {AVAILABLE_THEMES.map((theme) => {
+                  const isActive = currentTheme === theme.id;
+                  return (
+                    <div
+                      key={theme.id}
+                      onClick={() => {
+                        if (onSelectTheme) {
+                          onSelectTheme(theme.id);
+                        } else {
+                          if (isLight !== (theme.category === 'light')) onToggleTheme();
+                        }
+                      }}
+                      className={`p-3 border cursor-pointer transition-all relative rounded-none flex flex-col justify-between ${
+                        isActive
+                          ? 'ring-2'
+                          : 'hover:opacity-90'
+                      }`}
+                      style={{
+                        backgroundColor: theme.surfaceHex,
+                        borderColor: isActive ? theme.accentHex : theme.borderHex,
+                        color: theme.textHex,
+                        boxShadow: isActive ? `0 0 0 1px ${theme.accentHex}` : 'none'
+                      }}
+                    >
+                      <div>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <span className="font-bold text-sm flex items-center gap-1.5" style={{ color: theme.accentHex }}>
+                            <span>{theme.badgeEmoji}</span>
+                            <span>{theme.name}</span>
+                          </span>
+                          {isActive ? (
+                            <span
+                              className="text-[10px] px-1.5 py-0.5 font-bold border"
+                              style={{
+                                backgroundColor: theme.bgHex,
+                                borderColor: theme.accentHex,
+                                color: theme.accentHex
+                              }}
+                            >
+                              [ Active ]
+                            </span>
+                          ) : (
+                            <span className="text-[10px] opacity-50 font-mono">
+                              {theme.category === 'dark' ? 'Dark' : 'Light'}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs opacity-80 leading-relaxed mb-2.5">
+                          {theme.description}
+                        </p>
+                      </div>
 
-                {/* Light Theme Selection Card */}
-                <div
-                  onClick={() => { if (!isLight) onToggleTheme(); }}
-                  className={`p-3 border cursor-pointer transition-all ${
-                    isLight
-                      ? 'border-cyan-600 bg-white ring-1 ring-cyan-600 text-gray-900'
-                      : 'border-gray-800 bg-black hover:bg-gray-900 text-gray-400'
-                  }`}
-                >
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-bold text-sm text-cyan-700">☀️ Terminal Light Mode</span>
-                    {isLight && <span className="text-[10px] bg-cyan-100 border border-cyan-300 text-cyan-800 px-1.5 py-0.5 font-bold">[ Active ]</span>}
-                  </div>
-                  <p className="text-xs opacity-75">
-                    Crisp minimal light canvas (#ffffff) tailored for daytime legibility and clean paper aesthetics.
-                  </p>
-                </div>
+                      {/* Mini Color Swatch Bar */}
+                      <div className="flex items-center gap-1 pt-2 border-t border-dashed" style={{ borderColor: theme.borderHex }}>
+                        <span className="text-[10px] opacity-60 mr-1">Palette:</span>
+                        <div className="w-3.5 h-3.5 border border-black/30" style={{ backgroundColor: theme.bgHex }} title="Background" />
+                        <div className="w-3.5 h-3.5 border border-black/30" style={{ backgroundColor: theme.surfaceHex }} title="Card/Surface" />
+                        <div className="w-3.5 h-3.5 border border-black/30" style={{ backgroundColor: theme.accentHex }} title="Accent" />
+                        <div className="w-3.5 h-3.5 border border-black/30" style={{ backgroundColor: theme.textHex }} title="Text" />
+                        <div className="w-3.5 h-3.5 border border-black/30" style={{ backgroundColor: theme.borderHex }} title="Border" />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
