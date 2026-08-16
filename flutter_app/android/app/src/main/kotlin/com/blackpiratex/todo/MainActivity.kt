@@ -1,4 +1,4 @@
-package com.todonext.flutter_app
+package com.blackpiratex.todo
 
 import io.flutter.embedding.android.FlutterActivity
 

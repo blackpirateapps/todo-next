@@ -42,19 +42,22 @@ class SidebarWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ListTile(
-              dense: true,
-              selected: activeFilter.isEmpty,
-              selectedTileColor: isLight ? Colors.grey[300] : Colors.grey[800],
-              title: Text(
-                '[ALL TASKS]',
-                style: GoogleFonts.jetBrainsMono(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: isLight ? Colors.black : Colors.white,
+            Material(
+              color: Colors.transparent,
+              child: ListTile(
+                dense: true,
+                selected: activeFilter.isEmpty,
+                selectedTileColor: isLight ? Colors.grey[300] : Colors.grey[800],
+                title: Text(
+                  '[ALL TASKS]',
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isLight ? Colors.black : Colors.white,
+                  ),
                 ),
+                onTap: () => onFilterClick(''),
               ),
-              onTap: () => onFilterClick(''),
             ),
             const Divider(height: 1),
 

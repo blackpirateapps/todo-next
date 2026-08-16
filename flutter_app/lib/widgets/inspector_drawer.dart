@@ -316,8 +316,10 @@ class _InspectorDrawerWidgetState extends State<InspectorDrawerWidget> {
             ),
             child: Row(
               children: [
-                Text('INSPECTOR', style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.bold)),
-                const Spacer(),
+                Flexible(
+                  child: Text('INSPECTOR', overflow: TextOverflow.ellipsis, style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(width: 8),
                 InkWell(
                   onTap: () => widget.onSaveAsTemplate(task),
                   child: Container(

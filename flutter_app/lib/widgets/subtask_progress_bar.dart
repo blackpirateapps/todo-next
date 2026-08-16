@@ -27,9 +27,10 @@ class SubtaskProgressBar extends StatelessWidget {
 
     return Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: compact ? 40 : 80,
+          width: compact ? 36 : 70,
           height: compact ? 6 : 8,
           decoration: BoxDecoration(
             color: isLight ? Colors.grey[300] : Colors.grey[800],
@@ -37,7 +38,7 @@ class SubtaskProgressBar extends StatelessWidget {
           ),
           child: FractionallySizedBox(
             alignment: Alignment.centerLeft,
-            widthFactor: percent,
+            widthFactor: percent.clamp(0.0, 1.0),
             child: Container(
               color: percent == 1.0
                   ? Colors.green
@@ -46,13 +47,16 @@ class SubtaskProgressBar extends StatelessWidget {
           ),
         ),
         if (showText) ...[
-          const SizedBox(width: 6),
-          Text(
-            '[$completedCount/$totalCount] $percentInt%',
-            style: GoogleFonts.jetBrainsMono(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: isLight ? Colors.grey[600] : Colors.grey[400],
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              '[$completedCount/$totalCount] $percentInt%',
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: isLight ? Colors.grey[600] : Colors.grey[400],
+              ),
             ),
           ),
         ],

@@ -41,11 +41,11 @@ class Comment {
 
   factory Comment.fromJson(Map<String, dynamic> json) {
     return Comment(
-      id: json['id'] as String?,
-      taskId: json['taskId'] as String?,
-      author: json['author'] as String? ?? 'user',
-      timestamp: json['timestamp'] as String? ?? '',
-      text: json['text'] as String? ?? '',
+      id: json['id']?.toString(),
+      taskId: json['taskId']?.toString(),
+      author: (json['author'] ?? 'user').toString(),
+      timestamp: (json['timestamp'] ?? '').toString(),
+      text: (json['text'] ?? '').toString(),
     );
   }
 }

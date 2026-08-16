@@ -41,7 +41,13 @@ Recently updated with:
     - Wrapped `SidebarWidget` in `SafeArea` to prevent status bar/notch overlap.
     - Responsive `TemplateModalWidget` gallery preventing button clipping on narrow displays.
   - Full `todo.txt` syntax parser, recurrence spawning engine, template token generator, calendar view, inspector drawer, and terminal command bar.
-  - Passes `flutter analyze` with **0 issues found**.
+  - **Android Instant Launch Crash Resolution**:
+    - **Native ClassNotFoundException Fix**: Fixed package mismatch where Android `namespace` was changed to `com.blackpiratex.todo` in `build.gradle.kts` while `MainActivity.kt` was located under `com.todonext.flutter_app`. Relocated `MainActivity.kt` to `android/app/src/main/kotlin/com/blackpiratex/todo/MainActivity.kt` with package `com.blackpiratex.todo`.
+    - **Safe Deferred Dialog Lifecycle**: Fixed `HomeScreen` calling `showDialog()` immediately inside async `initState` sequence by wrapping in `WidgetsBinding.instance.addPostFrameCallback` with `mounted` checks and protective try/catch blocks.
+    - **Defensive Model Deserialization**: Made `Task.fromJson`, `Template.fromJson`, `TemplateSubtask.fromJson`, `Subtask.fromJson`, and `Comment.fromJson` resilient against `null` values, type conversions (`int` vs `String`, `bool` vs `int`/`String`), and `Map<dynamic, dynamic>` subtask/comment decoding.
+    - **Resilient Font Loading Fallbacks**: Added try/catch fallback in `AppTheme.monoStyle` and text themes to safely fallback to system `monospace` if `GoogleFonts` runtime HTTP download fails or the device is offline.
+    - **Layout Overflow & Assertion Fixes**: Wrapped `SidebarWidget` `ListTile` in `Material` to prevent DecoratedBox splash clipping assertions, and made `SubtaskProgressBar` and `InspectorDrawerWidget` header rows flexible to prevent `RenderFlex` overflow.
+  - Passes `flutter analyze` and `flutter test` with **0 issues found**.
 - **Bi-directional Web Sync & Header Authentication**:
   - Live bi-directional sync between Android app and web backend (`https://todo-next-five-mu.vercel.app/api`).
   - Extended Next.js backend (`lib/auth.ts` & `app/api/auth/route.ts`) with `Authorization: Bearer <token>` and `x-app-session` headers.

@@ -56,58 +56,82 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _initAndLoadData() async {
-    await ApiService.init();
+    try {
+      await ApiService.init();
 
-    final authStatus = await ApiService.checkAuthStatus();
-    if (authStatus['authRequired'] == true && authStatus['authenticated'] != true) {
-      if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => LoginDialogWidget(
-            isLight: widget.isLight,
-            onLoginSuccess: () {
-              _loadDataFromWebOrCache();
-            },
-          ),
-        );
+      final authStatus = await ApiService.checkAuthStatus();
+      if (authStatus['authRequired'] == true && authStatus['authenticated'] != true) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => LoginDialogWidget(
+                isLight: widget.isLight,
+                onLoginSuccess: () {
+                  _loadDataFromWebOrCache();
+                },
+              ),
+            );
+          }
+        });
+      } else {
+        await _loadDataFromWebOrCache();
       }
-    } else {
+    } catch (_) {
       await _loadDataFromWebOrCache();
     }
   }
 
   Future<void> _loadDataFromWebOrCache() async {
-    setState(() => _syncStatus = 'syncing');
+    if (mounted) setState(() => _syncStatus = 'syncing');
 
-    final remoteTasks = await ApiService.fetchTasks();
-    final remoteTemplates = await ApiService.fetchTemplates();
+    try {
+      final remoteTasks = await ApiService.fetchTasks();
+      final remoteTemplates = await ApiService.fetchTemplates();
 
-    if (remoteTasks != null) {
-      setState(() {
-        _tasks = remoteTasks;
-        if (remoteTemplates != null) _templates = remoteTemplates;
-        if (_tasks.isNotEmpty && _selectedTask == null) {
-          _selectedTask = _tasks.first;
+      if (remoteTasks != null) {
+        if (mounted) {
+          setState(() {
+            _tasks = remoteTasks;
+            if (remoteTemplates != null) _templates = remoteTemplates;
+            if (_tasks.isNotEmpty && _selectedTask == null) {
+              _selectedTask = _tasks.first;
+            }
+            _syncStatus = 'synced';
+            _isLoading = false;
+          });
         }
-        _syncStatus = 'synced';
-        _isLoading = false;
-      });
-      await _storageService.saveTasks(_tasks);
-      if (remoteTemplates != null) await _storageService.saveTemplates(_templates);
-    } else {
-      // Offline fallback
+        await _storageService.saveTasks(_tasks);
+        if (remoteTemplates != null) await _storageService.saveTemplates(_templates);
+        return;
+      }
+    } catch (_) {}
+
+    // Offline fallback
+    try {
       final localTasks = await _storageService.loadTasks();
       final localTemplates = await _storageService.loadTemplates();
-      setState(() {
-        _tasks = localTasks;
-        _templates = localTemplates;
-        if (_tasks.isNotEmpty && _selectedTask == null) {
-          _selectedTask = _tasks.first;
-        }
-        _syncStatus = 'offline';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _tasks = localTasks;
+          _templates = localTemplates;
+          if (_tasks.isNotEmpty && _selectedTask == null) {
+            _selectedTask = _tasks.first;
+          }
+          _syncStatus = 'offline';
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _tasks = [];
+          _templates = [];
+          _syncStatus = 'offline';
+          _isLoading = false;
+        });
+      }
     }
   }
 
