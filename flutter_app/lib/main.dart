@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
 
@@ -17,26 +18,58 @@ class TodoNextApp extends StatefulWidget {
 }
 
 class _TodoNextAppState extends State<TodoNextApp> {
-  bool _isLightMode = false;
+  AppThemeId _currentTheme = AppThemeId.dark;
 
-  void _toggleTheme() {
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedTheme();
+  }
+
+  Future<void> _loadSavedTheme() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final themeKey = prefs.getString('todo_next_theme');
+      if (themeKey != null) {
+        setState(() {
+          _currentTheme = AppTheme.fromKey(themeKey);
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _setTheme(AppThemeId theme) async {
     setState(() {
-      _isLightMode = !_isLightMode;
+      _currentTheme = theme;
     });
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('todo_next_theme', AppTheme.toKey(theme));
+    } catch (_) {}
+  }
+
+  void _cycleTheme() {
+    final values = AppThemeId.values;
+    final nextIndex = (values.indexOf(_currentTheme) + 1) % values.length;
+    _setTheme(values[nextIndex]);
   }
 
   @override
   Widget build(BuildContext context) {
+    final themeData = AppTheme.getThemeData(_currentTheme);
+    final isLight = AppTheme.isLightTheme(_currentTheme);
+
     return MaterialApp(
       title: 'Todo Next',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme(),
-      darkTheme: AppTheme.darkTheme(),
-      themeMode: _isLightMode ? ThemeMode.light : ThemeMode.dark,
+      theme: themeData,
       home: HomeScreen(
-        isLight: _isLightMode,
-        onToggleTheme: _toggleTheme,
+        currentTheme: _currentTheme,
+        onSelectTheme: _setTheme,
+        onToggleTheme: _cycleTheme,
+        isLight: isLight,
       ),
     );
   }
 }
+

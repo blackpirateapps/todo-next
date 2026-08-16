@@ -10,23 +10,27 @@ import '../services/api_service.dart';
 import '../utils/todo_parser.dart';
 import '../utils/template_engine.dart';
 import '../utils/recurrence_engine.dart';
+import '../theme/app_theme.dart';
 import '../widgets/command_input.dart';
 import '../widgets/sidebar.dart';
 import '../widgets/task_list.dart';
 import '../widgets/calendar_view.dart';
 import '../widgets/inspector_drawer.dart';
-import '../widgets/template_modal.dart';
-import '../widgets/syntax_guide_modal.dart';
+import '../widgets/settings_modal.dart';
 import '../widgets/confirm_dialog.dart';
 import '../widgets/login_dialog.dart';
 import '../widgets/status_bar.dart';
 
 class HomeScreen extends StatefulWidget {
+  final AppThemeId currentTheme;
+  final Function(AppThemeId theme) onSelectTheme;
   final VoidCallback onToggleTheme;
   final bool isLight;
 
   const HomeScreen({
     super.key,
+    required this.currentTheme,
+    required this.onSelectTheme,
     required this.onToggleTheme,
     required this.isLight,
   });
@@ -388,6 +392,26 @@ class _HomeScreenState extends State<HomeScreen> {
     final trimmed = val.trim();
     if (trimmed.isEmpty) return;
 
+    if (trimmed == ':settings' || trimmed == ':theme') {
+      _openSettingsModal(0);
+      _commandController.clear();
+      return;
+    }
+
+    if (trimmed.startsWith(':theme ')) {
+      final target = trimmed.substring(7).trim().toLowerCase();
+      final mappedTheme = AppTheme.fromKey(target);
+      widget.onSelectTheme(mappedTheme);
+      _commandController.clear();
+      return;
+    }
+
+    if (trimmed == ':syntax') {
+      _openSettingsModal(2);
+      _commandController.clear();
+      return;
+    }
+
     if (trimmed == ':recurring') {
       setState(() => _activeFilter = 'rec:');
       _commandController.clear();
@@ -605,12 +629,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _openTemplatesModal() {
+  void _openSettingsModal([int initialTab = 0]) {
     showDialog(
       context: context,
-      builder: (context) => TemplateModalWidget(
+      builder: (context) => SettingsModalWidget(
         templates: _templates,
         isLight: widget.isLight,
+        currentTheme: widget.currentTheme,
+        onSelectTheme: widget.onSelectTheme,
+        initialTabIndex: initialTab,
         onInstantiateTemplate: _handleInstantiateTemplate,
         onCreateTemplate: (tmpl) async {
           setState(() {
@@ -621,16 +648,39 @@ class _HomeScreenState extends State<HomeScreen> {
           final ok = await ApiService.createTemplate(tmpl);
           setState(() => _syncStatus = ok ? 'synced' : 'offline');
         },
+        onUpdateTemplate: (id, updates) async {
+          final idx = _templates.indexWhere((t) => t.id == id);
+          if (idx != -1) {
+            final cur = _templates[idx];
+            final updated = Template(
+              id: cur.id,
+              name: updates['name'] ?? cur.name,
+              rawTemplate: updates['rawTemplate'] ?? cur.rawTemplate,
+              description: updates['description'] ?? cur.description,
+              createdAt: cur.createdAt,
+              updatedAt: updates['updatedAt'] ?? DateTime.now().toIso8601String(),
+              projects: cur.projects,
+              contexts: cur.contexts,
+              subtasks: cur.subtasks,
+            );
+            setState(() {
+              _templates[idx] = updated;
+              _syncStatus = 'syncing';
+            });
+            await _storageService.saveTemplates(_templates);
+            final ok = await ApiService.updateTemplate(id, updates);
+            setState(() => _syncStatus = ok ? 'synced' : 'offline');
+          }
+        },
         onDeleteTemplate: _handleDeleteTemplate,
+        syncStatus: _syncStatus,
+        onForceSync: _loadDataFromWebOrCache,
       ),
     );
   }
 
-  void _openSyntaxModal() {
-    showDialog(
-      context: context,
-      builder: (context) => SyntaxGuideModalWidget(isLight: widget.isLight),
-    );
+  void _openTemplatesModal() {
+    _openSettingsModal(1);
   }
 
   List<Task> _getFilteredTasks() {
@@ -690,7 +740,7 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.cyan[700],
         elevation: 4,
         icon: const Icon(Icons.add, color: Colors.white, size: 20),
-        label: Text('NEW TASK', style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+        label: Text('NEW TASK', style: AppTheme.monoStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
         onPressed: _openAddTaskModal,
       ),
       body: SafeArea(
@@ -705,7 +755,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
               },
               onOpenTemplates: _openTemplatesModal,
-              onOpenSyntax: _openSyntaxModal,
+              onOpenSettings: _openSettingsModal,
               onChangeView: (view) => setState(() => _activeView = view),
               activeView: _activeView,
               isLight: widget.isLight,
@@ -765,6 +815,7 @@ class _HomeScreenState extends State<HomeScreen> {
               activeFilter: _activeFilter,
               syncStatus: _syncStatus,
               isLight: widget.isLight,
+              currentTheme: widget.currentTheme,
               onToggleTheme: widget.onToggleTheme,
               onForceSync: _loadDataFromWebOrCache,
             ),

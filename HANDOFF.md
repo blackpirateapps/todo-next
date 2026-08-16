@@ -90,12 +90,26 @@ Recently updated with:
   - Updated [`components/StatusBar.tsx`](file:///home/dog/git/todo-next/components/StatusBar.tsx) to display the active theme badge (e.g. `[🐱 Catppuccin Mocha]`) and cycle themes on click.
   - Added terminal commands `:theme` and `:theme <name>` (`:theme mocha`, `:theme gruvbox`, `:theme paper`, `:theme dark`, `:theme light`) in `CommandInput`.
   - Persisted user theme preference in `localStorage.setItem('todo_next_theme', theme)`.
-- **Unified Settings & Preferences Modal (`SettingsModal.tsx`)**:
-  - Added dedicated Settings Modal containing:
-    - **Theme Switcher Tab**: Interactive visual selection cards for all 5 themes with live palette swatches and 1-click activation.
-    - **Task Templates Manager & Editor Tab**: Full template gallery with search, `[ Use ]` button, `[ Edit ]` button (enabling inline editing of template name, raw template string, description, and subtasks), `[ + New Template ]` builder, and delete confirmation.
-    - **Syntax Guide Tab**: Complete `todo.txt` syntax reference covering priorities `(A)`, projects `+proj`, contexts `@ctx`, due dates `due:YYYY-MM-DD`, times `time:HH:MM`, recurrence rules `rec:`, and terminal commands.
-  - Header Navigation: Removed `[?] Syntax` button from homepage header (`CommandInput.tsx`) and added `[⚙️ Settings]` button next to `[Templates]`. `[Templates]` button remains accessible on the homepage header. Added `:settings` and `:theme` terminal commands.
+- **Multi-Theme Engine & Settings Modal Port (Flutter App)**:
+  - Ported complete multi-theme architecture to Flutter (`flutter_app/lib/theme/app_theme.dart`):
+    - Added `enum AppThemeId { dark, light, mocha, gruvboxDark, paperInk }` with complete `ThemeDefinition` models and `ThemeData` builders.
+    - Persisted theme selection in `SharedPreferences` (key: `todo_next_theme`).
+  - Added Unified Settings Modal (`flutter_app/lib/widgets/settings_modal.dart`):
+    - **Tab 1: Themes**: Visual selection cards for all 5 themes with palette swatches, descriptions, active badges, and 1-tap switching. Also includes System & Account Diagnostics.
+    - **Tab 2: Task Templates Manager & Editor**: Template search, `[ Use ]`, `[ Edit ]` inline editor, `[ + New Template ]` builder, and delete confirmation.
+    - **Tab 3: Syntax Guide**: Full `todo.txt` syntax reference covering priorities, projects, contexts, due dates, tokens, recurrence rules, and terminal commands.
+  - Header & Status Bar Updates:
+    - Added `[⚙️ Settings]` button to `CommandInputWidget`.
+    - Added active theme badge button to `StatusBarWidget` (`[🌙 Pitch Black]`, `[☀️ Clean White]`, `[🐱 Catppuccin Mocha]`, `[🌰 Gruvbox Dark]`, `[📜 Paper & Ink]`) with 1-tap cycling.
+  - Added Terminal Commands to Mobile App:
+    - `:settings` & `:theme` -> Open Settings Modal.
+    - `:theme <name>` (`:theme mocha`, `:theme gruvbox`, `:theme paper`, `:theme dark`, `:theme light`) -> Direct theme switching.
+    - `:syntax` -> Open Syntax Guide.
+  - Default Sorting & Filtering:
+    - Updated `TaskListWidget` defaults to **Creation Date Descending** (`SortOrder.desc`) and **Open** tasks (`StatusFilter.open`).
+  - Code Quality & Tests:
+    - 0 issues found on `flutter analyze`.
+    - Added 5-theme verification tests in `flutter_app/test/app_launch_test.dart` (all tests passing).
 
 ---
 

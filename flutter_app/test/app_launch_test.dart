@@ -15,11 +15,14 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  test('AppTheme loads without error', () {
-    final dark = AppTheme.darkTheme();
-    final light = AppTheme.lightTheme();
-    expect(dark, isNotNull);
-    expect(light, isNotNull);
+  test('AppTheme loads all 5 themes without error', () {
+    for (final themeId in AppThemeId.values) {
+      final themeData = AppTheme.getThemeData(themeId);
+      final def = AppTheme.getDefinition(themeId);
+      expect(themeData, isNotNull);
+      expect(def.name.isNotEmpty, true);
+      expect(def.badgeEmoji.isNotEmpty, true);
+    }
   });
 
   test('StorageService initializes and loads seed data', () async {

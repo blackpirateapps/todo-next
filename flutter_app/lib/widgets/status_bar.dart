@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../theme/app_theme.dart';
 
 class StatusBarWidget extends StatelessWidget {
   final int filteredCount;
@@ -7,6 +7,7 @@ class StatusBarWidget extends StatelessWidget {
   final String activeFilter;
   final String syncStatus; // 'synced' | 'syncing' | 'offline'
   final bool isLight;
+  final AppThemeId currentTheme;
   final VoidCallback onToggleTheme;
   final VoidCallback onForceSync;
 
@@ -17,6 +18,7 @@ class StatusBarWidget extends StatelessWidget {
     required this.activeFilter,
     required this.syncStatus,
     required this.isLight,
+    this.currentTheme = AppThemeId.dark,
     required this.onToggleTheme,
     required this.onForceSync,
   });
@@ -25,6 +27,7 @@ class StatusBarWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final bg = isLight ? const Color(0xFFF4F4F5) : const Color(0xFF09090B);
     final border = isLight ? const Color(0xFFE4E4E7) : const Color(0xFF27272A);
+    final themeDef = AppTheme.getDefinition(currentTheme);
 
     String syncText = '[Synced ✓]';
     Color syncBg = Colors.green[900]!;
@@ -47,13 +50,13 @@ class StatusBarWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
             color: Colors.blue[900],
-            child: Text('NORMAL', style: GoogleFonts.jetBrainsMono(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+            child: Text('NORMAL', style: AppTheme.monoStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
           ),
           const SizedBox(width: 8),
-          Text('$filteredCount/$totalCount items', style: GoogleFonts.jetBrainsMono(fontSize: 10, color: Colors.grey[400])),
+          Text('$filteredCount/$totalCount items', style: AppTheme.monoStyle(fontSize: 10, color: Colors.grey[400])),
           if (activeFilter.isNotEmpty) ...[
             const SizedBox(width: 8),
-            Text('[$activeFilter]', style: GoogleFonts.jetBrainsMono(fontSize: 10, color: Colors.cyan, fontWeight: FontWeight.bold)),
+            Text('[$activeFilter]', style: AppTheme.monoStyle(fontSize: 10, color: Colors.cyan, fontWeight: FontWeight.bold)),
           ],
 
           const Spacer(),
@@ -63,18 +66,18 @@ class StatusBarWidget extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
               color: syncBg,
-              child: Text(syncText, style: GoogleFonts.jetBrainsMono(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+              child: Text(syncText, style: AppTheme.monoStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
             ),
           ),
           const SizedBox(width: 8),
 
           InkWell(
             onTap: onToggleTheme,
-            child: Text(isLight ? '[Dark]' : '[Light]', style: GoogleFonts.jetBrainsMono(fontSize: 10, fontWeight: FontWeight.bold)),
+            child: Text('[${themeDef.badgeEmoji} ${themeDef.name}]', style: AppTheme.monoStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isLight ? Colors.black87 : Colors.white)),
           ),
           const SizedBox(width: 8),
 
-          Text('todo.txt utf-8', style: GoogleFonts.jetBrainsMono(fontSize: 10, color: Colors.grey[500])),
+          Text('todo.txt utf-8', style: AppTheme.monoStyle(fontSize: 10, color: Colors.grey[500])),
         ],
       ),
     );

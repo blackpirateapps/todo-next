@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
 class FormattedText extends StatelessWidget {
   final String text;
   final bool isCompleted;
   final bool isLight;
+  final AppThemeId? currentTheme;
   final double fontSize;
 
   const FormattedText({
@@ -13,6 +13,7 @@ class FormattedText extends StatelessWidget {
     required this.text,
     this.isCompleted = false,
     required this.isLight,
+    this.currentTheme,
     this.fontSize = 13.0,
   });
 
@@ -20,14 +21,18 @@ class FormattedText extends StatelessWidget {
   Widget build(BuildContext context) {
     if (text.isEmpty) return const SizedBox.shrink();
 
+    final themeDef = currentTheme != null
+        ? AppTheme.getDefinition(currentTheme!)
+        : AppTheme.getDefinition(isLight ? AppThemeId.light : AppThemeId.dark);
+
     final words = text.split(RegExp(r'\s+'));
     final List<TextSpan> spans = [];
 
-    final defaultStyle = GoogleFonts.jetBrainsMono(
+    final defaultStyle = AppTheme.monoStyle(
       fontSize: fontSize,
       color: isCompleted
           ? (isLight ? Colors.grey[400] : Colors.grey[600])
-          : (isLight ? AppTheme.lightText : AppTheme.darkText),
+          : themeDef.text,
       decoration: isCompleted ? TextDecoration.lineThrough : TextDecoration.none,
     );
 
@@ -39,9 +44,9 @@ class FormattedText extends StatelessWidget {
       if (!isCompleted) {
         if (RegExp(r'^\([A-Z]\)$').hasMatch(word)) {
           final pri = word[1];
-          Color color = AppTheme.priC;
-          if (pri == 'A') color = AppTheme.priA;
-          if (pri == 'B') color = AppTheme.priB;
+          Color color = themeDef.priC;
+          if (pri == 'A') color = themeDef.priA;
+          if (pri == 'B') color = themeDef.priB;
 
           style = defaultStyle.copyWith(
             color: color,
@@ -49,27 +54,27 @@ class FormattedText extends StatelessWidget {
           );
         } else if (word.startsWith('+') && word.length > 1) {
           style = defaultStyle.copyWith(
-            color: isLight ? Colors.cyan[800] : Colors.cyan[300],
+            color: themeDef.project,
             fontWeight: FontWeight.w600,
           );
         } else if (word.startsWith('@') && word.length > 1) {
           style = defaultStyle.copyWith(
-            color: isLight ? Colors.green[800] : Colors.green[400],
+            color: themeDef.context,
             fontWeight: FontWeight.w600,
           );
         } else if (word.toLowerCase().startsWith('due:')) {
           style = defaultStyle.copyWith(
-            color: isLight ? Colors.purple[800] : Colors.purple[300],
+            color: themeDef.due,
             fontWeight: FontWeight.bold,
           );
         } else if (word.toLowerCase().startsWith('time:')) {
           style = defaultStyle.copyWith(
-            color: isLight ? Colors.purple[800] : Colors.purple[300],
+            color: themeDef.due,
             fontWeight: FontWeight.bold,
           );
         } else if (word.toLowerCase().startsWith('rec:')) {
           style = defaultStyle.copyWith(
-            color: isLight ? Colors.cyan[900] : Colors.cyan[300],
+            color: themeDef.accent,
             fontWeight: FontWeight.bold,
           );
         }

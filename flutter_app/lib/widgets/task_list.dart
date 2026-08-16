@@ -33,8 +33,8 @@ class TaskListWidget extends StatefulWidget {
 
 class _TaskListWidgetState extends State<TaskListWidget> {
   SortField _sortField = SortField.creationDate;
-  SortOrder _sortOrder = SortOrder.asc;
-  StatusFilter _statusFilter = StatusFilter.all;
+  SortOrder _sortOrder = SortOrder.desc;
+  StatusFilter _statusFilter = StatusFilter.open;
   PriorityFilter _priorityFilter = PriorityFilter.all;
   String _periodFilter = 'all';
 

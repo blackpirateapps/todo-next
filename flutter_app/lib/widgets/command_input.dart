@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../theme/app_theme.dart';
 
 class CommandInputWidget extends StatelessWidget {
   final TextEditingController controller;
   final Function(String) onSubmit;
   final VoidCallback onToggleSidebar;
   final VoidCallback onOpenTemplates;
-  final VoidCallback onOpenSyntax;
+  final Function(int initialTab) onOpenSettings;
   final Function(String view) onChangeView;
   final String activeView;
   final bool isLight;
@@ -17,7 +17,7 @@ class CommandInputWidget extends StatelessWidget {
     required this.onSubmit,
     required this.onToggleSidebar,
     required this.onOpenTemplates,
-    required this.onOpenSyntax,
+    required this.onOpenSettings,
     required this.onChangeView,
     required this.activeView,
     required this.isLight,
@@ -45,7 +45,7 @@ class CommandInputWidget extends StatelessWidget {
                   : Colors.transparent,
               border: Border.all(color: border),
             ),
-            child: Text('[List]', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold)),
+            child: Text('[List]', style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold)),
           ),
         ),
         InkWell(
@@ -58,7 +58,7 @@ class CommandInputWidget extends StatelessWidget {
                   : Colors.transparent,
               border: Border.all(color: border),
             ),
-            child: Text('[Calendar]', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold)),
+            child: Text('[Calendar]', style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold)),
           ),
         ),
         InkWell(
@@ -66,15 +66,15 @@ class CommandInputWidget extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(border: Border.all(color: border)),
-            child: Text('[Templates]', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.cyan)),
+            child: Text('[Templates]', style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.cyan)),
           ),
         ),
         InkWell(
-          onTap: onOpenSyntax,
+          onTap: () => onOpenSettings(0),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(border: Border.all(color: border)),
-            child: Text('[?] Syntax', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green)),
+            child: Text('[⚙️ Settings]', style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.purple[300])),
           ),
         ),
       ],
@@ -82,15 +82,15 @@ class CommandInputWidget extends StatelessWidget {
 
     Widget searchField = Row(
       children: [
-        Text('>', style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green)),
+        Text('>', style: AppTheme.monoStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green)),
         const SizedBox(width: 6),
         Expanded(
           child: TextField(
             controller: controller,
-            style: GoogleFonts.jetBrainsMono(fontSize: 12),
+            style: AppTheme.monoStyle(fontSize: 12),
             decoration: InputDecoration(
               hintText: 'Filter... or :add (A) Task... or :use Template',
-              hintStyle: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[600]),
+              hintStyle: AppTheme.monoStyle(fontSize: 11, color: Colors.grey[600]),
               border: InputBorder.none,
               isDense: true,
               contentPadding: const EdgeInsets.symmetric(vertical: 6),

@@ -185,6 +185,19 @@ class ApiService {
     return false;
   }
 
+  static Future<bool> updateTemplate(String id, Map<String, dynamic> updates) async {
+    try {
+      final res = await http.patch(
+        Uri.parse('$baseUrl/templates/$id'),
+        headers: _getHeaders(),
+        body: jsonEncode(updates),
+      ).timeout(const Duration(seconds: 8));
+
+      return res.statusCode == 200;
+    } catch (_) {}
+    return false;
+  }
+
   static Future<bool> deleteTemplate(String id) async {
     try {
       final res = await http.delete(
