@@ -49,12 +49,10 @@ jobs:
           command: |
             if [ -n "$KEYSTORE_BASE64" ]; then
               echo "$KEYSTORE_BASE64" | base64 -d > flutter_app/android/app/upload-keystore.jks
-              cat <<EOF > flutter_app/android/key.properties
-storePassword=$KEYSTORE_PASSWORD
-keyPassword=$KEY_PASSWORD
-keyAlias=$KEY_ALIAS
-storeFile=app/upload-keystore.jks
-EOF
+              echo "storePassword=$KEYSTORE_PASSWORD" > flutter_app/android/key.properties
+              echo "keyPassword=$KEY_PASSWORD" >> flutter_app/android/key.properties
+              echo "keyAlias=$KEY_ALIAS" >> flutter_app/android/key.properties
+              echo "storeFile=app/upload-keystore.jks" >> flutter_app/android/key.properties
               echo "Release Keystore configured successfully."
             else
               echo "No KEYSTORE_BASE64 environment variable found. Building with debug signing."
