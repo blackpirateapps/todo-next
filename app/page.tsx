@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Task, Template, Reference, AppTheme, AVAILABLE_THEMES, isLightTheme } from '@/types/todo';
+import { Task, Template, Reference, AppTheme, AVAILABLE_THEMES, isLightTheme, FontSize, AVAILABLE_FONT_SIZES } from '@/types/todo';
 import { Sidebar } from '@/components/Sidebar';
 import { TaskList } from '@/components/TaskList';
 import { CalendarView } from '@/components/CalendarView';
@@ -55,6 +55,7 @@ export default function UtilitarianTodoPage() {
   const [theme, setTheme] = useState<AppTheme>('dark');
   const isLightMode = isLightTheme(theme);
   const [showIcons, setShowIcons] = useState(false);
+  const [fontSize, setFontSize] = useState<FontSize>('default');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Template & Settings Modal State
@@ -90,6 +91,11 @@ export default function UtilitarianTodoPage() {
         setShowIcons(savedShowIcons === 'true');
       }
 
+      const savedFontSize = localStorage.getItem('todo_next_font_size') as FontSize | null;
+      if (savedFontSize && AVAILABLE_FONT_SIZES.some(f => f.id === savedFontSize)) {
+        setFontSize(savedFontSize);
+      }
+
       const savedQueue = localStorage.getItem('todo_next_pending_queue');
       if (savedQueue) {
         const parsed = JSON.parse(savedQueue);
@@ -118,6 +124,13 @@ export default function UtilitarianTodoPage() {
     try {
       localStorage.setItem('todo_next_theme', newTheme);
       localStorage.setItem('todo_next_is_light', String(isLightTheme(newTheme)));
+    } catch {}
+  };
+
+  const changeFontSize = (newSize: FontSize) => {
+    setFontSize(newSize);
+    try {
+      localStorage.setItem('todo_next_font_size', newSize);
     } catch {}
   };
 
@@ -1133,6 +1146,7 @@ export default function UtilitarianTodoPage() {
   return (
     <div
       data-theme={theme}
+      data-font-size={fontSize}
       style={{ backgroundColor: 'var(--app-bg)', color: 'var(--app-text)' }}
       className={`flex flex-col h-screen text-xs font-mono overflow-hidden antialiased ${rootThemeClass}`}
     >
@@ -1296,6 +1310,8 @@ export default function UtilitarianTodoPage() {
         initialTab={settingsInitialTab}
         showIcons={showIcons}
         onToggleIcons={toggleShowIcons}
+        fontSize={fontSize}
+        onSelectFontSize={changeFontSize}
       />
     </div>
   );

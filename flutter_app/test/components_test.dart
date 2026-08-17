@@ -201,6 +201,39 @@ void main() {
       expect(find.byType(SyntaxGuideTab), findsOneWidget);
       expect(find.text('1. Priority'), findsOneWidget);
     });
+
+    testWidgets('renders ThemeSettingsTab and toggles font size scaling', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      AppFontSize selectedFontSize = AppFontSize.normal;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ThemeSettingsTab(
+              currentTheme: AppThemeId.dark,
+              onSelectTheme: (_) {},
+              isLight: false,
+              currentFontSize: selectedFontSize,
+              onSelectFontSize: (size) {
+                selectedFontSize = size;
+              },
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('FONT & UI SCALE'), findsOneWidget);
+      expect(find.text('Compact'), findsOneWidget);
+      expect(find.text('Comfortable'), findsOneWidget);
+      expect(find.text('Extra Large'), findsOneWidget);
+
+      await tester.tap(find.text('Comfortable'));
+      await tester.pumpAndSettle();
+      expect(selectedFontSize, AppFontSize.large);
+    });
   });
 
   group('AddTaskDialog Tests', () {

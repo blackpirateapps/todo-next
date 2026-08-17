@@ -100,6 +100,7 @@ class _ReferenceEditorDialogState extends State<ReferenceEditorDialog> {
 
     return Dialog(
       backgroundColor: widget.isLight ? Colors.white : const Color(0xFF111113),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 18),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.zero,
         side: BorderSide(color: widget.isLight ? Colors.grey[400]! : Colors.grey[800]!),

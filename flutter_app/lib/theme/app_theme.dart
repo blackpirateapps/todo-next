@@ -3,6 +3,26 @@ import 'package:google_fonts/google_fonts.dart';
 
 enum AppThemeId { dark, light, mocha, gruvboxDark, paperInk }
 
+enum AppFontSize { small, normal, large, xlarge }
+
+class FontSizeDefinition {
+  final AppFontSize id;
+  final String key;
+  final String name;
+  final String scaleText;
+  final double scaleFactor;
+  final String description;
+
+  const FontSizeDefinition({
+    required this.id,
+    required this.key,
+    required this.name,
+    required this.scaleText,
+    required this.scaleFactor,
+    required this.description,
+  });
+}
+
 class ThemeDefinition {
   final AppThemeId id;
   final String key;
@@ -179,6 +199,61 @@ class AppTheme {
 
   static bool isLightTheme(AppThemeId id) {
     return getDefinition(id).isLight;
+  }
+
+  static const List<FontSizeDefinition> availableFontSizes = [
+    FontSizeDefinition(
+      id: AppFontSize.small,
+      key: 'small',
+      name: 'Compact',
+      scaleText: '88%',
+      scaleFactor: 0.88,
+      description: 'Maximum density for small screens or power users',
+    ),
+    FontSizeDefinition(
+      id: AppFontSize.normal,
+      key: 'normal',
+      name: 'Standard',
+      scaleText: '100%',
+      scaleFactor: 1.0,
+      description: 'Balanced default terminal typography',
+    ),
+    FontSizeDefinition(
+      id: AppFontSize.large,
+      key: 'large',
+      name: 'Comfortable',
+      scaleText: '115%',
+      scaleFactor: 1.15,
+      description: 'Larger text for enhanced mobile readability',
+    ),
+    FontSizeDefinition(
+      id: AppFontSize.xlarge,
+      key: 'xlarge',
+      name: 'Extra Large',
+      scaleText: '130%',
+      scaleFactor: 1.30,
+      description: 'Maximum accessibility scale',
+    ),
+  ];
+
+  static FontSizeDefinition getFontSizeDefinition(AppFontSize size) {
+    return availableFontSizes.firstWhere(
+      (f) => f.id == size,
+      orElse: () => availableFontSizes[1],
+    );
+  }
+
+  static AppFontSize fontSizeFromKey(String? key) {
+    if (key == null) return AppFontSize.normal;
+    final lower = key.trim().toLowerCase();
+    if (lower == 'small' || lower == 'compact') return AppFontSize.small;
+    if (lower == 'large' || lower == 'comfortable') return AppFontSize.large;
+    if (lower == 'xlarge' || lower == 'extra_large' || lower == 'extralarge') return AppFontSize.xlarge;
+    return AppFontSize.normal;
+  }
+
+  static String fontSizeToKey(AppFontSize size) {
+    return getFontSizeDefinition(size).key;
   }
 
   // Backward compatible static properties

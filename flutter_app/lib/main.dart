@@ -19,22 +19,28 @@ class TodoNextApp extends StatefulWidget {
 
 class _TodoNextAppState extends State<TodoNextApp> {
   AppThemeId _currentTheme = AppThemeId.dark;
+  AppFontSize _currentFontSize = AppFontSize.normal;
 
   @override
   void initState() {
     super.initState();
-    _loadSavedTheme();
+    _loadSavedPreferences();
   }
 
-  Future<void> _loadSavedTheme() async {
+  Future<void> _loadSavedPreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final themeKey = prefs.getString('todo_next_theme');
-      if (themeKey != null) {
-        setState(() {
+      final fontSizeKey = prefs.getString('todo_next_font_size');
+
+      setState(() {
+        if (themeKey != null) {
           _currentTheme = AppTheme.fromKey(themeKey);
-        });
-      }
+        }
+        if (fontSizeKey != null) {
+          _currentFontSize = AppTheme.fontSizeFromKey(fontSizeKey);
+        }
+      });
     } catch (_) {}
   }
 
@@ -48,6 +54,16 @@ class _TodoNextAppState extends State<TodoNextApp> {
     } catch (_) {}
   }
 
+  Future<void> _setFontSize(AppFontSize size) async {
+    setState(() {
+      _currentFontSize = size;
+    });
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('todo_next_font_size', AppTheme.fontSizeToKey(size));
+    } catch (_) {}
+  }
+
   void _cycleTheme() {
     final values = AppThemeId.values;
     final nextIndex = (values.indexOf(_currentTheme) + 1) % values.length;
@@ -58,18 +74,28 @@ class _TodoNextAppState extends State<TodoNextApp> {
   Widget build(BuildContext context) {
     final themeData = AppTheme.getThemeData(_currentTheme);
     final isLight = AppTheme.isLightTheme(_currentTheme);
+    final scaleDef = AppTheme.getFontSizeDefinition(_currentFontSize);
 
     return MaterialApp(
       title: 'Todo Next',
       debugShowCheckedModeBanner: false,
       theme: themeData,
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(scaleDef.scaleFactor),
+          ),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: HomeScreen(
         currentTheme: _currentTheme,
         onSelectTheme: _setTheme,
         onToggleTheme: _cycleTheme,
         isLight: isLight,
+        currentFontSize: _currentFontSize,
+        onSelectFontSize: _setFontSize,
       ),
     );
   }
 }
-

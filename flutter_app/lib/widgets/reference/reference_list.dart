@@ -106,92 +106,95 @@ class _ReferenceListWidgetState extends State<ReferenceListWidget> {
         children: [
           // Toolbar: Header, Tabs, Sort
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
               color: widget.isLight ? Colors.grey[100] : const Color(0xFF111113),
               border: Border(bottom: BorderSide(color: widget.isLight ? Colors.grey[300]! : Colors.grey[800]!)),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    if (widget.showIcons) ...[
-                      Icon(Icons.auto_stories_outlined, size: 14, color: widget.isLight ? Colors.cyan[800] : Colors.cyan[400]),
-                      const SizedBox(width: 6),
-                    ],
-                    Text(
-                      '[ REFERENCES ]',
-                      style: AppTheme.monoStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: widget.isLight ? Colors.cyan[800] : Colors.cyan[400],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  Row(
+                    children: [
+                      if (widget.showIcons) ...[
+                        Icon(Icons.auto_stories_outlined, size: 14, color: widget.isLight ? Colors.cyan[800] : Colors.cyan[400]),
+                        const SizedBox(width: 6),
+                      ],
+                      Text(
+                        '[ REFERENCES ]',
+                        style: AppTheme.monoStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: widget.isLight ? Colors.cyan[800] : Colors.cyan[400],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Tabs
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: widget.isLight ? Colors.grey[400]! : Colors.grey[700]!),
-                      ),
-                      child: Row(
-                        children: [
-                          _buildTabButton('all', 'All', widget.showIcons ? Icons.folder_outlined : null),
-                          _buildTabButton('recent', 'Recent', widget.showIcons ? Icons.schedule : null),
-                          _buildTabButton('archived', 'Archived', widget.showIcons ? Icons.archive_outlined : null),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Sort Dropdown & New Button
-                Row(
-                  children: [
-                    DropdownButtonHideUnderline(
-                      child: DropdownButton<ReferenceSortOrder>(
-                        value: _sortOrder,
-                        isDense: true,
-                        dropdownColor: widget.isLight ? Colors.white : Colors.grey[900],
-                        style: AppTheme.monoStyle(fontSize: 10, color: widget.isLight ? Colors.black : Colors.white),
-                        items: const [
-                          DropdownMenuItem(value: ReferenceSortOrder.updated, child: Text('Updated')),
-                          DropdownMenuItem(value: ReferenceSortOrder.created, child: Text('Created')),
-                          DropdownMenuItem(value: ReferenceSortOrder.alphabetical, child: Text('A-Z')),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) setState(() => _sortOrder = val);
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.cyan[700],
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-                      ),
-                      onPressed: widget.onOpenNewReference,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (widget.showIcons) ...[
-                            const Icon(Icons.add, size: 12, color: Colors.white),
-                            const SizedBox(width: 2),
+                      const SizedBox(width: 8),
+                      // Tabs
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: widget.isLight ? Colors.grey[400]! : Colors.grey[700]!),
+                        ),
+                        child: Row(
+                          children: [
+                            _buildTabButton('all', 'All', widget.showIcons ? Icons.folder_outlined : null),
+                            _buildTabButton('recent', 'Recent', widget.showIcons ? Icons.schedule : null),
+                            _buildTabButton('archived', 'Archived', widget.showIcons ? Icons.archive_outlined : null),
                           ],
-                          Text(
-                            '+ NEW',
-                            style: AppTheme.monoStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Sort Dropdown & New Button
+                  Row(
+                    children: [
+                      DropdownButtonHideUnderline(
+                        child: DropdownButton<ReferenceSortOrder>(
+                          value: _sortOrder,
+                          isDense: true,
+                          dropdownColor: widget.isLight ? Colors.white : Colors.grey[900],
+                          style: AppTheme.monoStyle(fontSize: 10, color: widget.isLight ? Colors.black : Colors.white),
+                          items: const [
+                            DropdownMenuItem(value: ReferenceSortOrder.updated, child: Text('Updated')),
+                            DropdownMenuItem(value: ReferenceSortOrder.created, child: Text('Created')),
+                            DropdownMenuItem(value: ReferenceSortOrder.alphabetical, child: Text('A-Z')),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) setState(() => _sortOrder = val);
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.cyan[700],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                        ),
+                        onPressed: widget.onOpenNewReference,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (widget.showIcons) ...[
+                              const Icon(Icons.add, size: 12, color: Colors.white),
+                              const SizedBox(width: 2),
+                            ],
+                            Text(
+                              '+ NEW',
+                              style: AppTheme.monoStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
 

@@ -162,6 +162,20 @@
     - **OFF (Classic Terminal Mode)**: Strict retro ASCII / bracket syntax (`[ ]`, `[x]`, `[List]`, `[Calendar]`, `[Refs]`, `[del]`, `(A)`).
     - **ON (Professional Icons Mode)**: Elegant, high-contrast vector icons with color accents and clean alignment.
   - Persisted in `localStorage` (`todo_next_show_icons`) on Web and `SharedPreferences` (`todo_next_show_icons`) in Flutter.
+- **UI Font Size Scaling & Small Phone Optimizations (Web & Android Flutter)**:
+  - **4-Level Font & UI Scaling System**:
+    - **Compact (88%)**: High-density view ideal for power users and smaller phone screens.
+    - **Standard (100%)**: Default balanced monospace sizing.
+    - **Comfortable (115%)**: Increased legibility and larger tap targets.
+    - **Extra Large (130%)**: Maximum readability and accessibility scale.
+  - **Web Implementation**: Controlled via `data-font-size="small|default|large|xlarge"` with smooth CSS transitions on `body`, `.font-mono`, and root layout. Persisted in `localStorage` key `todo_next_font_size`.
+  - **Android/Flutter Implementation**: Built into `AppTheme.availableFontSizes` and applied dynamically via `MediaQuery.textScaler: TextScaler.linear(scaleFactor)` in `main.dart`. Persisted in `SharedPreferences` key `todo_next_font_size`.
+  - **Small Phone Layout Adaptations**:
+    - `StatusBarWidget`: Encapsulated in horizontal scroll so status counters, filters, sync badges, and theme indicators never overflow or clip on narrow devices (< 360px).
+    - `ReferenceListWidget`: Made toolbar and filter chips scrollable horizontally with zero `RenderFlex` overflow warnings.
+    - `CommandInputWidget`: Search bar and navigation buttons wrap and scroll horizontally with compact layout on narrow screens.
+    - `AddTaskDialog` & `ReferenceEditorDialog`: Responsive width `min(dialogWidth, screenWidth * 0.92)` with `SingleChildScrollView` to prevent keyboard overlap on small phone viewports.
+    - `InspectorDrawerWidget` & `ReferenceDrawerWidget`: Responsive drawer width `min(340, screenWidth * 0.92)` preventing horizontal overflow on compact phone displays.
 - **Flutter Codebase Modularization & Refactoring for Maintainability**:
   - Modularized large monolithic widget files (>25-30KB) into focused, single-responsibility sub-components under organized domain directories:
     - `flutter_app/lib/widgets/settings/`: `theme_settings_tab.dart`, `templates_settings_tab.dart`, `syntax_guide_tab.dart`, and `template_form_dialog.dart` (reduced `settings_modal.dart` from 29KB down to 6.0KB).

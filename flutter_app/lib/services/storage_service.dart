@@ -249,6 +249,7 @@ class StorageService {
   }
 
   static const String _showIconsKey = 'todo_next_show_icons';
+  static const String _fontSizeKey = 'todo_next_font_size';
 
   Future<bool> loadShowIcons() async {
     final prefs = await SharedPreferences.getInstance();
@@ -258,6 +259,16 @@ class StorageService {
   Future<void> saveShowIcons(bool showIcons) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_showIconsKey, showIcons);
+  }
+
+  Future<String> loadFontSizeKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_fontSizeKey) ?? 'normal';
+  }
+
+  Future<void> saveFontSizeKey(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_fontSizeKey, key);
   }
 }
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Sparkles, Terminal, Palette } from 'lucide-react';
-import { Template, AppTheme, AVAILABLE_THEMES } from '@/types/todo';
+import { Sparkles, Terminal, Palette, Type } from 'lucide-react';
+import { Template, AppTheme, AVAILABLE_THEMES, FontSize, AVAILABLE_FONT_SIZES } from '@/types/todo';
 import { resolveTemplateTokens } from '@/utils/templateEngine';
 import { FormattedText } from './FormattedText';
 import { ConfirmModal } from './ConfirmModal';
@@ -24,6 +24,8 @@ interface SettingsModalProps {
   initialTab?: 'theme' | 'templates' | 'syntax';
   showIcons?: boolean;
   onToggleIcons?: (value: boolean) => void;
+  fontSize?: FontSize;
+  onSelectFontSize?: (size: FontSize) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -44,7 +46,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onLogout,
   initialTab = 'theme',
   showIcons = false,
-  onToggleIcons
+  onToggleIcons,
+  fontSize = 'default',
+  onSelectFontSize
 }) => {
   const [activeTab, setActiveTab] = useState<'theme' | 'templates' | 'syntax'>(initialTab);
   const [templateSearch, setTemplateSearch] = useState('');
@@ -317,6 +321,51 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </>
                   )}
                 </button>
+              </div>
+            </div>
+
+            {/* Font & UI Scale Preferences */}
+            <div className={`p-3 border space-y-3 ${isLight ? 'bg-gray-50 border-gray-300' : 'bg-gray-900/40 border-gray-800'}`}>
+              <div className={`font-bold uppercase border-b pb-1 flex justify-between items-center ${isLight ? 'text-gray-700 border-gray-300' : 'text-gray-300 border-gray-800'}`}>
+                <span className="flex items-center gap-1.5">
+                  <Type className="w-3.5 h-3.5 text-cyan-500" />
+                  <span>Font &amp; UI Scale</span>
+                </span>
+                <span className="text-[10px] opacity-60 font-mono">[ Text Sizing ]</span>
+              </div>
+
+              <p className="text-[11px] opacity-75 leading-relaxed">
+                Adjust typography and interface scaling across tasks, workspace panels, drawers, and modal dialogs.
+              </p>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {AVAILABLE_FONT_SIZES.map((sizeDef) => {
+                  const isActive = fontSize === sizeDef.id;
+                  return (
+                    <button
+                      key={sizeDef.id}
+                      type="button"
+                      onClick={() => onSelectFontSize && onSelectFontSize(sizeDef.id)}
+                      className={`p-2.5 border text-left flex flex-col justify-between transition-colors cursor-pointer ${
+                        isActive
+                          ? isLight
+                            ? 'bg-cyan-100 border-cyan-600 text-cyan-900'
+                            : 'bg-cyan-950/70 border-cyan-400 text-cyan-200'
+                          : isLight
+                          ? 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                          : 'bg-black/50 border-gray-800 text-gray-400 hover:border-gray-700'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center w-full">
+                        <span className="font-bold text-xs">{sizeDef.name}</span>
+                        <span className={`text-[10px] font-mono font-bold ${isActive ? (isLight ? 'text-cyan-800' : 'text-cyan-300') : 'opacity-60'}`}>
+                          {sizeDef.scale}
+                        </span>
+                      </div>
+                      <span className="text-[10px] opacity-70 mt-1 line-clamp-1">{sizeDef.description}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

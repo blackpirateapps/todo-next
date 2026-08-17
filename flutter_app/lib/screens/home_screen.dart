@@ -31,6 +31,8 @@ class HomeScreen extends StatefulWidget {
   final Function(AppThemeId theme) onSelectTheme;
   final VoidCallback onToggleTheme;
   final bool isLight;
+  final AppFontSize currentFontSize;
+  final Function(AppFontSize size)? onSelectFontSize;
 
   const HomeScreen({
     super.key,
@@ -38,6 +40,8 @@ class HomeScreen extends StatefulWidget {
     required this.onSelectTheme,
     required this.onToggleTheme,
     required this.isLight,
+    this.currentFontSize = AppFontSize.normal,
+    this.onSelectFontSize,
   });
 
   @override
@@ -804,6 +808,8 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         onLogin: _openLoginModal,
         initialTabIndex: initialTab,
+        currentFontSize: widget.currentFontSize,
+        onSelectFontSize: widget.onSelectFontSize,
       ),
     );
   }

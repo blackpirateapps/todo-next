@@ -27,6 +27,8 @@ class SettingsModalWidget extends StatefulWidget {
   final int initialTabIndex;
   final bool showIcons;
   final Function(bool value)? onToggleIcons;
+  final AppFontSize currentFontSize;
+  final Function(AppFontSize size)? onSelectFontSize;
 
   const SettingsModalWidget({
     super.key,
@@ -46,6 +48,8 @@ class SettingsModalWidget extends StatefulWidget {
     this.initialTabIndex = 0,
     this.showIcons = false,
     this.onToggleIcons,
+    this.currentFontSize = AppFontSize.normal,
+    this.onSelectFontSize,
   });
 
   @override
@@ -149,6 +153,8 @@ class _SettingsModalWidgetState extends State<SettingsModalWidget> {
                       onLogin: widget.onLogin,
                       showIcons: widget.showIcons,
                       onToggleIcons: widget.onToggleIcons,
+                      currentFontSize: widget.currentFontSize,
+                      onSelectFontSize: widget.onSelectFontSize,
                     )
                   : _activeTabIndex == 1
                       ? TemplatesSettingsTab(

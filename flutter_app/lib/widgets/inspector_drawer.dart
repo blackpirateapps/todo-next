@@ -41,9 +41,12 @@ class InspectorDrawerWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final drawerWidth = screenWidth > 400 ? 340.0 : (screenWidth * 0.92);
+
     if (task == null) {
       return Container(
-        width: 320,
+        width: drawerWidth,
         color: isLight ? const Color(0xFFF4F4F5) : const Color(0xFF09090B),
         child: Center(
           child: Text(
@@ -58,7 +61,7 @@ class InspectorDrawerWidget extends StatelessWidget {
     final border = isLight ? const Color(0xFFE4E4E7) : const Color(0xFF27272A);
 
     return Container(
-      width: 340,
+      width: drawerWidth,
       decoration: BoxDecoration(
         color: bg,
         border: Border(left: BorderSide(color: border)),

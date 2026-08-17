@@ -121,11 +121,13 @@ class _ReferenceDrawerWidgetState extends State<ReferenceDrawerWidget> {
   @override
   Widget build(BuildContext context) {
     final isLight = widget.isLight;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final drawerWidth = screenWidth > 400 ? 340.0 : (screenWidth * 0.92);
 
     // 1. EMPTY STATE
     if (widget.reference == null && !widget.isCreating) {
       return Container(
-        width: 320,
+        width: drawerWidth,
         decoration: BoxDecoration(
           color: isLight ? const Color(0xFFF9F9FB) : const Color(0xFF09090B),
           border: Border(left: BorderSide(color: isLight ? Colors.grey[300]! : Colors.grey[800]!)),
@@ -145,7 +147,7 @@ class _ReferenceDrawerWidgetState extends State<ReferenceDrawerWidget> {
       final liveSmartActions = ReferenceUtils.detectSmartActions(_contentController.text);
 
       return Container(
-        width: 340,
+        width: drawerWidth,
         decoration: BoxDecoration(
           color: isLight ? Colors.white : const Color(0xFF09090B),
           border: Border(left: BorderSide(color: isLight ? Colors.grey[300]! : Colors.grey[800]!)),
@@ -401,7 +403,7 @@ class _ReferenceDrawerWidgetState extends State<ReferenceDrawerWidget> {
     } catch (_) {}
 
     return Container(
-      width: 340,
+      width: drawerWidth,
       decoration: BoxDecoration(
         color: isLight ? Colors.white : const Color(0xFF09090B),
         border: Border(left: BorderSide(color: isLight ? Colors.grey[300]! : Colors.grey[800]!)),

@@ -86,6 +86,22 @@ export interface Reference {
 
 export type AppTheme = 'dark' | 'light' | 'mocha' | 'gruvbox-dark' | 'paper-ink';
 
+export type FontSize = 'small' | 'default' | 'large' | 'xlarge';
+
+export interface FontSizeDefinition {
+  id: FontSize;
+  name: string;
+  scale: string;
+  description: string;
+}
+
+export const AVAILABLE_FONT_SIZES: FontSizeDefinition[] = [
+  { id: 'small', name: 'Compact', scale: '88%', description: 'Maximum density for power users' },
+  { id: 'default', name: 'Standard', scale: '100%', description: 'Default balanced terminal sizing' },
+  { id: 'large', name: 'Comfortable', scale: '115%', description: 'Enlarged text for higher legibility' },
+  { id: 'xlarge', name: 'Extra Large', scale: '130%', description: 'Maximum accessibility scale' },
+];
+
 export interface ThemeDefinition {
   id: AppTheme;
   name: string;

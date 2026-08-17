@@ -12,6 +12,8 @@ class ThemeSettingsTab extends StatelessWidget {
   final VoidCallback? onLogin;
   final bool showIcons;
   final Function(bool value)? onToggleIcons;
+  final AppFontSize currentFontSize;
+  final Function(AppFontSize size)? onSelectFontSize;
 
   const ThemeSettingsTab({
     super.key,
@@ -25,6 +27,8 @@ class ThemeSettingsTab extends StatelessWidget {
     this.onLogin,
     this.showIcons = false,
     this.onToggleIcons,
+    this.currentFontSize = AppFontSize.normal,
+    this.onSelectFontSize,
   });
 
   @override
@@ -215,6 +219,115 @@ class ThemeSettingsTab extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // Font & UI Scale Card
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isLight ? Colors.grey[100] : const Color(0xFF18181B),
+            border: Border.all(color: isLight ? Colors.grey[300]! : Colors.grey[800]!),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.format_size, size: 14, color: Colors.cyan[400]),
+                      const SizedBox(width: 6),
+                      Text(
+                        'FONT & UI SCALE',
+                        style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    '[ Text Sizing ]',
+                    style: AppTheme.monoStyle(fontSize: 10, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Adjust typography scaling across task lists, buttons, drawers, and modal dialogs on mobile.',
+                style: AppTheme.monoStyle(fontSize: 10, color: Colors.grey),
+              ),
+              const SizedBox(height: 10),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isCompact = constraints.maxWidth < 360;
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: AppTheme.availableFontSizes.map((sizeDef) {
+                      final isActive = currentFontSize == sizeDef.id;
+                      final itemWidth = isCompact
+                          ? constraints.maxWidth
+                          : (constraints.maxWidth - 8) / 2 - 1;
+                      return InkWell(
+                        onTap: () => onSelectFontSize?.call(sizeDef.id),
+                        child: Container(
+                          width: itemWidth,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? (isLight ? Colors.cyan[100] : const Color(0xFF083344))
+                                : (isLight ? Colors.white : Colors.black),
+                            border: Border.all(
+                              color: isActive
+                                  ? Colors.cyan
+                                  : (isLight ? Colors.grey[300]! : Colors.grey[800]!),
+                              width: isActive ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    sizeDef.name,
+                                    style: AppTheme.monoStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: isActive
+                                          ? (isLight ? Colors.cyan[900] : Colors.cyan[300])
+                                          : (isLight ? Colors.black87 : Colors.white),
+                                    ),
+                                  ),
+                                  Text(
+                                    sizeDef.scaleText,
+                                    style: AppTheme.monoStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: isActive ? Colors.cyan : Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                sizeDef.description,
+                                style: AppTheme.monoStyle(fontSize: 9, color: Colors.grey),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
               ),
             ],
           ),

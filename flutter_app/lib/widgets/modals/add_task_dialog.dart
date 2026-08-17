@@ -47,17 +47,22 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     final bg = widget.isLight ? Colors.white : const Color(0xFF09090B);
     final border = widget.isLight ? const Color(0xFFE4E4E7) : const Color(0xFF27272A);
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final dialogWidth = screenWidth > 500 ? 450.0 : (screenWidth * 0.92);
+
     return Dialog(
       backgroundColor: bg,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero, side: BorderSide(color: border)),
       child: Container(
-        width: 450,
+        width: dialogWidth,
         padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
               children: [
                 Text(
                   '[CREATE NEW TASK]',
@@ -161,6 +166,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
