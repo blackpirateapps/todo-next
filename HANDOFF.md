@@ -25,9 +25,8 @@
   - **Web Application Workspace & UI (`components/Reference*.tsx`)**:
     - Sidebar Workspaces Switcher: Toggle between **Tasks** (`[ Tasks ]`) and **References** (`[ References ]`).
     - Reference List Workspace (`ReferenceList.tsx`): Real-time search, tab filters (`All`, `Recent (15)`, `Archived`), and tag pills.
-    - Reference Inspector Drawer (`ReferenceDetails.tsx`): Displays metadata, Smart Action triggers, full formatted content with copy button, edit, archive/restore, and delete.
-    - Reference Editor Modal (`ReferenceModal.tsx`): Create and update references with auto tag extraction from `#tag`, `+project`, and `@context`.
-    - Command Bar & Terminal Commands: `:refs` / `:ref` (open modal), `:ref <title>`, `:ref <title> | <content>`.
+    - Inline Sidebar Viewing & Editing (`ReferenceDetails.tsx`): Completely eliminates popup modals! The inspector drawer seamlessly transforms into the inline editor and creator, supporting Title, Content, auto-tag extraction, live Smart Actions previews, and instant saving.
+    - Command Bar & Terminal Commands: `:refs` / `:ref` (open sidebar creator), `:ref <title>`, `:ref <title> | <content>`.
     - Local Caching & Sync: Optimistic UI updates with instant `localStorage` hydration and non-blocking API sync.
   - **Native Android & Tablet Implementation (`flutter_app/`)**:
     - Model: `Reference` model with defensive deserialization and `copyWith`.
@@ -208,9 +207,8 @@
 │   ├── FormattedText.tsx
 │   ├── LoginScreen.tsx               # Firebase Auth login/signup & bpx migration wizard
 │   ├── OnboardingPage.tsx            # Terminal-styled interactive Landing & Onboarding page
-│   ├── ReferenceDetails.tsx          # Reference Inspector Drawer with Smart Actions
+│   ├── ReferenceDetails.tsx          # Inline Reference Viewing & Editing Sidebar with Smart Actions
 │   ├── ReferenceList.tsx             # Reference Workspace List (search, tabs, tag filters)
-│   ├── ReferenceModal.tsx            # Reference Editor Modal with tag extraction
 │   ├── Sidebar.tsx                   # Workspaces Switcher ([ Tasks ] vs [ References ])
 │   ├── StatusBar.tsx                 # Displays logged-in user email and sync indicator
 │   ├── SubtaskProgressBar.tsx

@@ -8,7 +8,6 @@ import { CalendarView } from '@/components/CalendarView';
 import { TaskDetails } from '@/components/TaskDetails';
 import { ReferenceList } from '@/components/ReferenceList';
 import { ReferenceDetails } from '@/components/ReferenceDetails';
-import { ReferenceModal } from '@/components/ReferenceModal';
 import { CommandInput } from '@/components/CommandInput';
 import { StatusBar, SyncStatus } from '@/components/StatusBar';
 import { LoginScreen } from '@/components/LoginScreen';
@@ -62,9 +61,8 @@ export default function UtilitarianTodoPage() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<'theme' | 'templates' | 'syntax'>('theme');
 
-  // Reference Modal State
-  const [isReferenceModalOpen, setIsReferenceModalOpen] = useState(false);
-  const [referenceToEdit, setReferenceToEdit] = useState<Reference | null>(null);
+  // Reference Sidebar State (Inline view/create/edit)
+  const [isCreatingReference, setIsCreatingReference] = useState(false);
   const [initialRefTitle, setInitialRefTitle] = useState('');
   const [initialRefContent, setInitialRefContent] = useState('');
 
@@ -738,7 +736,7 @@ export default function UtilitarianTodoPage() {
   };
 
   // --- REFERENCE CRUD HANDLERS ---
-  const handleCreateReference = async (refData: { title: string; content: string; tags: string[] }) => {
+  const handleCreateReference = async (refData: { title: string; content: string; tags: string[] }): Promise<Reference> => {
     const newRef: Reference = {
       id: `ref-${Date.now()}`,
       title: refData.title,
@@ -755,6 +753,7 @@ export default function UtilitarianTodoPage() {
       return updated;
     });
     setSelectedReference(newRef);
+    setIsCreatingReference(false);
     setActiveView('references');
 
     setSyncStatus('syncing');
@@ -773,6 +772,8 @@ export default function UtilitarianTodoPage() {
     } catch {
       queueMutation({ type: 'CREATE_REFERENCE', id: newRef.id, data: newRef });
     }
+
+    return newRef;
   };
 
   const handleUpdateReference = async (id: string, updates: Partial<Reference>) => {
@@ -839,18 +840,18 @@ export default function UtilitarianTodoPage() {
     }
   };
 
-  const openNewReferenceModal = (title = '', content = '') => {
-    setReferenceToEdit(null);
+  const openNewReferenceSidebar = (title = '', content = '') => {
+    setSelectedReference(null);
     setInitialRefTitle(title);
     setInitialRefContent(content);
-    setIsReferenceModalOpen(true);
+    setIsCreatingReference(true);
+    setActiveView('references');
   };
 
-  const openEditReferenceModal = (ref: Reference) => {
-    setReferenceToEdit(ref);
-    setInitialRefTitle(ref.title);
-    setInitialRefContent(ref.content);
-    setIsReferenceModalOpen(true);
+  const handleSaveNewReference = async (title: string, content: string, tags: string[]) => {
+    const created = await handleCreateReference({ title, content, tags });
+    setIsCreatingReference(false);
+    setSelectedReference(created);
   };
 
   // --- TERMINAL COMMAND BAR HANDLER ---
@@ -890,9 +891,9 @@ export default function UtilitarianTodoPage() {
       return;
     }
 
-    // Command: :ref -> Open New Reference Modal
+    // Command: :ref -> Open New Reference Sidebar
     if (trimmed === ':ref') {
-      openNewReferenceModal();
+      openNewReferenceSidebar();
       setCommandQuery('');
       return;
     }
@@ -913,7 +914,7 @@ export default function UtilitarianTodoPage() {
         setCommandQuery('');
         return;
       } else {
-        openNewReferenceModal(refArgs);
+        openNewReferenceSidebar(refArgs);
         setCommandQuery('');
         return;
       }
@@ -1175,9 +1176,12 @@ export default function UtilitarianTodoPage() {
           <ReferenceList
             references={references}
             selectedReferenceId={selectedReference?.id}
-            onSelectReference={setSelectedReference}
+            onSelectReference={(ref) => {
+              setIsCreatingReference(false);
+              setSelectedReference(ref);
+            }}
             onDeleteReference={handleDeleteReference}
-            onOpenNewReferenceModal={() => openNewReferenceModal()}
+            onOpenNewReferenceModal={() => openNewReferenceSidebar()}
             isLight={isLightMode}
             activeFilter={activeFilter}
             searchQuery={commandQuery}
@@ -1200,12 +1204,21 @@ export default function UtilitarianTodoPage() {
           </div>
         ) : (
           <div className={`fixed inset-0 z-30 transition-transform duration-200 ease-in-out transform ${
-            selectedReference ? 'translate-x-0' : 'translate-x-full'
+            (selectedReference || isCreatingReference) ? 'translate-x-0' : 'translate-x-full'
           } lg:relative lg:translate-x-0 lg:z-10`}>
             <ReferenceDetails
               reference={selectedReference}
-              onClose={() => setSelectedReference(null)}
-              onEdit={openEditReferenceModal}
+              isCreating={isCreatingReference}
+              initialTitle={initialRefTitle}
+              initialContent={initialRefContent}
+              onClose={() => {
+                setSelectedReference(null);
+                setIsCreatingReference(false);
+              }}
+              onSaveNew={handleSaveNewReference}
+              onSaveEdit={handleUpdateReference}
+              onCancelCreate={() => setIsCreatingReference(false)}
+              onStartCreate={() => openNewReferenceSidebar()}
               onArchive={handleArchiveReference}
               onDelete={handleDeleteReference}
               isLight={isLightMode}
@@ -1227,23 +1240,6 @@ export default function UtilitarianTodoPage() {
         syncStatus={syncStatus}
         pendingCount={pendingQueue.length}
         onForceSync={flushSyncQueue}
-      />
-
-      {/* Reference Modal */}
-      <ReferenceModal
-        isOpen={isReferenceModalOpen}
-        onClose={() => setIsReferenceModalOpen(false)}
-        referenceToEdit={referenceToEdit}
-        onSave={(data) => {
-          if (referenceToEdit) {
-            handleUpdateReference(referenceToEdit.id, data);
-          } else {
-            handleCreateReference(data);
-          }
-        }}
-        isLight={isLightMode}
-        initialTitle={initialRefTitle}
-        initialContent={initialRefContent}
       />
 
       {/* Template Modal */}

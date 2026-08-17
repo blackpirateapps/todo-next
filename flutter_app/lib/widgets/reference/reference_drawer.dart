@@ -5,23 +5,74 @@ import '../../models/reference.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/reference_utils.dart';
 
-class ReferenceDrawerWidget extends StatelessWidget {
+class ReferenceDrawerWidget extends StatefulWidget {
   final Reference? reference;
+  final bool isCreating;
+  final String? initialTitle;
+  final String? initialContent;
   final bool isLight;
   final VoidCallback onClose;
-  final Function(Reference ref) onEdit;
+  final Function(Reference ref)? onEdit;
+  final Function(String title, String content, List<String> tags)? onSaveNew;
+  final Function(String id, Map<String, dynamic> updates)? onSaveEdit;
+  final VoidCallback? onCancelCreate;
   final Function(String id, bool archive) onArchive;
   final Function(Reference ref) onDelete;
 
   const ReferenceDrawerWidget({
     super.key,
     required this.reference,
+    this.isCreating = false,
+    this.initialTitle,
+    this.initialContent,
     required this.isLight,
     required this.onClose,
-    required this.onEdit,
+    this.onEdit,
+    this.onSaveNew,
+    this.onSaveEdit,
+    this.onCancelCreate,
     required this.onArchive,
     required this.onDelete,
   });
+
+  @override
+  State<ReferenceDrawerWidget> createState() => _ReferenceDrawerWidgetState();
+}
+
+class _ReferenceDrawerWidgetState extends State<ReferenceDrawerWidget> {
+  bool _isEditing = false;
+  late TextEditingController _titleController;
+  late TextEditingController _contentController;
+  late TextEditingController _tagController;
+  List<String> _tags = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.initialTitle ?? widget.reference?.title ?? '');
+    _contentController = TextEditingController(text: widget.initialContent ?? widget.reference?.content ?? '');
+    _tagController = TextEditingController();
+    _tags = widget.reference != null ? List<String>.from(widget.reference!.tags) : [];
+  }
+
+  @override
+  void didUpdateWidget(covariant ReferenceDrawerWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.reference != widget.reference || oldWidget.isCreating != widget.isCreating) {
+      _titleController.text = widget.initialTitle ?? widget.reference?.title ?? '';
+      _contentController.text = widget.initialContent ?? widget.reference?.content ?? '';
+      _tags = widget.reference != null ? List<String>.from(widget.reference!.tags) : [];
+      _isEditing = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _contentController.dispose();
+    _tagController.dispose();
+    super.dispose();
+  }
 
   Future<void> _launchAction(BuildContext context, String urlStr) async {
     try {
@@ -52,9 +103,25 @@ class ReferenceDrawerWidget extends StatelessWidget {
     }
   }
 
+  void _addTag() {
+    final text = _tagController.text.trim();
+    if (text.isNotEmpty) {
+      final formatted = (text.startsWith('+') || text.startsWith('@')) ? text : '#$text';
+      if (!_tags.contains(formatted)) {
+        setState(() {
+          _tags.add(formatted);
+          _tagController.clear();
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (reference == null) {
+    final isLight = widget.isLight;
+
+    // 1. EMPTY STATE
+    if (widget.reference == null && !widget.isCreating) {
       return Container(
         width: 320,
         decoration: BoxDecoration(
@@ -70,7 +137,254 @@ class ReferenceDrawerWidget extends StatelessWidget {
       );
     }
 
-    final ref = reference!;
+    // 2. INLINE CREATION OR EDITING FORM IN DRAWER
+    if (widget.isCreating || _isEditing) {
+      final isNew = widget.isCreating;
+      final liveSmartActions = ReferenceUtils.detectSmartActions(_contentController.text);
+
+      return Container(
+        width: 340,
+        decoration: BoxDecoration(
+          color: isLight ? Colors.white : const Color(0xFF09090B),
+          border: Border(left: BorderSide(color: isLight ? Colors.grey[300]! : Colors.grey[800]!)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Drawer Header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isLight ? Colors.grey[100] : const Color(0xFF111113),
+                border: Border(bottom: BorderSide(color: isLight ? Colors.grey[300]! : Colors.grey[800]!)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: isNew
+                          ? (isLight ? Colors.green[100] : const Color(0xFF052E16).withValues(alpha: 0.5))
+                          : (isLight ? Colors.cyan[100] : const Color(0xFF083344).withValues(alpha: 0.5)),
+                      border: Border.all(
+                        color: isNew
+                            ? (isLight ? Colors.green[400]! : Colors.green[800]!)
+                            : (isLight ? Colors.cyan[400]! : Colors.cyan[800]!),
+                      ),
+                    ),
+                    child: Text(
+                      isNew ? '➕ NEW REFERENCE' : '✏️ EDIT REFERENCE',
+                      style: AppTheme.monoStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: isNew
+                            ? (isLight ? Colors.green[900] : Colors.green[300])
+                            : (isLight ? Colors.cyan[900] : Colors.cyan[300]),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 16),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () {
+                      if (isNew) {
+                        if (widget.onCancelCreate != null) widget.onCancelCreate!();
+                      } else {
+                        setState(() => _isEditing = false);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // Form Inputs
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(12),
+                children: [
+                  Text(
+                    'TITLE',
+                    style: AppTheme.monoStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey[500]),
+                  ),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: _titleController,
+                    style: AppTheme.monoStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Server IP, Wi-Fi Password',
+                      hintStyle: AppTheme.monoStyle(fontSize: 11, color: Colors.grey[500]),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.zero, borderSide: BorderSide(color: Colors.grey[700]!)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  Text(
+                    'CONTENT / DETAILS',
+                    style: AppTheme.monoStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey[500]),
+                  ),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: _contentController,
+                    maxLines: 6,
+                    onChanged: (_) => setState(() {}),
+                    style: AppTheme.monoStyle(fontSize: 11),
+                    decoration: InputDecoration(
+                      hintText: 'Enter phone numbers, links, credentials, addresses, or notes...',
+                      hintStyle: AppTheme.monoStyle(fontSize: 11, color: Colors.grey[500]),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.all(8),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.zero, borderSide: BorderSide(color: Colors.grey[700]!)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Live smart action preview
+                  if (liveSmartActions.isNotEmpty) ...[
+                    Text(
+                      'SMART ACTIONS DETECTED',
+                      style: AppTheme.monoStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.cyan[400]),
+                    ),
+                    const SizedBox(height: 4),
+                    ...liveSmartActions.map((act) => Container(
+                          margin: const EdgeInsets.only(bottom: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isLight ? Colors.cyan[50] : const Color(0xFF083344).withValues(alpha: 0.3),
+                            border: Border.all(color: isLight ? Colors.cyan[200]! : Colors.cyan[800]!),
+                          ),
+                          child: Row(
+                            children: [
+                              Text(act.type.name.toUpperCase(), style: AppTheme.monoStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.cyan[300])),
+                              const SizedBox(width: 6),
+                              Expanded(child: Text(act.value, style: AppTheme.monoStyle(fontSize: 10), overflow: TextOverflow.ellipsis)),
+                            ],
+                          ),
+                        )),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Tags
+                  Text(
+                    'TAGS',
+                    style: AppTheme.monoStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey[500]),
+                  ),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: _tags.map((t) => Chip(
+                          label: Text(t, style: AppTheme.monoStyle(fontSize: 10)),
+                          onDeleted: () => setState(() => _tags.remove(t)),
+                          deleteIconColor: Colors.red[300],
+                          padding: EdgeInsets.zero,
+                          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                        )).toList(),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _tagController,
+                          style: AppTheme.monoStyle(fontSize: 11),
+                          decoration: InputDecoration(
+                            hintText: '+project or @context',
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.zero, borderSide: BorderSide(color: Colors.grey[700]!)),
+                          ),
+                          onSubmitted: (_) => _addTag(),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          minimumSize: Size.zero,
+                        ),
+                        onPressed: _addTag,
+                        child: Text('+ Add', style: AppTheme.monoStyle(fontSize: 10)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Footer actions
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isLight ? Colors.grey[50] : const Color(0xFF111113),
+                border: Border(top: BorderSide(color: isLight ? Colors.grey[300]! : Colors.grey[800]!)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      minimumSize: Size.zero,
+                    ),
+                    onPressed: () {
+                      if (isNew) {
+                        if (widget.onCancelCreate != null) widget.onCancelCreate!();
+                      } else {
+                        setState(() => _isEditing = false);
+                      }
+                    },
+                    child: Text('Cancel', style: AppTheme.monoStyle(fontSize: 10)),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isNew ? Colors.green[700] : Colors.cyan[700],
+                      foregroundColor: Colors.white,
+                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      minimumSize: Size.zero,
+                    ),
+                    onPressed: () {
+                      final title = _titleController.text.trim();
+                      if (title.isEmpty) return;
+                      final content = _contentController.text.trim();
+
+                      if (isNew) {
+                        if (widget.onSaveNew != null) {
+                          widget.onSaveNew!(title, content, _tags);
+                        }
+                      } else if (widget.reference != null) {
+                        if (widget.onSaveEdit != null) {
+                          widget.onSaveEdit!(widget.reference!.id, {
+                            'title': title,
+                            'content': content,
+                            'tags': _tags,
+                          });
+                        }
+                        setState(() => _isEditing = false);
+                      }
+                    },
+                    child: Text(
+                      isNew ? 'Create Reference' : 'Save Changes',
+                      style: AppTheme.monoStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 3. INLINE VIEW MODE IN DRAWER
+    final ref = widget.reference!;
     final smartActions = ReferenceUtils.detectSmartActions(ref.content);
 
     String formattedCreated = ref.createdAt;
@@ -144,7 +458,7 @@ class ReferenceDrawerWidget extends StatelessWidget {
                   icon: const Icon(Icons.close, size: 16),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  onPressed: onClose,
+                  onPressed: widget.onClose,
                 ),
               ],
             ),
@@ -382,7 +696,13 @@ class ReferenceDrawerWidget extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                     minimumSize: Size.zero,
                   ),
-                  onPressed: () => onEdit(ref),
+                  onPressed: () {
+                    if (widget.onEdit != null) {
+                      widget.onEdit!(ref);
+                    } else {
+                      setState(() => _isEditing = true);
+                    }
+                  },
                 ),
                 OutlinedButton(
                   style: OutlinedButton.styleFrom(
@@ -390,7 +710,7 @@ class ReferenceDrawerWidget extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                     minimumSize: Size.zero,
                   ),
-                  onPressed: () => onArchive(ref.id, !ref.archived),
+                  onPressed: () => widget.onArchive(ref.id, !ref.archived),
                   child: Text(
                     ref.archived ? 'Restore' : 'Archive',
                     style: AppTheme.monoStyle(fontSize: 10),
@@ -404,7 +724,7 @@ class ReferenceDrawerWidget extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                     minimumSize: Size.zero,
                   ),
-                  onPressed: () => onDelete(ref),
+                  onPressed: () => widget.onDelete(ref),
                   child: Text('Delete', style: AppTheme.monoStyle(fontSize: 10)),
                 ),
               ],
