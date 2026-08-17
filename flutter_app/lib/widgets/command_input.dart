@@ -62,6 +62,19 @@ class CommandInputWidget extends StatelessWidget {
           ),
         ),
         InkWell(
+          onTap: () => onChangeView('references'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: activeView == 'references'
+                  ? (isLight ? Colors.cyan[100] : Colors.cyan[950])
+                  : Colors.transparent,
+              border: Border.all(color: border),
+            ),
+            child: Text('[Refs]', style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.cyan)),
+          ),
+        ),
+        InkWell(
           onTap: onOpenTemplates,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -89,7 +102,7 @@ class CommandInputWidget extends StatelessWidget {
             controller: controller,
             style: AppTheme.monoStyle(fontSize: 12),
             decoration: InputDecoration(
-              hintText: 'Filter... or :add (A) Task... or :use Template',
+              hintText: 'Filter... or :add Task... or :ref John | +91 98765 or :refs',
               hintStyle: AppTheme.monoStyle(fontSize: 11, color: Colors.grey[600]),
               border: InputBorder.none,
               isDense: true,

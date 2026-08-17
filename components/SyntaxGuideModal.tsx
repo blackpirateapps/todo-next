@@ -85,12 +85,28 @@ export const SyntaxGuideModal: React.FC<SyntaxGuideModalProps> = ({
 
           <div>
             <div className={`font-bold uppercase mb-1 border-b pb-0.5 ${isLight ? 'text-gray-600 border-gray-300' : 'text-gray-400 border-gray-800'}`}>
-              6. Full Examples
+              6. Reference System (Keep / Remember)
+            </div>
+            <p className="mb-2 opacity-90">
+              References store information you need to <strong>KNOW or KEEP</strong> (phone numbers, addresses, Wi-Fi info, URLs, keys) without checkboxes or completion states.
+            </p>
+            <ul className="list-disc list-inside space-y-1 opacity-90">
+              <li><code className={isLight ? 'text-cyan-700 font-bold' : 'text-cyan-400 font-bold'}>:refs</code> — Switch to Reference Workspace.</li>
+              <li><code className={isLight ? 'text-cyan-700 font-bold' : 'text-cyan-400 font-bold'}>:ref</code> — Open New Reference Editor dialog.</li>
+              <li><code className={isLight ? 'text-cyan-700 font-bold' : 'text-cyan-400 font-bold'}>:ref &lt;title&gt;</code> — Open editor with pre-filled title (e.g. <code className="font-semibold">:ref John</code>).</li>
+              <li><code className={isLight ? 'text-cyan-700 font-bold' : 'text-cyan-400 font-bold'}>:ref &lt;title&gt; | &lt;content&gt;</code> — Quick create reference with title and content.</li>
+            </ul>
+          </div>
+
+          <div>
+            <div className={`font-bold uppercase mb-1 border-b pb-0.5 ${isLight ? 'text-gray-600 border-gray-300' : 'text-gray-400 border-gray-800'}`}>
+              7. Full Examples
             </div>
             <div className={`p-2 border font-mono text-[11px] space-y-1.5 ${isLight ? 'bg-gray-100 border-gray-300' : 'bg-gray-900 border-gray-800'}`}>
               <div>:add (A) Build core parser +backend @dev due:2026-08-12 time:10:00</div>
               <div>:add (B) Weekly code review +dev @review due:2026-08-15 rec:1w</div>
-              <div>:add Morning prep & inbox zero @personal rec:weekday</div>
+              <div>:ref John | +91 98765 43210 @people</div>
+              <div>:ref Home Wi-Fi | SSID: Fiber5G Password: coffee @home</div>
             </div>
           </div>
         </div>

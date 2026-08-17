@@ -3,7 +3,34 @@
 ## 📌 Project Overview
 `todo-next` (Title: **Todo Next**) is a lightweight, terminal-styled task manager heavily influenced by the **`todo.txt` format** and **Unix philosophy**. It provides a fast, minimalist interface with keyboard navigation, syntax highlighting for projects (`+project`), contexts (`@context`), priorities (`(A)`, `(B)`), due dates (`due:YYYY-MM-DD`), dual theme support (Dark/Light mode), and full **List & Calendar views**.
 
-Recently updated with:
+- **Flagship Reference System (Web & Native Android)**:
+  - **Philosophy & Distinction**: Separates actionable todo.txt items from static non-actionable reference material (phone numbers, addresses, emails, meeting links, server configs, Wi-Fi credentials, cheat sheets).
+  - **Data Model & Turso Database Schema**:
+    - `references` table (`id`, `user_id`, `title`, `content`, `archived`, `created_at`, `updated_at`) with indexes on `user_id`, `created_at`, and `archived`.
+    - `reference_tags` relational table (`id`, `reference_id`, `tag`) with index on `tag`.
+    - Integrated with `db.batch()` for 1-roundtrip atomic querying and CRUD operations.
+  - **Smart Actions Engine (`referenceUtils.ts` & `reference_utils.dart`)**:
+    - **Phone Numbers**: Auto-detected via international/local regex -> One-click Call action (`tel:<number>`).
+    - **URLs & Links**: Auto-detected via web URL pattern -> One-click Open in Browser action.
+    - **Email Addresses**: Auto-detected via email regex -> One-click Compose Mail action (`mailto:<email>`).
+    - **Addresses & Locations**: Auto-detected postal codes / street patterns -> One-click Google Maps search action.
+    - **Quick Copy**: Formats reference title, content, and tags neatly for instant clipboard sharing.
+  - **Web Application Workspace & UI (`components/Reference*.tsx`)**:
+    - Sidebar Workspaces Switcher: Toggle between **Tasks** (`[ Tasks ]`) and **References** (`[ References ]`).
+    - Reference List Workspace (`ReferenceList.tsx`): Real-time search, tab filters (`All`, `Recent (15)`, `Archived`), and tag pills.
+    - Reference Inspector Drawer (`ReferenceDetails.tsx`): Displays metadata, Smart Action triggers, full formatted content with copy button, edit, archive/restore, and delete.
+    - Reference Editor Modal (`ReferenceModal.tsx`): Create and update references with auto tag extraction from `#tag`, `+project`, and `@context`.
+    - Command Bar & Terminal Commands: `:refs` / `:ref` (open modal), `:ref <title>`, `:ref <title> | <content>`.
+    - Local Caching & Sync: Optimistic UI updates with instant `localStorage` hydration and non-blocking API sync.
+  - **Native Android & Tablet Implementation (`flutter_app/`)**:
+    - Model: `Reference` model with defensive deserialization and `copyWith`.
+    - Local Cache: `StorageService` using `SharedPreferences` with default seed references.
+    - API Client: `ApiService` methods for `fetchReferences`, `createReference`, `updateReference`, `deleteReference`, `archiveReference`, `restoreReference`.
+    - Widgets: `ReferenceListWidget`, `ReferenceItemWidget`, `ReferenceDrawerWidget`, `ReferenceEditorDialog`.
+    - Responsive Tablet & Mobile layout in `HomeScreen` with animated drawer transitions and swipe navigation.
+    - Terminal Command Parser: Extended with `OpenReferencesCommand`, `OpenNewReferenceCommand`, and `QuickCreateReferenceCommand`.
+  - **Syntax Guide & Help**: Documented reference system commands and examples in `SyntaxGuideModal.tsx` and `SyntaxGuideTab.dart`.
+  - **Full Test Coverage**: Unit tests, storage tests, smart action tests, and widget tests passing across web and mobile.
 - **Full SaaS Conversion & Firebase Authentication (Web & Android App)**:
   - Converted app from single-user to multi-tenant SaaS application allowing open user sign-up and log-in with email & password via Firebase Auth.
   - Multi-tenancy database schema: added `users` table (`id`, `email`, `username`, `is_migrated`, `created_at`) and `user_id` foreign keys to `tasks` and `templates`.
@@ -151,6 +178,12 @@ Recently updated with:
 │   │   │   └── migrate-bpx/route.ts   # Execute zero-data-loss migration for account bpx
 │   │   ├── health/route.ts           # Diagnostic endpoint for DB & Vercel serverless health
 │   │   ├── recurring/route.ts        # Endpoint for listing recurring schedules
+│   │   ├── references/               # Reference System API routes
+│   │   │   ├── route.ts              # GET /api/references, POST /api/references
+│   │   │   └── [id]/
+│   │   │       ├── route.ts          # GET, PATCH, DELETE /api/references/[id]
+│   │   │       ├── archive/route.ts  # POST /api/references/[id]/archive
+│   │   │       └── restore/route.ts  # POST /api/references/[id]/restore
 │   │   ├── tasks/
 │   │   │   ├── route.ts
 │   │   │   └── [id]/
@@ -163,55 +196,61 @@ Recently updated with:
 │   └── page.tsx
 ├── components/
 │   ├── CalendarView.tsx              # Includes future recurrence projections
-│   ├── CommandInput.tsx              # :rec, :skip, :recurring terminal commands
+│   ├── CommandInput.tsx              # :rec, :skip, :ref, :refs terminal commands & [Refs] switch
 │   ├── ConfirmModal.tsx
 │   ├── FormattedText.tsx
 │   ├── LoginScreen.tsx               # Firebase Auth login/signup & bpx migration wizard
-│   ├── Sidebar.tsx
+│   ├── ReferenceDetails.tsx          # Reference Inspector Drawer with Smart Actions
+│   ├── ReferenceList.tsx             # Reference Workspace List (search, tabs, tag filters)
+│   ├── ReferenceModal.tsx            # Reference Editor Modal with tag extraction
+│   ├── Sidebar.tsx                   # Workspaces Switcher ([ Tasks ] vs [ References ])
 │   ├── StatusBar.tsx                 # Displays logged-in user email and sync indicator
 │   ├── SubtaskProgressBar.tsx
-│   ├── SyntaxGuideModal.tsx          # rec: syntax guide documentation
+│   ├── SyntaxGuideModal.tsx          # rec: & :ref syntax guide documentation
 │   ├── TaskDetails.tsx              # Recurrence pattern control card & presets
 │   ├── TaskList.tsx                 # Visual terminal recurrence badges ([🔄 rec:1w], [⚡ strict:3d])
 │   └── TemplateModal.tsx
 ├── flutter_app/                       # Native Flutter Android Application
 │   ├── android/                      # Native Android Gradle configuration
 │   ├── lib/
-│   │   ├── models/                   # Task, Subtask, Comment, Template, RecurrenceRule
+│   │   ├── models/                   # Task, Subtask, Comment, Template, RecurrenceRule, Reference
 │   │   ├── screens/                  # HomeScreen (Adaptive Phone & Tablet layout)
-│   │   ├── services/                 # ApiService, StorageService
+│   │   ├── services/                 # ApiService, StorageService (Tasks, Templates, References)
 │   │   ├── theme/                    # AppTheme (5 Developer & Terminal Themes)
-│   │   ├── utils/                    # command_parser, todo_parser, recurrence_engine, template_engine, date_utils
+│   │   ├── utils/                    # command_parser, todo_parser, recurrence_engine, template_engine, reference_utils, date_utils
 │   │   └── widgets/
 │   │       ├── calendar/             # CalendarHeader, CalendarWeekdayHeader, CalendarDayCell
 │   │       ├── inspector/            # Header, Title, Metadata, Recurrence, Tags, Desc, Subtasks, Comments
 │   │       ├── modals/               # AddTaskDialog
+│   │       ├── reference/            # ReferenceListWidget, ReferenceItemWidget, ReferenceDrawerWidget, ReferenceEditorDialog
 │   │       ├── settings/             # ThemeSettingsTab, TemplatesSettingsTab, SyntaxGuideTab, TemplateFormDialog
 │   │       ├── task_list/            # TaskListToolbar, TaskListHeader, TaskListItem
 │   │       ├── calendar_view.dart    # Calendar View coordinator
-│   │       ├── command_input.dart    # Command Bar & quick action buttons
+│   │       ├── command_input.dart    # Command Bar & quick action buttons ([Tasks]/[Refs])
 │   │       ├── confirm_dialog.dart   # Universal Confirmation dialog
 │   │       ├── formatted_text.dart   # todo.txt syntax highlight renderer
 │   │       ├── inspector_drawer.dart # Inspector Drawer coordinator
 │   │       ├── login_dialog.dart     # Authentication modal
 │   │       ├── settings_modal.dart   # Unified Settings coordinator
-│   │       ├── sidebar.dart          # Tag & filter navigation sidebar
+│   │       ├── sidebar.dart          # Tag & filter navigation sidebar (Workspaces section)
 │   │       ├── status_bar.dart       # Status and sync indicator
 │   │       └── subtask_progress_bar.dart # Progress bar [2/4]
-│   ├── test/                         # widget_test, app_launch_test, command_parser_test, components_test
+│   ├── test/                         # widget_test, app_launch_test, command_parser_test, components_test, reference_model_test, reference_utils_test, reference_storage_test, reference_widget_test
 │   └── pubspec.yaml
 ├── lib/
 │   ├── auth.ts
-│   └── db.ts                         # Turso DB client with recurrence schema migrations
+│   └── db.ts                         # Turso DB client with references schema & batching
 ├── public/
 ├── types/
-│   └── todo.ts                       # Extended with RecurrenceRule & Task recurrence types
+│   └── todo.ts                       # Extended with Reference & SmartAction interfaces
 ├── utils/
 │   ├── dateUtils.ts
 │   ├── recurrenceEngine.ts           # Recurrence rule parser, due date math & spawning engine
+│   ├── referenceUtils.ts             # Smart action detection regex & copy formatter
 │   ├── templateEngine.ts
 │   └── todoParser.ts                 # Extended todo.txt rec: tag parser
 ├── ANDROID_APP_FEATURE_PLAN.md
 ├── HANDOFF.md
+├── reference-feature.md
 └── RECURRING_TASKS_FEATURE_PLAN.md
 ```

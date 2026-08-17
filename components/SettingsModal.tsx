@@ -396,7 +396,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                   {filteredTemplates.length === 0 && (
                     <div className={`text-center py-8 italic ${isLight ? 'text-gray-400' : 'text-gray-600'}`}>
-                      No templates match search. Click "+ New Template" to create one!
+                      No templates match search. Click &quot;+ New Template&quot; to create one!
                     </div>
                   )}
                 </div>
@@ -552,10 +552,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <div>
               <div className={`font-bold uppercase mb-1 border-b pb-0.5 ${isLight ? 'text-gray-600 border-gray-300' : 'text-gray-400 border-gray-800'}`}>
-                6. Terminal Commands
+                6. Reference System (Keep / Remember)
+              </div>
+              <p className="mb-2 opacity-90">
+                References store non-actionable information you need to <strong>KNOW or KEEP</strong> (phone numbers, addresses, Wi-Fi info, URLs, snippets) without checkboxes.
+              </p>
+              <ul className="list-disc list-inside space-y-1 opacity-90">
+                <li><code className={isLight ? 'text-cyan-700 font-bold' : 'text-cyan-400 font-bold'}>:refs</code> — Switch to Reference Workspace.</li>
+                <li><code className={isLight ? 'text-cyan-700 font-bold' : 'text-cyan-400 font-bold'}>:ref</code> — Open New Reference Editor dialog.</li>
+                <li><code className={isLight ? 'text-cyan-700 font-bold' : 'text-cyan-400 font-bold'}>:ref &lt;title&gt;</code> — Open editor with pre-filled title.</li>
+                <li><code className={isLight ? 'text-cyan-700 font-bold' : 'text-cyan-400 font-bold'}>:ref &lt;title&gt; | &lt;content&gt;</code> — Quick create reference.</li>
+              </ul>
+            </div>
+
+            <div>
+              <div className={`font-bold uppercase mb-1 border-b pb-0.5 ${isLight ? 'text-gray-600 border-gray-300' : 'text-gray-400 border-gray-800'}`}>
+                7. Terminal Commands
               </div>
               <div className={`p-2 border font-mono text-[11px] space-y-1.5 ${isLight ? 'bg-gray-100 border-gray-300' : 'bg-gray-900 border-gray-800'}`}>
                 <div><span className="font-bold text-cyan-400">:settings</span> — Open Settings & Preferences Modal</div>
+                <div><span className="font-bold text-cyan-400">:refs</span> — Open Reference Workspace</div>
+                <div><span className="font-bold text-cyan-400">:ref &lt;title&gt; | &lt;content&gt;</span> — Quick create reference</div>
                 <div><span className="font-bold text-cyan-400">:template</span> — Open Task Templates Gallery</div>
                 <div><span className="font-bold text-cyan-400">:use &lt;name&gt;</span> — Instantiate template by name</div>
                 <div><span className="font-bold text-cyan-400">:skip</span> — Skip next occurrence of selected task</div>

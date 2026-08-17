@@ -247,7 +247,7 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
 
               {filteredTemplates.length === 0 && (
                 <div className={`text-center py-8 italic ${isLight ? 'text-gray-400' : 'text-gray-600'}`}>
-                  No templates match search. Click "+ New Template" to create one!
+                  No templates match search. Click &quot;+ New Template&quot; to create one!
                 </div>
               )}
             </div>

@@ -4,11 +4,13 @@ import '../models/task.dart';
 import '../models/subtask.dart';
 import '../models/comment.dart';
 import '../models/template.dart';
+import '../models/reference.dart';
 import '../utils/todo_parser.dart';
 
 class StorageService {
   static const String _tasksKey = 'todo_next_cached_tasks';
   static const String _templatesKey = 'todo_next_cached_templates';
+  static const String _referencesKey = 'todo_next_cached_references';
 
   static final List<Map<String, dynamic>> _initialTasksData = [
     {
@@ -184,9 +186,66 @@ class StorageService {
     }
   }
 
+  static final List<Map<String, dynamic>> _starterReferencesData = [
+    {
+      'id': 'ref-1',
+      'title': 'John (Backend Lead)',
+      'content': '+91 98765 43210\njohn.doe@example.com',
+      'tags': ['@people', '+work'],
+      'createdAt': '2026-08-06T10:00:00Z',
+      'updatedAt': '2026-08-06T10:00:00Z',
+      'archived': false,
+    },
+    {
+      'id': 'ref-2',
+      'title': 'Home Wi-Fi Network',
+      'content': 'SSID: Home_5G_Fiber\nPassword: CoffeeVimCode2026!',
+      'tags': ['@home', '+infra'],
+      'createdAt': '2026-08-06T10:00:00Z',
+      'updatedAt': '2026-08-06T10:00:00Z',
+      'archived': false,
+    },
+    {
+      'id': 'ref-3',
+      'title': 'Dr. Sharma Clinic',
+      'content': '14 Carter Road, Bandra West, Mumbai 400050\nTel: +91 22 2640 1234',
+      'tags': ['@places', '@health'],
+      'createdAt': '2026-08-06T10:00:00Z',
+      'updatedAt': '2026-08-06T10:00:00Z',
+      'archived': false,
+    }
+  ];
+
   Future<void> saveTemplates(List<Template> templates) async {
     final prefs = await SharedPreferences.getInstance();
     final jsonStr = jsonEncode(templates.map((t) => t.toJson()).toList());
     await prefs.setString(_templatesKey, jsonStr);
   }
+
+  Future<List<Reference>> loadReferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonStr = prefs.getString(_referencesKey);
+
+    if (jsonStr == null || jsonStr.isEmpty) {
+      final refs = _starterReferencesData
+          .map((data) => Reference.fromJson(Map<String, dynamic>.from(data)))
+          .toList();
+      await saveReferences(refs);
+      return refs;
+    }
+
+    try {
+      final List decoded = jsonDecode(jsonStr);
+      return decoded.map((item) => Reference.fromJson(Map<String, dynamic>.from(item))).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<void> saveReferences(List<Reference> references) async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonStr = jsonEncode(references.map((r) => r.toJson()).toList());
+    await prefs.setString(_referencesKey, jsonStr);
+  }
 }
+

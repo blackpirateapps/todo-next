@@ -1,11 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Task, Template, AppTheme, AVAILABLE_THEMES, isLightTheme } from '@/types/todo';
+import { Task, Template, Reference, AppTheme, AVAILABLE_THEMES, isLightTheme } from '@/types/todo';
 import { Sidebar } from '@/components/Sidebar';
 import { TaskList } from '@/components/TaskList';
 import { CalendarView } from '@/components/CalendarView';
 import { TaskDetails } from '@/components/TaskDetails';
+import { ReferenceList } from '@/components/ReferenceList';
+import { ReferenceDetails } from '@/components/ReferenceDetails';
+import { ReferenceModal } from '@/components/ReferenceModal';
 import { CommandInput } from '@/components/CommandInput';
 import { StatusBar, SyncStatus } from '@/components/StatusBar';
 import { LoginScreen } from '@/components/LoginScreen';
@@ -14,24 +17,38 @@ import { SettingsModal } from '@/components/SettingsModal';
 import { updateRawDates, parseRawToStructured, buildRawFromStructured } from '@/utils/todoParser';
 import { instantiateTaskFromTemplate } from '@/utils/templateEngine';
 import { spawnNextRecurrenceInstance, skipRecurrenceOccurrence } from '@/utils/recurrenceEngine';
+import { extractTagsFromText } from '@/utils/referenceUtils';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, getIdToken, User } from 'firebase/auth';
 
 interface PendingMutation {
-  type: 'CREATE' | 'UPDATE' | 'DELETE' | 'CREATE_TEMPLATE' | 'UPDATE_TEMPLATE' | 'DELETE_TEMPLATE';
+  type:
+    | 'CREATE'
+    | 'UPDATE'
+    | 'DELETE'
+    | 'CREATE_TEMPLATE'
+    | 'UPDATE_TEMPLATE'
+    | 'DELETE_TEMPLATE'
+    | 'CREATE_REFERENCE'
+    | 'UPDATE_REFERENCE'
+    | 'DELETE_REFERENCE'
+    | 'ARCHIVE_REFERENCE'
+    | 'RESTORE_REFERENCE';
   id: string;
-  data?: any;
+  data?: unknown;
 }
 
 export default function UtilitarianTodoPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [references, setReferences] = useState<Reference[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  const [activeView, setActiveView] = useState<'list' | 'calendar'>('list');
+  const [activeView, setActiveView] = useState<'list' | 'calendar' | 'references'>('list');
   const [commandQuery, setCommandQuery] = useState('');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedReference, setSelectedReference] = useState<Reference | null>(null);
   const [activeFilter, setActiveFilter] = useState('');
   const [theme, setTheme] = useState<AppTheme>('dark');
   const isLightMode = isLightTheme(theme);
@@ -42,11 +59,17 @@ export default function UtilitarianTodoPage() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<'theme' | 'templates' | 'syntax'>('theme');
 
+  // Reference Modal State
+  const [isReferenceModalOpen, setIsReferenceModalOpen] = useState(false);
+  const [referenceToEdit, setReferenceToEdit] = useState<Reference | null>(null);
+  const [initialRefTitle, setInitialRefTitle] = useState('');
+  const [initialRefContent, setInitialRefContent] = useState('');
+
   // Sync & Offline State
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('synced');
   const [pendingQueue, setPendingQueue] = useState<PendingMutation[]>([]);
 
-  // Load theme, pending queue & cached templates from localStorage on client
+  // Load theme, pending queue & cached data from localStorage on mount
   useEffect(() => {
     try {
       const savedTheme = localStorage.getItem('todo_next_theme') as AppTheme | null;
@@ -69,6 +92,15 @@ export default function UtilitarianTodoPage() {
       if (cachedTmpls) {
         const parsed = JSON.parse(cachedTmpls);
         if (Array.isArray(parsed)) setTemplates(parsed);
+      }
+
+      const cachedRefs = localStorage.getItem('todo_next_cached_references');
+      if (cachedRefs) {
+        const parsed = JSON.parse(cachedRefs);
+        if (Array.isArray(parsed)) {
+          setReferences(parsed);
+          if (parsed.length > 0) setSelectedReference(parsed[0]);
+        }
       }
     } catch {}
   }, []);
@@ -158,8 +190,40 @@ export default function UtilitarianTodoPage() {
             headers
           });
           if (!res.ok) remaining.push(item);
+        } else if (item.type === 'CREATE_REFERENCE') {
+          const res = await fetch('/api/references', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(item.data),
+          });
+          if (!res.ok) remaining.push(item);
+        } else if (item.type === 'UPDATE_REFERENCE') {
+          const res = await fetch(`/api/references/${item.id}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify(item.data),
+          });
+          if (!res.ok) remaining.push(item);
+        } else if (item.type === 'DELETE_REFERENCE') {
+          const res = await fetch(`/api/references/${item.id}`, {
+            method: 'DELETE',
+            headers
+          });
+          if (!res.ok) remaining.push(item);
+        } else if (item.type === 'ARCHIVE_REFERENCE') {
+          const res = await fetch(`/api/references/${item.id}/archive`, {
+            method: 'POST',
+            headers
+          });
+          if (!res.ok) remaining.push(item);
+        } else if (item.type === 'RESTORE_REFERENCE') {
+          const res = await fetch(`/api/references/${item.id}/restore`, {
+            method: 'POST',
+            headers
+          });
+          if (!res.ok) remaining.push(item);
         }
-      } catch (err) {
+      } catch {
         remaining.push(item);
       }
     }
@@ -195,14 +259,15 @@ export default function UtilitarianTodoPage() {
     };
   }, [pendingQueue.length, flushSyncQueue]);
 
-  // Fetch Tasks & Templates for authenticated user concurrently
-  const fetchTasksAndTemplates = useCallback(async () => {
+  // Fetch Tasks, Templates & References concurrently
+  const fetchUserData = useCallback(async () => {
     try {
       const headers = await getAuthHeaders();
 
-      const [tasksRes, templatesRes] = await Promise.all([
+      const [tasksRes, templatesRes, referencesRes] = await Promise.all([
         fetch('/api/tasks', { headers }),
-        fetch('/api/templates', { headers })
+        fetch('/api/templates', { headers }),
+        fetch('/api/references?archived=all', { headers })
       ]);
 
       if (tasksRes.ok) {
@@ -223,8 +288,19 @@ export default function UtilitarianTodoPage() {
           localStorage.setItem('todo_next_cached_templates', JSON.stringify(templatesData));
         }
       }
+
+      if (referencesRes.ok) {
+        const referencesData = await referencesRes.json();
+        if (Array.isArray(referencesData)) {
+          setReferences(referencesData);
+          localStorage.setItem('todo_next_cached_references', JSON.stringify(referencesData));
+          if (referencesData.length > 0) {
+            setSelectedReference(prev => prev || referencesData[0]);
+          }
+        }
+      }
     } catch {
-      // Offline fallback
+      // Offline fallback from localStorage
       const cachedTasks = localStorage.getItem('todo_next_cached_tasks');
       if (cachedTasks) {
         const parsed = JSON.parse(cachedTasks);
@@ -235,6 +311,12 @@ export default function UtilitarianTodoPage() {
       if (cachedTmpls) {
         const parsed = JSON.parse(cachedTmpls);
         setTemplates(parsed);
+      }
+      const cachedRefs = localStorage.getItem('todo_next_cached_references');
+      if (cachedRefs) {
+        const parsed = JSON.parse(cachedRefs);
+        setReferences(parsed);
+        if (parsed.length > 0) setSelectedReference(prev => prev || parsed[0]);
       }
       setSyncStatus('offline');
     } finally {
@@ -258,6 +340,14 @@ export default function UtilitarianTodoPage() {
               setLoading(false);
             }
           }
+          const cachedRefs = localStorage.getItem('todo_next_cached_references');
+          if (cachedRefs) {
+            const parsed = JSON.parse(cachedRefs);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setReferences(parsed);
+              setSelectedReference(prev => prev || parsed[0]);
+            }
+          }
         } catch {}
 
         // Non-blocking background session sync
@@ -270,24 +360,29 @@ export default function UtilitarianTodoPage() {
         });
 
         // Parallel background data sync
-        fetchTasksAndTemplates();
+        fetchUserData();
       } else {
         setTasks([]);
         setTemplates([]);
+        setReferences([]);
         setSelectedTask(null);
+        setSelectedReference(null);
         setLoading(false);
       }
     });
 
     return () => unsubscribe();
-  }, [fetchTasksAndTemplates]);
+  }, [fetchUserData]);
 
   const handleLogout = async () => {
     await signOut(auth);
     await fetch('/api/auth', { method: 'DELETE' });
     setCurrentUser(null);
     setTasks([]);
+    setTemplates([]);
+    setReferences([]);
     setSelectedTask(null);
+    setSelectedReference(null);
   };
 
   const filteredTasks = useMemo(() => {
@@ -307,6 +402,7 @@ export default function UtilitarianTodoPage() {
     setSyncStatus(navigator.onLine ? 'unsaved' : 'offline');
   };
 
+  // --- TASK CRUD HANDLERS ---
   const handleToggleTask = async (id: string) => {
     const taskToUpdate = tasks.find(t => t.id === id);
     if (!taskToUpdate) return;
@@ -322,15 +418,18 @@ export default function UtilitarianTodoPage() {
       if (taskToUpdate.priority) newRaw = `(${taskToUpdate.priority}) ${newRaw}`;
     }
 
-    const updates = { completed: isNowCompleted, status: (isNowCompleted ? 'completed' : 'open') as 'open' | 'completed', raw: newRaw, completionDate: isNowCompleted ? today : undefined };
+    const updates = {
+      completed: isNowCompleted,
+      status: (isNowCompleted ? 'completed' : 'open') as 'open' | 'completed',
+      raw: newRaw,
+      completionDate: isNowCompleted ? today : undefined
+    };
 
-    // Check if task is recurring and marking complete -> spawn next occurrence instance!
     let nextTaskInstance: Task | null = null;
     if (isNowCompleted && taskToUpdate.recurrence) {
       nextTaskInstance = spawnNextRecurrenceInstance(taskToUpdate, today);
     }
 
-    // Optimistic UI update
     setTasks(prev => {
       let updated = prev.map(t => t.id === id ? { ...t, ...updates } : t);
       if (nextTaskInstance) {
@@ -344,7 +443,6 @@ export default function UtilitarianTodoPage() {
       setSelectedTask(prev => prev ? { ...prev, ...updates } : null);
     }
 
-    // Backend update or queue
     setSyncStatus('syncing');
     try {
       const headers = await getAuthHeaders();
@@ -414,7 +512,6 @@ export default function UtilitarianTodoPage() {
   };
 
   const handleUpdateTask = async (id: string, updates: Partial<Task>) => {
-    // Optimistic UI update
     setTasks(prev => {
       const updated = prev.map(t => t.id === id ? { ...t, ...updates } : t);
       localStorage.setItem('todo_next_cached_tasks', JSON.stringify(updated));
@@ -424,7 +521,6 @@ export default function UtilitarianTodoPage() {
       setSelectedTask(prev => prev ? { ...prev, ...updates } : null);
     }
 
-    // Backend update or queue
     setSyncStatus('syncing');
     try {
       const headers = await getAuthHeaders();
@@ -457,7 +553,6 @@ export default function UtilitarianTodoPage() {
       creationDate: parsed.creationDate,
     };
 
-    // Optimistic UI update
     setTasks(prev => {
       const updated = prev.map(t => t.id === taskId ? { ...t, ...updates } : t);
       localStorage.setItem('todo_next_cached_tasks', JSON.stringify(updated));
@@ -467,7 +562,6 @@ export default function UtilitarianTodoPage() {
       setSelectedTask(prev => prev ? { ...prev, ...updates } : null);
     }
 
-    // Backend update or queue
     setSyncStatus('syncing');
     try {
       const headers = await getAuthHeaders();
@@ -522,15 +616,14 @@ export default function UtilitarianTodoPage() {
 
     const { newTask } = instantiateTaskFromTemplate(tmpl);
 
-    // Optimistic UI update
     setTasks(prev => {
       const updated = [newTask, ...prev];
       localStorage.setItem('todo_next_cached_tasks', JSON.stringify(updated));
       return updated;
     });
     setSelectedTask(newTask);
+    setActiveView('list');
 
-    // Backend instantiation call
     setSyncStatus('syncing');
     try {
       const headers = await getAuthHeaders();
@@ -641,6 +734,123 @@ export default function UtilitarianTodoPage() {
     setIsTemplateModalOpen(true);
   };
 
+  // --- REFERENCE CRUD HANDLERS ---
+  const handleCreateReference = async (refData: { title: string; content: string; tags: string[] }) => {
+    const newRef: Reference = {
+      id: `ref-${Date.now()}`,
+      title: refData.title,
+      content: refData.content,
+      tags: refData.tags,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      archived: false
+    };
+
+    setReferences(prev => {
+      const updated = [newRef, ...prev];
+      localStorage.setItem('todo_next_cached_references', JSON.stringify(updated));
+      return updated;
+    });
+    setSelectedReference(newRef);
+    setActiveView('references');
+
+    setSyncStatus('syncing');
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch('/api/references', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(newRef),
+      });
+      if (res.ok && pendingQueue.length === 0) {
+        setSyncStatus('synced');
+      } else {
+        queueMutation({ type: 'CREATE_REFERENCE', id: newRef.id, data: newRef });
+      }
+    } catch {
+      queueMutation({ type: 'CREATE_REFERENCE', id: newRef.id, data: newRef });
+    }
+  };
+
+  const handleUpdateReference = async (id: string, updates: Partial<Reference>) => {
+    const now = new Date().toISOString();
+    const fullUpdates = { ...updates, updatedAt: now };
+
+    setReferences(prev => {
+      const updated = prev.map(r => r.id === id ? { ...r, ...fullUpdates } : r);
+      localStorage.setItem('todo_next_cached_references', JSON.stringify(updated));
+      return updated;
+    });
+
+    if (selectedReference?.id === id) {
+      setSelectedReference(prev => prev ? { ...prev, ...fullUpdates } : null);
+    }
+
+    setSyncStatus('syncing');
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/references/${id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(fullUpdates),
+      });
+      if (res.ok && pendingQueue.length === 0) {
+        setSyncStatus('synced');
+      } else {
+        queueMutation({ type: 'UPDATE_REFERENCE', id, data: fullUpdates });
+      }
+    } catch {
+      queueMutation({ type: 'UPDATE_REFERENCE', id, data: fullUpdates });
+    }
+  };
+
+  const handleArchiveReference = async (id: string, archive: boolean) => {
+    await handleUpdateReference(id, { archived: archive });
+  };
+
+  const handleDeleteReference = async (id: string) => {
+    setReferences(prev => {
+      const updated = prev.filter(r => r.id !== id);
+      localStorage.setItem('todo_next_cached_references', JSON.stringify(updated));
+      return updated;
+    });
+
+    if (selectedReference?.id === id) {
+      setSelectedReference(null);
+    }
+
+    setSyncStatus('syncing');
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/references/${id}`, {
+        method: 'DELETE',
+        headers
+      });
+      if (res.ok && pendingQueue.length === 0) {
+        setSyncStatus('synced');
+      } else {
+        queueMutation({ type: 'DELETE_REFERENCE', id });
+      }
+    } catch {
+      queueMutation({ type: 'DELETE_REFERENCE', id });
+    }
+  };
+
+  const openNewReferenceModal = (title = '', content = '') => {
+    setReferenceToEdit(null);
+    setInitialRefTitle(title);
+    setInitialRefContent(content);
+    setIsReferenceModalOpen(true);
+  };
+
+  const openEditReferenceModal = (ref: Reference) => {
+    setReferenceToEdit(ref);
+    setInitialRefTitle(ref.title);
+    setInitialRefContent(ref.content);
+    setIsReferenceModalOpen(true);
+  };
+
+  // --- TERMINAL COMMAND BAR HANDLER ---
   const handleCommandSubmit = async (val: string) => {
     const trimmed = val.trim();
 
@@ -670,9 +880,46 @@ export default function UtilitarianTodoPage() {
       return;
     }
 
+    // Command: :refs -> Navigate to Reference Workspace
+    if (trimmed === ':refs' || trimmed === ':references') {
+      setActiveView('references');
+      setCommandQuery('');
+      return;
+    }
+
+    // Command: :ref -> Open New Reference Modal
+    if (trimmed === ':ref') {
+      openNewReferenceModal();
+      setCommandQuery('');
+      return;
+    }
+
+    // Command: :ref <title> or :ref <title> | <content>
+    if (trimmed.startsWith(':ref ')) {
+      const refArgs = trimmed.replace(':ref ', '').trim();
+      if (refArgs.includes('|')) {
+        const [rawTitle, ...rawContentParts] = refArgs.split('|');
+        const title = rawTitle.trim();
+        const content = rawContentParts.join('|').trim();
+        const autoTags = extractTagsFromText(content + ' ' + title);
+        await handleCreateReference({
+          title: title || 'New Reference',
+          content,
+          tags: autoTags
+        });
+        setCommandQuery('');
+        return;
+      } else {
+        openNewReferenceModal(refArgs);
+        setCommandQuery('');
+        return;
+      }
+    }
+
     // Command: :recurring -> Filter by rec:
     if (trimmed === ':recurring') {
       setActiveFilter('rec:');
+      setActiveView('list');
       setCommandQuery('');
       return;
     }
@@ -725,14 +972,14 @@ export default function UtilitarianTodoPage() {
       return;
     }
 
-    // Command 1: :template -> Open Template Manager
+    // Command: :template -> Open Template Manager
     if (trimmed === ':template') {
       setIsTemplateModalOpen(true);
       setCommandQuery('');
       return;
     }
 
-    // Command 2: :use <template_name> -> Instantiate template by name
+    // Command: :use <template_name> -> Instantiate template by name
     if (trimmed.startsWith(':use ')) {
       const tmplQuery = trimmed.replace(':use ', '').trim();
       const tmpl = templates.find(t => t.name.toLowerCase().includes(tmplQuery.toLowerCase()) || t.id === tmplQuery);
@@ -743,7 +990,7 @@ export default function UtilitarianTodoPage() {
       return;
     }
 
-    // Command 3: :template save <name> -> Convert current selected task or raw input into template
+    // Command: :template save <name> -> Convert current selected task into template
     if (trimmed.startsWith(':template save ')) {
       const tmplName = trimmed.replace(':template save ', '').trim();
       const newTmpl: Template = {
@@ -768,7 +1015,7 @@ export default function UtilitarianTodoPage() {
       return;
     }
 
-    // Command 4: :add ... -> Standard Task Insertion
+    // Command: :add ... -> Standard Task Insertion
     if (trimmed.startsWith(':add ')) {
       const newTaskRaw = trimmed.replace(':add ', '');
       const parsed = parseRawToStructured(newTaskRaw);
@@ -797,6 +1044,7 @@ export default function UtilitarianTodoPage() {
         return updated;
       });
       setSelectedTask(newTask);
+      setActiveView('list');
       setCommandQuery('');
 
       setSyncStatus('syncing');
@@ -837,11 +1085,13 @@ export default function UtilitarianTodoPage() {
   if (!currentUser) {
     return (
       <LoginScreen
-        onLoginSuccess={fetchTasksAndTemplates}
+        onLoginSuccess={fetchUserData}
         isLight={isLightMode}
       />
     );
   }
+
+  const isReferenceView = activeView === 'references';
 
   return (
     <div
@@ -868,14 +1118,18 @@ export default function UtilitarianTodoPage() {
       <div className="flex flex-1 overflow-hidden relative">
         <Sidebar
           tasks={tasks}
+          references={references}
           onFilterClick={setActiveFilter}
           activeFilter={activeFilter}
           isLight={isLightMode}
+          activeView={activeView}
+          onChangeView={setActiveView}
           isOpenMobile={isMobileSidebarOpen}
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
         />
 
-        {activeView === 'list' ? (
+        {/* Middle Workspace Area */}
+        {activeView === 'list' && (
           <TaskList
             tasks={filteredTasks}
             selectedTaskId={selectedTask?.id}
@@ -884,7 +1138,9 @@ export default function UtilitarianTodoPage() {
             onDeleteTask={handleDeleteTask}
             isLight={isLightMode}
           />
-        ) : (
+        )}
+
+        {activeView === 'calendar' && (
           <CalendarView
             tasks={filteredTasks}
             selectedTaskId={selectedTask?.id}
@@ -896,21 +1152,52 @@ export default function UtilitarianTodoPage() {
           />
         )}
 
-        <div className={`fixed inset-0 z-30 transition-transform duration-200 ease-in-out transform ${selectedTask ? 'translate-x-0' : 'translate-x-full'} lg:relative lg:translate-x-0 lg:z-10`}>
-          <TaskDetails
-            task={selectedTask}
-            onClose={() => setSelectedTask(null)}
-            onUpdateTask={handleUpdateTask}
-            onSaveAsTemplate={handleSaveTaskAsTemplate}
-            onSkipRecurrence={handleSkipRecurrence}
+        {activeView === 'references' && (
+          <ReferenceList
+            references={references}
+            selectedReferenceId={selectedReference?.id}
+            onSelectReference={setSelectedReference}
+            onDeleteReference={handleDeleteReference}
+            onOpenNewReferenceModal={() => openNewReferenceModal()}
             isLight={isLightMode}
+            activeFilter={activeFilter}
+            searchQuery={commandQuery}
           />
-        </div>
+        )}
+
+        {/* Right Inspector Drawer (Tasks vs References) */}
+        {!isReferenceView ? (
+          <div className={`fixed inset-0 z-30 transition-transform duration-200 ease-in-out transform ${
+            selectedTask ? 'translate-x-0' : 'translate-x-full'
+          } lg:relative lg:translate-x-0 lg:z-10`}>
+            <TaskDetails
+              task={selectedTask}
+              onClose={() => setSelectedTask(null)}
+              onUpdateTask={handleUpdateTask}
+              onSaveAsTemplate={handleSaveTaskAsTemplate}
+              onSkipRecurrence={handleSkipRecurrence}
+              isLight={isLightMode}
+            />
+          </div>
+        ) : (
+          <div className={`fixed inset-0 z-30 transition-transform duration-200 ease-in-out transform ${
+            selectedReference ? 'translate-x-0' : 'translate-x-full'
+          } lg:relative lg:translate-x-0 lg:z-10`}>
+            <ReferenceDetails
+              reference={selectedReference}
+              onClose={() => setSelectedReference(null)}
+              onEdit={openEditReferenceModal}
+              onArchive={handleArchiveReference}
+              onDelete={handleDeleteReference}
+              isLight={isLightMode}
+            />
+          </div>
+        )}
       </div>
 
       <StatusBar
-        filteredCount={filteredTasks.length}
-        totalCount={tasks.length}
+        filteredCount={isReferenceView ? references.filter(r => !r.archived).length : filteredTasks.length}
+        totalCount={isReferenceView ? references.length : tasks.length}
         activeFilter={activeFilter}
         isLightMode={isLightMode}
         currentTheme={theme}
@@ -923,6 +1210,24 @@ export default function UtilitarianTodoPage() {
         onForceSync={flushSyncQueue}
       />
 
+      {/* Reference Modal */}
+      <ReferenceModal
+        isOpen={isReferenceModalOpen}
+        onClose={() => setIsReferenceModalOpen(false)}
+        referenceToEdit={referenceToEdit}
+        onSave={(data) => {
+          if (referenceToEdit) {
+            handleUpdateReference(referenceToEdit.id, data);
+          } else {
+            handleCreateReference(data);
+          }
+        }}
+        isLight={isLightMode}
+        initialTitle={initialRefTitle}
+        initialContent={initialRefContent}
+      />
+
+      {/* Template Modal */}
       <TemplateModal
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
@@ -934,6 +1239,7 @@ export default function UtilitarianTodoPage() {
         isLight={isLightMode}
       />
 
+      {/* Settings Modal */}
       <SettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}

@@ -209,6 +209,16 @@ class AppTheme {
     TextDecoration? decoration,
     FontStyle fontStyle = FontStyle.normal,
   }) {
+    if (!GoogleFonts.config.allowRuntimeFetching) {
+      return TextStyle(
+        fontFamily: 'monospace',
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        decoration: decoration,
+        fontStyle: fontStyle,
+      );
+    }
     try {
       return GoogleFonts.jetBrainsMono(
         fontSize: fontSize,

@@ -112,4 +112,29 @@ class Template {
       subtasks: subtasksRaw.whereType<Map>().map((e) => TemplateSubtask.fromJson(Map<String, dynamic>.from(e))).toList(),
     );
   }
+
+  Template copyWith({
+    String? id,
+    String? name,
+    String? rawTemplate,
+    String? description,
+    String? createdAt,
+    String? updatedAt,
+    List<String>? projects,
+    List<String>? contexts,
+    List<TemplateSubtask>? subtasks,
+  }) {
+    return Template(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      rawTemplate: rawTemplate ?? this.rawTemplate,
+      description: description ?? this.description,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      projects: projects ?? this.projects,
+      contexts: contexts ?? this.contexts,
+      subtasks: subtasks ?? this.subtasks,
+    );
+  }
 }
+

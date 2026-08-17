@@ -44,10 +44,26 @@ class AddTaskCommand extends ParsedCommand {
   const AddTaskCommand(this.rawTask);
 }
 
+class OpenReferencesCommand extends ParsedCommand {
+  const OpenReferencesCommand();
+}
+
+class OpenNewReferenceCommand extends ParsedCommand {
+  final String? initialTitle;
+  const OpenNewReferenceCommand([this.initialTitle]);
+}
+
+class QuickCreateReferenceCommand extends ParsedCommand {
+  final String title;
+  final String content;
+  const QuickCreateReferenceCommand({required this.title, required this.content});
+}
+
 class SetFilterCommand extends ParsedCommand {
   final String filterQuery;
   const SetFilterCommand(this.filterQuery);
 }
+
 
 class CommandParser {
   static ParsedCommand? parse(String input) {
@@ -99,10 +115,34 @@ class CommandParser {
       return SaveTemplateCommand(name.isNotEmpty ? name : null);
     }
 
+    if (trimmed == ':refs' || trimmed == ':references') {
+      return const OpenReferencesCommand();
+    }
+
+    if (trimmed == ':ref') {
+      return const OpenNewReferenceCommand();
+    }
+
+    if (trimmed.startsWith(':ref ')) {
+      final refBody = trimmed.substring(5).trim();
+      if (refBody.contains('|')) {
+        final parts = refBody.split('|');
+        final title = parts[0].trim();
+        final content = parts.sublist(1).join('|').trim();
+        return QuickCreateReferenceCommand(
+          title: title.isNotEmpty ? title : 'New Reference',
+          content: content,
+        );
+      } else {
+        return OpenNewReferenceCommand(refBody.isNotEmpty ? refBody : null);
+      }
+    }
+
     if (trimmed.startsWith(':add ')) {
       final newTaskRaw = trimmed.substring(5);
       return AddTaskCommand(newTaskRaw);
     }
+
 
     return SetFilterCommand(trimmed);
   }

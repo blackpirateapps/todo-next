@@ -63,6 +63,27 @@ export interface Template {
   subtasks: TemplateSubtask[];
 }
 
+export type ReferenceSmartActionType = 'phone' | 'email' | 'url' | 'address';
+
+export interface ReferenceSmartAction {
+  type: ReferenceSmartActionType;
+  value: string;
+  label: string;
+  actionUrl: string;
+}
+
+export interface Reference {
+  id: string;
+  userId?: string;
+  title: string;
+  content: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+  archived: boolean;
+}
+
+
 export type AppTheme = 'dark' | 'light' | 'mocha' | 'gruvbox-dark' | 'paper-ink';
 
 export interface ThemeDefinition {

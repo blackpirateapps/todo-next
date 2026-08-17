@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/task.dart';
 import '../models/template.dart';
+import '../models/reference.dart';
 
 class ApiService {
   static const String baseUrl = 'https://todo-next-five-mu.vercel.app/api';
@@ -233,4 +234,83 @@ class ApiService {
     } catch (_) {}
     return false;
   }
+
+  // --- REFERENCE API METHODS ---
+
+  static Future<List<Reference>?> fetchReferences({String archived = 'all'}) async {
+    try {
+      final uri = Uri.parse('$baseUrl/references?archived=$archived');
+      final res = await http.get(uri, headers: _getHeaders()).timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final List decoded = jsonDecode(res.body);
+        return decoded.map((item) => Reference.fromJson(Map<String, dynamic>.from(item))).toList();
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<Reference?> createReference(Reference reference) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/references'),
+        headers: _getHeaders(),
+        body: jsonEncode(reference.toJson()),
+      ).timeout(const Duration(seconds: 8));
+
+      if (res.statusCode == 201 || res.statusCode == 200) {
+        return Reference.fromJson(jsonDecode(res.body));
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<bool> updateReference(String id, Map<String, dynamic> updates) async {
+    try {
+      final res = await http.patch(
+        Uri.parse('$baseUrl/references/$id'),
+        headers: _getHeaders(),
+        body: jsonEncode(updates),
+      ).timeout(const Duration(seconds: 8));
+
+      return res.statusCode == 200;
+    } catch (_) {}
+    return false;
+  }
+
+  static Future<bool> deleteReference(String id) async {
+    try {
+      final res = await http.delete(
+        Uri.parse('$baseUrl/references/$id'),
+        headers: _getHeaders(),
+      ).timeout(const Duration(seconds: 8));
+
+      return res.statusCode == 200;
+    } catch (_) {}
+    return false;
+  }
+
+  static Future<bool> archiveReference(String id) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/references/$id/archive'),
+        headers: _getHeaders(),
+      ).timeout(const Duration(seconds: 8));
+
+      return res.statusCode == 200;
+    } catch (_) {}
+    return false;
+  }
+
+  static Future<bool> restoreReference(String id) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/references/$id/restore'),
+        headers: _getHeaders(),
+      ).timeout(const Duration(seconds: 8));
+
+      return res.statusCode == 200;
+    } catch (_) {}
+    return false;
+  }
 }
+

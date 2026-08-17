@@ -1,5 +1,5 @@
 import { createClient, InValue } from '@libsql/client';
-import { Task, Subtask, Comment, Template, TemplateSubtask } from '@/types/todo';
+import { Task, Subtask, Comment, Template, TemplateSubtask, Reference } from '@/types/todo';
 import { parseRawToStructured, buildRawFromStructured } from '@/utils/todoParser';
 import { instantiateTaskFromTemplate } from '@/utils/templateEngine';
 
@@ -100,6 +100,27 @@ const starterTemplatesData = [
     rawTemplate: '(C) Morning prep and inbox zero @personal',
     description: 'Daily morning organization routine.',
     subtasks: ['Review priority A tasks', 'Clear unread emails & messages', 'Set daily goal focus']
+  }
+];
+
+const starterReferencesData = [
+  {
+    id: 'ref-1',
+    title: 'John (Backend Lead)',
+    content: '+91 98765 43210\njohn.doe@example.com',
+    tags: ['@people', '+work']
+  },
+  {
+    id: 'ref-2',
+    title: 'Home Wi-Fi Network',
+    content: 'SSID: Home_5G_Fiber\nPassword: CoffeeVimCode2026!',
+    tags: ['@home', '+infra']
+  },
+  {
+    id: 'ref-3',
+    title: 'Dr. Sharma Clinic',
+    content: '14 Carter Road, Bandra West, Mumbai 400050\nTel: +91 22 2640 1234',
+    tags: ['@places', '@health']
   }
 ];
 
@@ -220,7 +241,37 @@ export async function initDb() {
       );
     `);
 
+    // Create Relational References Tables
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS "references" (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        archived INTEGER NOT NULL DEFAULT 0,
+        user_id TEXT DEFAULT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      );
+    `);
+
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS reference_tags (
+        id TEXT PRIMARY KEY,
+        reference_id TEXT NOT NULL,
+        tag TEXT NOT NULL,
+        FOREIGN KEY (reference_id) REFERENCES "references"(id) ON DELETE CASCADE
+      );
+    `);
+
+    // Indexes for fast reference queries
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_references_user_id ON "references"(user_id);');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_references_user_archived ON "references"(user_id, archived);');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_references_updated_at ON "references"(updated_at);');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_reference_tags_ref_id ON reference_tags(reference_id);');
+
     // --- AUTOMATIC TASKS SCHEMA MIGRATION ---
+
     const tableInfo = await db.execute("PRAGMA table_info(tasks)");
     const hasRawColumn = tableInfo.rows.some(row => row.name === 'raw');
 
@@ -416,12 +467,35 @@ export async function initDb() {
       }
     }
 
+    // Initial Seed for References if empty
+    const refCountRes = await db.execute('SELECT COUNT(*) as count FROM "references"');
+    const refCount = Number(refCountRes.rows[0]?.count ?? 0);
+
+    if (refCount === 0) {
+      const nowStr = new Date().toISOString();
+      for (const r of starterReferencesData) {
+        await db.execute({
+          sql: `INSERT INTO "references" (id, title, content, created_at, updated_at, archived, user_id)
+                VALUES (?, ?, ?, ?, ?, 0, NULL)`,
+          args: [r.id, r.title, r.content, nowStr, nowStr]
+        });
+
+        for (const tag of r.tags) {
+          await db.execute({
+            sql: 'INSERT INTO reference_tags (id, reference_id, tag) VALUES (?, ?, ?)',
+            args: [`reft-${r.id}-${tag}`, r.id, tag]
+          });
+        }
+      }
+    }
+
     isInitialized = true;
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const e = err as Error;
     console.error('[DB Init Failed]:', {
-      message: err?.message,
-      stack: err?.stack,
-      cause: err?.cause,
+      message: e?.message,
+      stack: e?.stack,
+      cause: (e as any)?.cause,
       url
     });
     throw err;
@@ -668,9 +742,8 @@ export async function updateTaskInDb(id: string, updates: Partial<Task>, userId?
   if (existingRes.rows.length === 0) return null;
 
   const existingRow = existingRes.rows[0];
-
-  let raw = updates.raw !== undefined ? updates.raw : undefined;
-  let parsed = raw ? parseRawToStructured(raw, updates.creationDate || String(existingRow.creation_date)) : null;
+  const raw = updates.raw !== undefined ? updates.raw : undefined;
+  const parsed = raw ? parseRawToStructured(raw, updates.creationDate || String(existingRow.creation_date)) : null;
 
   const newStatus = updates.completed !== undefined
     ? (updates.completed ? 'completed' : 'open')
@@ -1078,3 +1151,232 @@ export async function instantiateTaskFromTemplateId(
   const { newTask } = instantiateTaskFromTemplate(tmpl, varOverrides);
   return await insertTask(newTask, userId);
 }
+
+// --- REFERENCE CRUD OPERATIONS ---
+
+export interface GetReferencesOptions {
+  archived?: boolean | 'all';
+  search?: string;
+  tag?: string;
+  sort?: 'updatedAt' | 'createdAt' | 'title' | string;
+  order?: 'asc' | 'desc';
+}
+
+export async function getAllReferences(
+  userId?: string,
+  options?: GetReferencesOptions
+): Promise<Reference[]> {
+  await initDb();
+
+  const conditions: string[] = [];
+  const args: InValue[] = [];
+
+  if (userId) {
+    conditions.push('(user_id = ? OR user_id IS NULL)');
+    args.push(userId);
+  }
+
+  if (options?.archived !== 'all' && options?.archived !== undefined) {
+    conditions.push('archived = ?');
+    args.push(options.archived ? 1 : 0);
+  } else if (options?.archived === undefined) {
+    conditions.push('archived = 0');
+  }
+
+  if (options?.search && options.search.trim()) {
+    const q = `%${options.search.trim().toLowerCase()}%`;
+    conditions.push('(LOWER(title) LIKE ? OR LOWER(content) LIKE ?)');
+    args.push(q, q);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  let sortCol = 'updated_at';
+  if (options?.sort === 'createdAt' || options?.sort === 'created_at') sortCol = 'created_at';
+  else if (options?.sort === 'title') sortCol = 'title';
+
+  const orderDir = options?.order?.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
+  const sql = `SELECT * FROM "references" ${whereClause} ORDER BY ${sortCol} ${orderDir}`;
+
+  const [refsRes, tagsRes] = await db.batch([
+    { sql, args },
+    'SELECT * FROM reference_tags'
+  ]);
+
+  const tagsMap = new Map<string, string[]>();
+  tagsRes.rows.forEach(r => {
+    const refId = String(r.reference_id);
+    const list = tagsMap.get(refId) || [];
+    tagsMap.set(refId, [...list, String(r.tag)]);
+  });
+
+  let results: Reference[] = refsRes.rows.map(r => {
+    const id = String(r.id);
+    const tags = tagsMap.get(id) || [];
+    return {
+      id,
+      userId: r.user_id ? String(r.user_id) : undefined,
+      title: String(r.title),
+      content: String(r.content || ''),
+      tags,
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at),
+      archived: Boolean(r.archived)
+    };
+  });
+
+  if (options?.tag && options.tag.trim()) {
+    const filterTag = options.tag.trim();
+    results = results.filter(ref => ref.tags.includes(filterTag));
+  }
+
+  return results;
+}
+
+export async function getReferenceById(id: string, userId?: string): Promise<Reference | null> {
+  await initDb();
+  let sql = 'SELECT * FROM "references" WHERE id = ?';
+  const args: InValue[] = [id];
+
+  if (userId) {
+    sql = 'SELECT * FROM "references" WHERE id = ? AND (user_id = ? OR user_id IS NULL)';
+    args.push(userId);
+  }
+
+  const [refRes, tagsRes] = await db.batch([
+    { sql, args },
+    { sql: 'SELECT tag FROM reference_tags WHERE reference_id = ?', args: [id] }
+  ]);
+
+  if (refRes.rows.length === 0) return null;
+  const row = refRes.rows[0];
+  const tags = tagsRes.rows.map(r => String(r.tag));
+
+  return {
+    id: String(row.id),
+    userId: row.user_id ? String(row.user_id) : undefined,
+    title: String(row.title),
+    content: String(row.content || ''),
+    tags,
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+    archived: Boolean(row.archived)
+  };
+}
+
+export async function insertReference(reference: Reference, userId?: string): Promise<Reference> {
+  await initDb();
+  const now = new Date().toISOString();
+  const id = reference.id || `ref-${Date.now()}`;
+  const title = reference.title || '';
+  const content = reference.content || '';
+  const createdAt = reference.createdAt || now;
+  const updatedAt = reference.updatedAt || now;
+  const archived = reference.archived ? 1 : 0;
+  const finalUserId = userId || reference.userId || null;
+
+  await db.execute({
+    sql: `INSERT INTO "references" (id, title, content, created_at, updated_at, archived, user_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    args: [id, title, content, createdAt, updatedAt, archived, finalUserId]
+  });
+
+  const tags = Array.from(new Set(reference.tags || []));
+  for (const tag of tags) {
+    await db.execute({
+      sql: 'INSERT INTO reference_tags (id, reference_id, tag) VALUES (?, ?, ?)',
+      args: [`reft-${id}-${tag}`, id, tag]
+    });
+  }
+
+  return {
+    id,
+    userId: finalUserId || undefined,
+    title,
+    content,
+    tags,
+    createdAt,
+    updatedAt,
+    archived: Boolean(archived)
+  };
+}
+
+export async function updateReferenceInDb(
+  id: string,
+  updates: Partial<Reference>,
+  userId?: string
+): Promise<Reference | null> {
+  await initDb();
+  const now = new Date().toISOString();
+
+  let sql = 'SELECT * FROM "references" WHERE id = ?';
+  const args: InValue[] = [id];
+
+  if (userId) {
+    sql = 'SELECT * FROM "references" WHERE id = ? AND (user_id = ? OR user_id IS NULL)';
+    args.push(userId);
+  }
+
+  const existingRes = await db.execute({ sql, args });
+  if (existingRes.rows.length === 0) return null;
+  const existing = existingRes.rows[0];
+
+  const title = updates.title !== undefined ? updates.title : String(existing.title);
+  const content = updates.content !== undefined ? updates.content : String(existing.content || '');
+  const archived = updates.archived !== undefined ? (updates.archived ? 1 : 0) : Number(existing.archived);
+  const updatedAt = updates.updatedAt || now;
+
+  await db.execute({
+    sql: `UPDATE "references" SET title = ?, content = ?, archived = ?, updated_at = ? WHERE id = ?`,
+    args: [title, content, archived, updatedAt, id]
+  });
+
+  let tags = updates.tags;
+  if (tags !== undefined) {
+    await db.execute({ sql: 'DELETE FROM reference_tags WHERE reference_id = ?', args: [id] });
+    for (const tag of tags) {
+      await db.execute({
+        sql: 'INSERT INTO reference_tags (id, reference_id, tag) VALUES (?, ?, ?)',
+        args: [`reft-${id}-${tag}`, id, tag]
+      });
+    }
+  } else {
+    const tagsRes = await db.execute({ sql: 'SELECT tag FROM reference_tags WHERE reference_id = ?', args: [id] });
+    tags = tagsRes.rows.map(r => String(r.tag));
+  }
+
+  return {
+    id,
+    userId: existing.user_id ? String(existing.user_id) : undefined,
+    title,
+    content,
+    tags: tags || [],
+    createdAt: String(existing.created_at),
+    updatedAt,
+    archived: Boolean(archived)
+  };
+}
+
+export async function archiveReferenceInDb(
+  id: string,
+  archive: boolean,
+  userId?: string
+): Promise<Reference | null> {
+  return updateReferenceInDb(id, { archived: archive }, userId);
+}
+
+export async function deleteReferenceFromDb(id: string, userId?: string): Promise<boolean> {
+  await initDb();
+  let sql = 'DELETE FROM "references" WHERE id = ?';
+  const args: InValue[] = [id];
+
+  if (userId) {
+    sql = 'DELETE FROM "references" WHERE id = ? AND (user_id = ? OR user_id IS NULL)';
+    args.push(userId);
+  }
+
+  await db.execute({ sql, args });
+  return true;
+}
+

@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../models/task.dart';
 import '../models/subtask.dart';
 import '../models/comment.dart';
 import '../models/template.dart';
+import '../models/reference.dart';
 import '../services/storage_service.dart';
 import '../services/api_service.dart';
 import '../utils/todo_parser.dart';
 import '../utils/template_engine.dart';
 import '../utils/recurrence_engine.dart';
+import '../utils/reference_utils.dart';
 import '../utils/command_parser.dart';
 import '../theme/app_theme.dart';
 import '../widgets/command_input.dart';
@@ -16,6 +17,9 @@ import '../widgets/sidebar.dart';
 import '../widgets/task_list.dart';
 import '../widgets/calendar_view.dart';
 import '../widgets/inspector_drawer.dart';
+import '../widgets/reference/reference_list.dart';
+import '../widgets/reference/reference_drawer.dart';
+import '../widgets/reference/reference_editor_dialog.dart';
 import '../widgets/settings_modal.dart';
 import '../widgets/confirm_dialog.dart';
 import '../widgets/login_dialog.dart';
@@ -46,12 +50,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Task> _tasks = [];
   List<Template> _templates = [];
+  List<Reference> _references = [];
   Task? _selectedTask;
+  Reference? _selectedReference;
   String _activeFilter = '';
-  String _activeView = 'list'; // 'list' | 'calendar'
+  String _activeView = 'list'; // 'list' | 'calendar' | 'references'
   String _syncStatus = 'synced'; // 'synced' | 'syncing' | 'offline'
   bool _isLoading = true;
-  bool _isSavingTemplate = false;
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -72,12 +77,18 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final localTasks = await _storageService.loadTasks();
       final localTemplates = await _storageService.loadTemplates();
+      final localReferences = await _storageService.loadReferences();
+
       if (mounted) {
         setState(() {
           _tasks = localTasks;
           _templates = localTemplates;
+          _references = localReferences;
           if (_tasks.isNotEmpty && _selectedTask == null) {
             _selectedTask = _tasks.first;
+          }
+          if (_references.isNotEmpty && _selectedReference == null) {
+            _selectedReference = _references.first;
           }
           _isLoading = false;
         });
@@ -103,27 +114,36 @@ class _HomeScreenState extends State<HomeScreen> {
       final dataFuture = Future.wait([
         ApiService.fetchTasks(),
         ApiService.fetchTemplates(),
+        ApiService.fetchReferences(),
       ]);
 
       await authFuture;
       final results = await dataFuture;
       final remoteTasks = results[0] as List<Task>?;
       final remoteTemplates = results[1] as List<Template>?;
+      final remoteReferences = results[2] as List<Reference>?;
 
       if (remoteTasks != null) {
         if (mounted) {
           setState(() {
             _tasks = remoteTasks;
             if (remoteTemplates != null) _templates = remoteTemplates;
+            if (remoteReferences != null) _references = remoteReferences;
+
             if (_tasks.isNotEmpty) {
               final stillExists = _tasks.any((t) => t.id == _selectedTask?.id);
               if (!stillExists) _selectedTask = _tasks.first;
+            }
+            if (_references.isNotEmpty) {
+              final refExists = _references.any((r) => r.id == _selectedReference?.id);
+              if (!refExists) _selectedReference = _references.first;
             }
             _syncStatus = 'synced';
           });
         }
         await _storageService.saveTasks(remoteTasks);
         if (remoteTemplates != null) await _storageService.saveTemplates(remoteTemplates);
+        if (remoteReferences != null) await _storageService.saveReferences(remoteReferences);
       } else {
         if (mounted) setState(() => _syncStatus = 'offline');
       }
@@ -138,63 +158,88 @@ class _HomeScreenState extends State<HomeScreen> {
       barrierDismissible: true,
       builder: (context) => LoginDialogWidget(
         isLight: widget.isLight,
-        onLoginSuccess: () {
-          _syncRemoteData();
-        },
+        onLoginSuccess: _syncRemoteData,
       ),
     );
   }
 
+  List<Task> _getFilteredTasks() {
+    List<Task> result = _tasks;
+    if (_activeFilter.isNotEmpty) {
+      result = result.where((t) => t.raw.contains(_activeFilter)).toList();
+    }
+    return result;
+  }
+
+  void _selectTaskAndOpenInspector(Task task, bool isTablet) {
+    setState(() {
+      _selectedTask = task;
+    });
+    if (!isTablet) {
+      _scaffoldKey.currentState?.openEndDrawer();
+    }
+  }
+
+  void _selectReferenceAndOpenInspector(Reference reference, bool isTablet) {
+    setState(() {
+      _selectedReference = reference;
+    });
+    if (!isTablet) {
+      _scaffoldKey.currentState?.openEndDrawer();
+    }
+  }
+
+  // --- TASK CRUD HANDLERS ---
   Future<void> _handleToggleTask(String id) async {
-    final idx = _tasks.indexWhere((t) => t.id == id);
-    if (idx == -1) return;
+    final index = _tasks.indexWhere((t) => t.id == id);
+    if (index == -1) return;
 
-    final taskToUpdate = _tasks[idx];
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final isNowCompleted = !taskToUpdate.completed;
+    final task = _tasks[index];
+    final isNowCompleted = !task.completed;
+    final today = DateTime.now().toIso8601String().split('T')[0];
 
-    String newRaw = taskToUpdate.raw;
+    String newRaw = task.raw;
     if (isNowCompleted) {
-      newRaw = 'x $today ${taskToUpdate.raw.replaceAll(RegExp(r'^\([A-Z]\)\s'), '')}';
+      newRaw = 'x $today ${task.raw.replaceAll(RegExp(r'^\([A-Z]\)\s'), '')}';
     } else {
-      newRaw = taskToUpdate.raw.replaceAll(RegExp(r'^x \d{4}-\d{2}-\d{2}\s'), '');
-      if (taskToUpdate.priority != null && taskToUpdate.priority!.isNotEmpty) {
-        newRaw = '(${taskToUpdate.priority}) $newRaw';
-      }
+      newRaw = task.raw.replaceAll(RegExp(r'^x\s+\d{4}-\d{2}-\d{2}\s+'), '');
+      if (task.priority != null) newRaw = '(${task.priority}) $newRaw';
     }
 
-    final updatedTask = taskToUpdate.copyWith(
+    final updated = task.copyWith(
       completed: isNowCompleted,
       status: isNowCompleted ? 'completed' : 'open',
       raw: newRaw,
       completionDate: isNowCompleted ? today : null,
     );
 
-    Task? nextTaskInstance;
-    if (isNowCompleted && taskToUpdate.recurrence != null && taskToUpdate.recurrence!.isNotEmpty) {
-      nextTaskInstance = spawnNextRecurrenceInstance(taskToUpdate, today);
+    Task? nextInstance;
+    if (isNowCompleted && task.recurrence != null) {
+      nextInstance = spawnNextRecurrenceInstance(task, today);
     }
 
-    // Optimistic UI update
     setState(() {
-      _tasks[idx] = updatedTask;
-      if (nextTaskInstance != null) {
-        _tasks.insert(0, nextTaskInstance);
+      _tasks[index] = updated;
+      if (nextInstance != null) {
+        _tasks.insert(0, nextInstance);
       }
       if (_selectedTask?.id == id) {
-        _selectedTask = updatedTask;
+        _selectedTask = updated;
       }
       _syncStatus = 'syncing';
     });
 
     await _storageService.saveTasks(_tasks);
 
-    // Web API sync in background
-    bool ok = false;
-    if (isNowCompleted && taskToUpdate.recurrence != null && taskToUpdate.recurrence!.isNotEmpty) {
-      ok = await ApiService.completeTask(id, today);
-    } else {
-      ok = await ApiService.updateTask(id, updatedTask.toJson());
+    final ok = await ApiService.updateTask(id, {
+      'completed': isNowCompleted,
+      'status': isNowCompleted ? 'completed' : 'open',
+      'raw': newRaw,
+      'completionDate': isNowCompleted ? today : null,
+    });
+
+    if (nextInstance != null) {
+      await ApiService.createTask(nextInstance);
     }
 
     if (mounted) {
@@ -205,16 +250,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _handleSkipRecurrence(String id) async {
-    final idx = _tasks.indexWhere((t) => t.id == id);
-    if (idx == -1) return;
+    final index = _tasks.indexWhere((t) => t.id == id);
+    if (index == -1) return;
 
-    final taskToSkip = _tasks[idx];
-    if (taskToSkip.recurrence == null || taskToSkip.recurrence!.isEmpty) return;
+    final task = _tasks[index];
+    if (task.recurrence == null) return;
 
-    final skipped = skipRecurrenceOccurrence(taskToSkip);
+    final skipped = skipRecurrenceOccurrence(task);
 
     setState(() {
-      _tasks[idx] = skipped;
+      _tasks[index] = skipped;
       if (_selectedTask?.id == id) {
         _selectedTask = skipped;
       }
@@ -223,7 +268,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     await _storageService.saveTasks(_tasks);
 
-    final ok = await ApiService.skipTask(id);
+    final ok = await ApiService.updateTask(id, {
+      'dueDate': skipped.dueDate,
+      'raw': skipped.raw,
+    });
     if (mounted) {
       setState(() {
         _syncStatus = ok ? 'synced' : 'offline';
@@ -232,34 +280,30 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _handleUpdateTask(String id, Map<String, dynamic> updates) async {
-    final idx = _tasks.indexWhere((t) => t.id == id);
-    if (idx == -1) return;
+    final index = _tasks.indexWhere((t) => t.id == id);
+    if (index == -1) return;
 
-    final current = _tasks[idx];
-    final updated = current.copyWith(
-      raw: updates['raw'] as String? ?? current.raw,
-      title: updates['title'] as String? ?? current.title,
-      priority: updates.containsKey('priority') ? updates['priority'] as String? : current.priority,
-      creationDate: updates['creationDate'] as String? ?? current.creationDate,
-      completionDate: updates.containsKey('completionDate') ? updates['completionDate'] as String? : current.completionDate,
-      dueDate: updates.containsKey('dueDate') ? updates['dueDate'] as String? : current.dueDate,
-      dueTime: updates.containsKey('dueTime') ? updates['dueTime'] as String? : current.dueTime,
-      recurrence: updates.containsKey('recurrence') ? updates['recurrence'] as String? : current.recurrence,
-      completed: updates['completed'] as bool? ?? current.completed,
-      status: updates['status'] as String? ?? current.status,
-      description: updates['description'] as String? ?? current.description,
-      projects: updates['projects'] != null ? List<String>.from(updates['projects']) : current.projects,
-      contexts: updates['contexts'] != null ? List<String>.from(updates['contexts']) : current.contexts,
+    final old = _tasks[index];
+    final updated = old.copyWith(
+      title: updates['title'] ?? old.title,
+      raw: updates['raw'] ?? old.raw,
+      description: updates['description'] ?? old.description,
+      priority: updates.containsKey('priority') ? updates['priority'] : old.priority,
+      dueDate: updates.containsKey('dueDate') ? updates['dueDate'] : old.dueDate,
+      dueTime: updates.containsKey('dueTime') ? updates['dueTime'] : old.dueTime,
+      recurrence: updates.containsKey('recurrence') ? updates['recurrence'] : old.recurrence,
+      projects: updates['projects'] != null ? List<String>.from(updates['projects']) : old.projects,
+      contexts: updates['contexts'] != null ? List<String>.from(updates['contexts']) : old.contexts,
       subtasks: updates['subtasks'] != null
-          ? (updates['subtasks'] as List).map((s) => Subtask.fromJson(Map<String, dynamic>.from(s))).toList()
-          : current.subtasks,
+          ? (updates['subtasks'] as List).map((s) => Subtask.fromJson(s)).toList()
+          : old.subtasks,
       comments: updates['comments'] != null
-          ? (updates['comments'] as List).map((c) => Comment.fromJson(Map<String, dynamic>.from(c))).toList()
-          : current.comments,
+          ? (updates['comments'] as List).map((c) => Comment.fromJson(c)).toList()
+          : old.comments,
     );
 
     setState(() {
-      _tasks[idx] = updated;
+      _tasks[index] = updated;
       if (_selectedTask?.id == id) {
         _selectedTask = updated;
       }
@@ -277,48 +321,34 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _handleMoveTask(String taskId, String targetDate, String? targetTime) async {
-    final idx = _tasks.indexWhere((t) => t.id == taskId);
-    if (idx == -1) return;
+    final index = _tasks.indexWhere((t) => t.id == taskId);
+    if (index == -1) return;
 
-    final taskToMove = _tasks[idx];
-    final newRaw = updateRawDates(taskToMove.raw, newDueDate: targetDate, newTime: targetTime);
-    final parsed = parseRawToStructured(newRaw, taskToMove.creationDate);
-
-    final updated = taskToMove.copyWith(
-      raw: newRaw,
-      dueDate: parsed.dueDate,
-      dueTime: parsed.dueTime,
+    final task = _tasks[index];
+    final newRaw = updateRawDates(
+      task.raw,
+      newCreationDate: task.creationDate,
+      newDueDate: targetDate,
+      newTime: targetTime,
     );
+    final parsed = parseRawToStructured(newRaw, task.creationDate);
 
-    setState(() {
-      _tasks[idx] = updated;
-      if (_selectedTask?.id == taskId) {
-        _selectedTask = updated;
-      }
-      _syncStatus = 'syncing';
-    });
-
-    await _storageService.saveTasks(_tasks);
-
-    final ok = await ApiService.updateTask(taskId, {
+    final updates = {
       'raw': newRaw,
       'dueDate': parsed.dueDate,
       'dueTime': parsed.dueTime,
-    });
+      'creationDate': parsed.creationDate,
+    };
 
-    if (mounted) {
-      setState(() {
-        _syncStatus = ok ? 'synced' : 'offline';
-      });
-    }
+    await _handleUpdateTask(taskId, updates);
   }
 
   void _handleDeleteTask(Task task) {
     showDialog(
       context: context,
       builder: (context) => ConfirmDialogWidget(
-        title: 'Delete Task',
-        message: 'Are you sure you want to delete "${task.title}"?',
+        title: 'DELETE TASK',
+        message: 'Are you sure you want to delete task "${task.title}"?',
         isLight: widget.isLight,
         onConfirm: () async {
           setState(() {
@@ -328,6 +358,7 @@ class _HomeScreenState extends State<HomeScreen> {
             }
             _syncStatus = 'syncing';
           });
+
           await _storageService.saveTasks(_tasks);
 
           final ok = await ApiService.deleteTask(task.id);
@@ -341,15 +372,19 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // --- TEMPLATE HANDLERS ---
   Future<void> _handleInstantiateTemplate(String templateId) async {
     final tmpl = _templates.firstWhere(
-      (t) => t.id == templateId || t.name.toLowerCase().contains(templateId.toLowerCase()),
+      (t) => t.id == templateId || t.name.toLowerCase() == templateId.toLowerCase(),
+      orElse: () => _templates.first,
     );
+
     final newTask = instantiateTaskFromTemplate(tmpl);
 
     setState(() {
       _tasks.insert(0, newTask);
       _selectedTask = newTask;
+      _activeView = 'list';
       _syncStatus = 'syncing';
     });
 
@@ -364,50 +399,74 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _handleSaveAsTemplate(Task task) async {
-    if (_isSavingTemplate) return;
-    _isSavingTemplate = true;
-
-    // Check if duplicate template was already created recently with same raw
-    final existingIdx = _templates.indexWhere((t) => t.rawTemplate == task.raw && t.name == 'Template: ${task.title}');
-    if (existingIdx != -1) {
-      _isSavingTemplate = false;
-      _openTemplatesModal();
-      return;
-    }
-
     final newTmpl = Template(
       id: 'tmpl-${DateTime.now().millisecondsSinceEpoch}',
-      name: 'Template: ${task.title}',
+      name: task.title.isNotEmpty ? task.title : 'Saved Task Template',
       rawTemplate: task.raw,
       description: task.description,
       createdAt: DateTime.now().toIso8601String(),
       updatedAt: DateTime.now().toIso8601String(),
-      projects: List.from(task.projects),
-      contexts: List.from(task.contexts),
-      subtasks: task.subtasks.asMap().entries.map((e) => TemplateSubtask(
-        id: 'tmpls-${DateTime.now().millisecondsSinceEpoch}-${e.key}',
-        title: e.value.raw,
-        position: e.key,
-      )).toList(),
+      projects: task.projects,
+      contexts: task.contexts,
+      subtasks: task.subtasks.asMap().entries.map((e) {
+        return TemplateSubtask(
+          id: 'tmpls-${DateTime.now().millisecondsSinceEpoch}-${e.key}',
+          title: e.value.raw.isNotEmpty ? e.value.raw : e.value.title,
+          position: e.key,
+        );
+      }).toList(),
     );
 
-    // Instant local save and instant modal opening (no waiting!)
+    await _handleCreateTemplate(newTmpl);
+    _openTemplatesModal();
+  }
+
+  Future<void> _handleCreateTemplate(Template template) async {
     setState(() {
-      _templates.insert(0, newTmpl);
+      _templates.insert(0, template);
       _syncStatus = 'syncing';
     });
 
     await _storageService.saveTemplates(_templates);
-    _openTemplatesModal();
 
-    // Async background API creation
-    ApiService.createTemplate(newTmpl).then((ok) {
-      if (mounted) {
-        setState(() => _syncStatus = ok ? 'synced' : 'offline');
-      }
-    }).whenComplete(() {
-      _isSavingTemplate = false;
+    final ok = await ApiService.createTemplate(template);
+    if (mounted) {
+      setState(() {
+        _syncStatus = ok ? 'synced' : 'offline';
+      });
+    }
+  }
+
+  Future<void> _handleUpdateTemplate(String id, Map<String, dynamic> updates) async {
+    final index = _templates.indexWhere((t) => t.id == id);
+    if (index == -1) return;
+
+    final old = _templates[index];
+    final updated = old.copyWith(
+      name: updates['name'] ?? old.name,
+      rawTemplate: updates['rawTemplate'] ?? old.rawTemplate,
+      description: updates['description'] ?? old.description,
+      updatedAt: DateTime.now().toIso8601String(),
+      projects: updates['projects'] != null ? List<String>.from(updates['projects']) : old.projects,
+      contexts: updates['contexts'] != null ? List<String>.from(updates['contexts']) : old.contexts,
+      subtasks: updates['subtasks'] != null
+          ? (updates['subtasks'] as List).map((s) => TemplateSubtask.fromJson(s)).toList()
+          : old.subtasks,
+    );
+
+    setState(() {
+      _templates[index] = updated;
+      _syncStatus = 'syncing';
     });
+
+    await _storageService.saveTemplates(_templates);
+
+    final ok = await ApiService.updateTemplate(id, updates);
+    if (mounted) {
+      setState(() {
+        _syncStatus = ok ? 'synced' : 'offline';
+      });
+    }
   }
 
   Future<void> _handleDeleteTemplate(String templateId) async {
@@ -415,6 +474,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _templates.removeWhere((t) => t.id == templateId);
       _syncStatus = 'syncing';
     });
+
     await _storageService.saveTemplates(_templates);
 
     final ok = await ApiService.deleteTemplate(templateId);
@@ -425,6 +485,132 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // --- REFERENCE HANDLERS ---
+  void _openNewReferenceDialog([String? initialTitle, String? initialContent]) {
+    showDialog(
+      context: context,
+      builder: (context) => ReferenceEditorDialog(
+        isLight: widget.isLight,
+        initialTitle: initialTitle,
+        initialContent: initialContent,
+        onSave: (title, content, tags) {
+          _handleCreateReference(title, content, tags);
+        },
+      ),
+    );
+  }
+
+  void _openEditReferenceDialog(Reference ref) {
+    showDialog(
+      context: context,
+      builder: (context) => ReferenceEditorDialog(
+        reference: ref,
+        isLight: widget.isLight,
+        onSave: (title, content, tags) {
+          _handleUpdateReference(ref.id, {
+            'title': title,
+            'content': content,
+            'tags': tags,
+          });
+        },
+      ),
+    );
+  }
+
+  Future<void> _handleCreateReference(String title, String content, List<String> tags) async {
+    final now = DateTime.now().toIso8601String();
+    final newRef = Reference(
+      id: 'ref-${DateTime.now().millisecondsSinceEpoch}',
+      title: title,
+      content: content,
+      tags: tags,
+      createdAt: now,
+      updatedAt: now,
+      archived: false,
+    );
+
+    setState(() {
+      _references.insert(0, newRef);
+      _selectedReference = newRef;
+      _activeView = 'references';
+      _syncStatus = 'syncing';
+    });
+
+    await _storageService.saveReferences(_references);
+
+    final created = await ApiService.createReference(newRef);
+    if (mounted) {
+      setState(() {
+        _syncStatus = created != null ? 'synced' : 'offline';
+      });
+    }
+  }
+
+  Future<void> _handleUpdateReference(String id, Map<String, dynamic> updates) async {
+    final index = _references.indexWhere((r) => r.id == id);
+    if (index == -1) return;
+
+    final old = _references[index];
+    final updated = old.copyWith(
+      title: updates['title'] ?? old.title,
+      content: updates['content'] ?? old.content,
+      tags: updates['tags'] != null ? List<String>.from(updates['tags']) : old.tags,
+      archived: updates.containsKey('archived') ? updates['archived'] as bool : old.archived,
+      updatedAt: DateTime.now().toIso8601String(),
+    );
+
+    setState(() {
+      _references[index] = updated;
+      if (_selectedReference?.id == id) {
+        _selectedReference = updated;
+      }
+      _syncStatus = 'syncing';
+    });
+
+    await _storageService.saveReferences(_references);
+
+    final ok = await ApiService.updateReference(id, updates);
+    if (mounted) {
+      setState(() {
+        _syncStatus = ok ? 'synced' : 'offline';
+      });
+    }
+  }
+
+  Future<void> _handleArchiveReference(String id, bool archive) async {
+    await _handleUpdateReference(id, {'archived': archive});
+  }
+
+  void _handleDeleteReference(Reference ref) {
+    showDialog(
+      context: context,
+      builder: (context) => ConfirmDialogWidget(
+        title: 'DELETE REFERENCE',
+        message: 'Are you sure you want to delete reference "${ref.title}"?',
+        isLight: widget.isLight,
+        onConfirm: () async {
+          setState(() {
+            _references.removeWhere((r) => r.id == ref.id);
+            if (_selectedReference?.id == ref.id) {
+              _selectedReference = _references.isNotEmpty ? _references.first : null;
+            }
+            _syncStatus = 'syncing';
+          });
+
+          await _storageService.saveReferences(_references);
+
+          final ok = await ApiService.deleteReference(ref.id);
+          if (mounted) {
+            setState(() {
+              _syncStatus = ok ? 'synced' : 'offline';
+            });
+          }
+        },
+      ),
+    );
+  }
+
+  // --- COMMAND BAR HANDLER ---
   Future<void> _handleCommandSubmit(String val) async {
     final cmd = CommandParser.parse(val);
     if (cmd == null) return;
@@ -476,6 +662,25 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
+    if (cmd is OpenReferencesCommand) {
+      setState(() => _activeView = 'references');
+      _commandController.clear();
+      return;
+    }
+
+    if (cmd is OpenNewReferenceCommand) {
+      _openNewReferenceDialog(cmd.initialTitle);
+      _commandController.clear();
+      return;
+    }
+
+    if (cmd is QuickCreateReferenceCommand) {
+      final autoTags = ReferenceUtils.extractTagsFromText('${cmd.title} ${cmd.content}');
+      await _handleCreateReference(cmd.title, cmd.content, autoTags);
+      _commandController.clear();
+      return;
+    }
+
     if (cmd is OpenTemplatesCommand) {
       _openTemplatesModal();
       _commandController.clear();
@@ -520,6 +725,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _tasks.insert(0, newTask);
         _selectedTask = newTask;
+        _activeView = 'list';
         _commandController.clear();
         _syncStatus = 'syncing';
       });
@@ -560,85 +766,31 @@ class _HomeScreenState extends State<HomeScreen> {
         isLight: widget.isLight,
         currentTheme: widget.currentTheme,
         onSelectTheme: widget.onSelectTheme,
-        initialTabIndex: initialTab,
+        onInstantiateTemplate: _handleInstantiateTemplate,
+        onCreateTemplate: _handleCreateTemplate,
+        onUpdateTemplate: _handleUpdateTemplate,
+        onDeleteTemplate: _handleDeleteTemplate,
+        onForceSync: _syncRemoteData,
         userEmail: ApiService.userEmail,
         syncStatus: _syncStatus,
-        onInstantiateTemplate: _handleInstantiateTemplate,
-        onForceSync: _syncRemoteData,
-        onLogin: () {
-          Navigator.of(context).pop();
-          _openLoginModal();
-        },
         onLogout: () async {
-          Navigator.of(context).pop();
           await ApiService.logout();
-          if (mounted) {
-            setState(() => _syncStatus = 'offline');
-          }
-        },
-        onCreateTemplate: (tmpl) async {
           setState(() {
-            _templates.insert(0, tmpl);
-            _syncStatus = 'syncing';
+            _tasks = [];
+            _templates = [];
+            _references = [];
+            _selectedTask = null;
+            _selectedReference = null;
           });
-          await _storageService.saveTemplates(_templates);
-          final ok = await ApiService.createTemplate(tmpl);
-          if (mounted) setState(() => _syncStatus = ok ? 'synced' : 'offline');
         },
-        onUpdateTemplate: (id, updates) async {
-          final idx = _templates.indexWhere((t) => t.id == id);
-          if (idx != -1) {
-            final cur = _templates[idx];
-            final updated = Template(
-              id: cur.id,
-              name: updates['name'] ?? cur.name,
-              rawTemplate: updates['rawTemplate'] ?? cur.rawTemplate,
-              description: updates['description'] ?? cur.description,
-              createdAt: cur.createdAt,
-              updatedAt: updates['updatedAt'] ?? DateTime.now().toIso8601String(),
-              projects: cur.projects,
-              contexts: cur.contexts,
-              subtasks: cur.subtasks,
-            );
-            setState(() {
-              _templates[idx] = updated;
-              _syncStatus = 'syncing';
-            });
-            await _storageService.saveTemplates(_templates);
-            final ok = await ApiService.updateTemplate(id, updates);
-            if (mounted) setState(() => _syncStatus = ok ? 'synced' : 'offline');
-          }
-        },
-        onDeleteTemplate: _handleDeleteTemplate,
+        onLogin: _openLoginModal,
+        initialTabIndex: initialTab,
       ),
     );
   }
 
   void _openTemplatesModal() {
     _openSettingsModal(1);
-  }
-
-  List<Task> _getFilteredTasks() {
-    if (_activeFilter.isEmpty) return _tasks;
-
-    final query = _activeFilter.toLowerCase();
-
-    return _tasks.where((t) {
-      if (_activeFilter.startsWith('+')) return t.projects.contains(_activeFilter);
-      if (_activeFilter.startsWith('@')) return t.contexts.contains(_activeFilter);
-      if (_activeFilter.startsWith('rec:')) return t.recurrence != null && t.recurrence!.isNotEmpty;
-
-      return t.raw.toLowerCase().contains(query) ||
-          t.title.toLowerCase().contains(query) ||
-          t.description.toLowerCase().contains(query);
-    }).toList();
-  }
-
-  void _selectTaskAndOpenInspector(Task task, bool isTablet) {
-    setState(() => _selectedTask = task);
-    if (!isTablet) {
-      _scaffoldKey.currentState?.openEndDrawer();
-    }
   }
 
   @override
@@ -653,6 +805,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final filteredTasks = _getFilteredTasks();
     final screenWidth = MediaQuery.of(context).size.width;
     final isTablet = screenWidth >= 600;
+    final isReferenceView = _activeView == 'references';
 
     return Scaffold(
       key: _scaffoldKey,
@@ -661,8 +814,14 @@ class _HomeScreenState extends State<HomeScreen> {
               child: SafeArea(
                 child: SidebarWidget(
                   tasks: _tasks,
+                  references: _references,
                   activeFilter: _activeFilter,
+                  activeView: _activeView,
                   isLight: widget.isLight,
+                  onChangeView: (view) {
+                    setState(() => _activeView = view);
+                    Navigator.of(context).pop();
+                  },
                   onFilterClick: (filter) {
                     setState(() => _activeFilter = filter);
                     Navigator.of(context).pop();
@@ -676,10 +835,10 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 4,
         icon: const Icon(Icons.add, color: Colors.white, size: 20),
         label: Text(
-          'NEW TASK',
+          isReferenceView ? 'NEW REF' : 'NEW TASK',
           style: AppTheme.monoStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        onPressed: _openAddTaskModal,
+        onPressed: isReferenceView ? () => _openNewReferenceDialog() : _openAddTaskModal,
       ),
       body: SafeArea(
         child: Column(
@@ -704,48 +863,74 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (isTablet)
                     SidebarWidget(
                       tasks: _tasks,
+                      references: _references,
                       activeFilter: _activeFilter,
+                      activeView: _activeView,
                       isLight: widget.isLight,
+                      onChangeView: (view) => setState(() => _activeView = view),
                       onFilterClick: (filter) => setState(() => _activeFilter = filter),
                     ),
+
+                  // Middle Workspace View
                   Expanded(
-                    child: _activeView == 'list'
-                        ? TaskListWidget(
-                            tasks: filteredTasks,
-                            selectedTaskId: _selectedTask?.id,
+                    child: isReferenceView
+                        ? ReferenceListWidget(
+                            references: _references,
+                            selectedReferenceId: _selectedReference?.id,
                             isLight: widget.isLight,
-                            onSelectTask: (t) => _selectTaskAndOpenInspector(t, isTablet),
-                            onToggleTask: _handleToggleTask,
-                            onDeleteTask: _handleDeleteTask,
+                            activeFilter: _activeFilter,
+                            onSelectReference: (r) => _selectReferenceAndOpenInspector(r, isTablet),
+                            onDeleteReference: _handleDeleteReference,
+                            onOpenNewReference: () => _openNewReferenceDialog(),
                           )
-                        : CalendarViewWidget(
-                            tasks: filteredTasks,
-                            selectedTaskId: _selectedTask?.id,
-                            isLight: widget.isLight,
-                            onSelectTask: (t) => _selectTaskAndOpenInspector(t, isTablet),
-                            onToggleTask: _handleToggleTask,
-                            onMoveTask: _handleMoveTask,
-                            onCreateTaskAtDate: (dateISO, timeStr) {
-                              final timeTag = timeStr != null ? ' time:$timeStr' : '';
-                              _commandController.text = ':add (A) New task due:$dateISO$timeTag ';
-                            },
-                          ),
+                        : _activeView == 'list'
+                            ? TaskListWidget(
+                                tasks: filteredTasks,
+                                selectedTaskId: _selectedTask?.id,
+                                isLight: widget.isLight,
+                                onSelectTask: (t) => _selectTaskAndOpenInspector(t, isTablet),
+                                onToggleTask: _handleToggleTask,
+                                onDeleteTask: _handleDeleteTask,
+                              )
+                            : CalendarViewWidget(
+                                tasks: filteredTasks,
+                                selectedTaskId: _selectedTask?.id,
+                                isLight: widget.isLight,
+                                onSelectTask: (t) => _selectTaskAndOpenInspector(t, isTablet),
+                                onToggleTask: _handleToggleTask,
+                                onMoveTask: _handleMoveTask,
+                                onCreateTaskAtDate: (dateISO, timeStr) {
+                                  final timeTag = timeStr != null ? ' time:$timeStr' : '';
+                                  _commandController.text = ':add (A) New task due:$dateISO$timeTag ';
+                                },
+                              ),
                   ),
+
+                  // Tablet Right Drawer
                   if (isTablet)
-                    InspectorDrawerWidget(
-                      task: _selectedTask,
-                      isLight: widget.isLight,
-                      onClose: () => setState(() => _selectedTask = null),
-                      onUpdateTask: _handleUpdateTask,
-                      onSaveAsTemplate: _handleSaveAsTemplate,
-                      onSkipRecurrence: _handleSkipRecurrence,
-                    ),
+                    isReferenceView
+                        ? ReferenceDrawerWidget(
+                            reference: _selectedReference,
+                            isLight: widget.isLight,
+                            onClose: () => setState(() => _selectedReference = null),
+                            onEdit: _openEditReferenceDialog,
+                            onArchive: _handleArchiveReference,
+                            onDelete: _handleDeleteReference,
+                          )
+                        : InspectorDrawerWidget(
+                            task: _selectedTask,
+                            isLight: widget.isLight,
+                            onClose: () => setState(() => _selectedTask = null),
+                            onUpdateTask: _handleUpdateTask,
+                            onSaveAsTemplate: _handleSaveAsTemplate,
+                            onSkipRecurrence: _handleSkipRecurrence,
+                          ),
                 ],
               ),
             ),
             StatusBarWidget(
-              filteredCount: filteredTasks.length,
-              totalCount: _tasks.length,
+              filteredCount: isReferenceView ? _references.where((r) => !r.archived).length : filteredTasks.length,
+              totalCount: isReferenceView ? _references.length : _tasks.length,
               activeFilter: _activeFilter,
               syncStatus: _syncStatus,
               isLight: widget.isLight,
@@ -756,18 +941,35 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      endDrawer: (!isTablet && _selectedTask != null)
+      endDrawer: (!isTablet && (isReferenceView ? _selectedReference != null : _selectedTask != null))
           ? Drawer(
               width: screenWidth * 0.88,
               child: SafeArea(
-                child: InspectorDrawerWidget(
-                  task: _selectedTask,
-                  isLight: widget.isLight,
-                  onClose: () => Navigator.of(context).pop(),
-                  onUpdateTask: _handleUpdateTask,
-                  onSaveAsTemplate: _handleSaveAsTemplate,
-                  onSkipRecurrence: _handleSkipRecurrence,
-                ),
+                child: isReferenceView
+                    ? ReferenceDrawerWidget(
+                        reference: _selectedReference,
+                        isLight: widget.isLight,
+                        onClose: () => Navigator.of(context).pop(),
+                        onEdit: (ref) {
+                          Navigator.of(context).pop();
+                          _openEditReferenceDialog(ref);
+                        },
+                        onArchive: (id, arch) {
+                          _handleArchiveReference(id, arch);
+                        },
+                        onDelete: (ref) {
+                          Navigator.of(context).pop();
+                          _handleDeleteReference(ref);
+                        },
+                      )
+                    : InspectorDrawerWidget(
+                        task: _selectedTask,
+                        isLight: widget.isLight,
+                        onClose: () => Navigator.of(context).pop(),
+                        onUpdateTask: _handleUpdateTask,
+                        onSaveAsTemplate: _handleSaveAsTemplate,
+                        onSkipRecurrence: _handleSkipRecurrence,
+                      ),
               ),
             )
           : null,

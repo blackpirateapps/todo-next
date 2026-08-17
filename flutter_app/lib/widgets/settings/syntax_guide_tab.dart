@@ -38,8 +38,20 @@ class SyntaxGuideTab extends StatelessWidget {
           '  :recurring    -> Filter tasks by active recurrence',
         ),
         _syntaxSection(
-          '6. Terminal Commands',
+          '6. Reference System (Keep / Remember)',
+          '• Tasks are things to DO. References are information to KNOW, KEEP, or REMEMBER (contacts, Wi-Fi info, keys, URLs, notes) without checkboxes.\n'
+          '• Smart Actions: Automatically detects Phone numbers (tel:), URLs (https://), Emails (mailto:), and Addresses (Maps).\n'
+          '• Reference Commands:\n'
+          '  :refs                         -> Open References Workspace\n'
+          '  :ref                          -> Open New Reference Dialog\n'
+          '  :ref <title>                  -> Pre-fill title in editor\n'
+          '  :ref <title> | <content>      -> Quick create reference',
+        ),
+        _syntaxSection(
+          '7. Terminal Commands',
           ':add (A) Title +project @context due:YYYY-MM-DD -> Add task\n'
+          ':refs                   -> Open References Workspace\n'
+          ':ref <title> | <content>-> Quick create reference\n'
           ':settings               -> Open Settings Modal\n'
           ':theme                  -> Open Theme Switcher\n'
           ':theme <mocha|gruvbox|paper|dark|light> -> Direct theme change\n'
