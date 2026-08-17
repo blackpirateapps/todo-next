@@ -53,13 +53,21 @@ class TaskListToolbar extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            Text(
-              showIcons ? '🔃 Sort: ' : 'Sort: ',
-              style: GoogleFonts.jetBrainsMono(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[500],
-              ),
+            Row(
+              children: [
+                if (showIcons) ...[
+                  Icon(Icons.swap_vert, size: 13, color: Colors.grey[500]),
+                  const SizedBox(width: 3),
+                ],
+                Text(
+                  'Sort: ',
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
             ),
             DropdownButton<SortField>(
               value: sortField,
@@ -73,11 +81,11 @@ class TaskListToolbar extends StatelessWidget {
               onChanged: (val) {
                 if (val != null) onSortFieldChanged(val);
               },
-              items: [
-                DropdownMenuItem(value: SortField.creationDate, child: Text(showIcons ? '🕒 Created' : 'Creation Date')),
-                DropdownMenuItem(value: SortField.dueDate, child: Text(showIcons ? '📅 Due Date' : 'Due Date')),
-                DropdownMenuItem(value: SortField.title, child: Text(showIcons ? '🔤 Title' : 'Title')),
-                DropdownMenuItem(value: SortField.priority, child: Text(showIcons ? '⚡ Priority' : 'Priority')),
+              items: const [
+                DropdownMenuItem(value: SortField.creationDate, child: Text('Created')),
+                DropdownMenuItem(value: SortField.dueDate, child: Text('Due Date')),
+                DropdownMenuItem(value: SortField.title, child: Text('Title')),
+                DropdownMenuItem(value: SortField.priority, child: Text('Priority')),
               ],
             ),
             const SizedBox(width: 4),
@@ -94,7 +102,7 @@ class TaskListToolbar extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Text(
-              showIcons ? '🔍 Status: ' : 'Filter: ',
+              'Status: ',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -103,14 +111,14 @@ class TaskListToolbar extends StatelessWidget {
             ),
             Row(
               children: [
-                _filterBtn('Open', StatusFilter.open, statusFilter == StatusFilter.open, () => onStatusFilterChanged(StatusFilter.open), border, showIcons ? '⭕ ' : null),
-                _filterBtn('Done', StatusFilter.completed, statusFilter == StatusFilter.completed, () => onStatusFilterChanged(StatusFilter.completed), border, showIcons ? '✅ ' : null),
-                _filterBtn('All', StatusFilter.all, statusFilter == StatusFilter.all, () => onStatusFilterChanged(StatusFilter.all), border, showIcons ? '📋 ' : null),
+                _filterBtn('Open', StatusFilter.open, statusFilter == StatusFilter.open, () => onStatusFilterChanged(StatusFilter.open), border, showIcons ? Icons.radio_button_unchecked : null, Colors.amber[400]),
+                _filterBtn('Done', StatusFilter.completed, statusFilter == StatusFilter.completed, () => onStatusFilterChanged(StatusFilter.completed), border, showIcons ? Icons.check_circle_outline : null, Colors.green[400]),
+                _filterBtn('All', StatusFilter.all, statusFilter == StatusFilter.all, () => onStatusFilterChanged(StatusFilter.all), border, showIcons ? Icons.format_list_bulleted : null, Colors.cyan[400]),
               ],
             ),
             const SizedBox(width: 12),
             Text(
-              showIcons ? '🚩 Pri: ' : 'Pri: ',
+              'Pri: ',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -119,17 +127,17 @@ class TaskListToolbar extends StatelessWidget {
             ),
             Row(
               children: [
-                _priBtn('All', PriorityFilter.all, border, null),
-                _priBtn('A', PriorityFilter.A, border, showIcons ? '🔴 ' : null),
-                _priBtn('B', PriorityFilter.B, border, showIcons ? '🟡 ' : null),
-                _priBtn('C', PriorityFilter.C, border, showIcons ? '🔵 ' : null),
-                _priBtn('-', PriorityFilter.none, border, null),
+                _priBtn('All', PriorityFilter.all, border, null, null),
+                _priBtn('A', PriorityFilter.A, border, showIcons ? Icons.flag : null, Colors.red[500]),
+                _priBtn('B', PriorityFilter.B, border, showIcons ? Icons.flag : null, Colors.amber[500]),
+                _priBtn('C', PriorityFilter.C, border, showIcons ? Icons.flag : null, Colors.blue[500]),
+                _priBtn('-', PriorityFilter.none, border, null, null),
               ],
             ),
             if (periodOptions.isNotEmpty) ...[
               const SizedBox(width: 12),
               Text(
-                showIcons ? '📅 Date: ' : 'Date: ',
+                'Date: ',
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
@@ -160,7 +168,7 @@ class TaskListToolbar extends StatelessWidget {
     );
   }
 
-  Widget _filterBtn(String label, StatusFilter filter, bool active, VoidCallback onTap, Color border, [String? iconPrefix]) {
+  Widget _filterBtn(String label, StatusFilter filter, bool active, VoidCallback onTap, Color border, [IconData? icon, Color? iconColor]) {
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -169,19 +177,28 @@ class TaskListToolbar extends StatelessWidget {
           color: active ? (isLight ? Colors.grey[300] : Colors.grey[800]) : Colors.transparent,
           border: Border.all(color: border),
         ),
-        child: Text(
-          iconPrefix != null ? '$iconPrefix$label' : label,
-          style: GoogleFonts.jetBrainsMono(
-            fontSize: 10,
-            fontWeight: active ? FontWeight.bold : FontWeight.normal,
-            color: active ? (isLight ? Colors.black : Colors.white) : Colors.grey[500],
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 10, color: iconColor),
+              const SizedBox(width: 3),
+            ],
+            Text(
+              label,
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 10,
+                fontWeight: active ? FontWeight.bold : FontWeight.normal,
+                color: active ? (isLight ? Colors.black : Colors.white) : Colors.grey[500],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _priBtn(String label, PriorityFilter pri, Color border, [String? iconPrefix]) {
+  Widget _priBtn(String label, PriorityFilter pri, Color border, [IconData? icon, Color? iconColor]) {
     final active = priorityFilter == pri;
     return InkWell(
       onTap: () => onPriorityFilterChanged(pri),
@@ -191,13 +208,22 @@ class TaskListToolbar extends StatelessWidget {
           color: active ? (isLight ? Colors.grey[300] : Colors.grey[800]) : Colors.transparent,
           border: Border.all(color: border),
         ),
-        child: Text(
-          iconPrefix != null ? '$iconPrefix$label' : label,
-          style: GoogleFonts.jetBrainsMono(
-            fontSize: 10,
-            fontWeight: active ? FontWeight.bold : FontWeight.normal,
-            color: active ? (isLight ? Colors.black : Colors.white) : Colors.grey[500],
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 10, color: iconColor),
+              const SizedBox(width: 2),
+            ],
+            Text(
+              label,
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 10,
+                fontWeight: active ? FontWeight.bold : FontWeight.normal,
+                color: active ? (isLight ? Colors.black : Colors.white) : Colors.grey[500],
+              ),
+            ),
+          ],
         ),
       ),
     );

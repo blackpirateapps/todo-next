@@ -1,4 +1,14 @@
 import React from 'react';
+import {
+  ListTodo,
+  Calendar,
+  BookOpen,
+  LayoutTemplate,
+  Settings,
+  Menu,
+  Terminal,
+  Search
+} from 'lucide-react';
 
 interface CommandInputProps {
   commandQuery: string;
@@ -39,13 +49,13 @@ export const CommandInput: React.FC<CommandInputProps> = ({
     }`}>
       <button
         onClick={onToggleMobileSidebar}
-        className={`md:hidden px-2 py-1 text-xs font-bold border rounded transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+        className={`md:hidden px-2 py-1 text-xs font-bold border rounded transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
           activeFilter
             ? (isLight ? 'bg-cyan-100 border-cyan-400 text-cyan-800' : 'bg-cyan-950 border-cyan-700 text-cyan-300')
             : (isLight ? 'border-gray-300 bg-gray-200 text-gray-700' : 'border-gray-700 bg-gray-900 text-gray-300')
         }`}
       >
-        {showIcons && <span>☰</span>}
+        {showIcons ? <Menu className="w-3.5 h-3.5 text-cyan-400" /> : null}
         <span>[{activeFilter ? activeFilter : 'Menu'}]</span>
       </button>
 
@@ -53,35 +63,35 @@ export const CommandInput: React.FC<CommandInputProps> = ({
       <div className="flex border text-xs font-mono select-none rounded overflow-hidden">
         <button
           onClick={() => onChangeView('list')}
-          className={`px-2 py-0.5 font-bold cursor-pointer flex items-center gap-1 ${
+          className={`px-2 py-0.5 font-bold cursor-pointer flex items-center gap-1.5 ${
             activeView === 'list'
               ? (isLight ? 'bg-gray-300 text-gray-900' : 'bg-gray-800 text-white')
               : (isLight ? 'hover:bg-gray-200 text-gray-600' : 'hover:bg-gray-800 text-gray-400')
           }`}
         >
-          {showIcons && <span>📋</span>}
+          {showIcons && <ListTodo className="w-3 h-3 text-cyan-400" />}
           <span>{showIcons ? 'List' : '[List]'}</span>
         </button>
         <button
           onClick={() => onChangeView('calendar')}
-          className={`px-2 py-0.5 font-bold border-l cursor-pointer flex items-center gap-1 ${isLight ? 'border-gray-300' : 'border-gray-800'} ${
+          className={`px-2 py-0.5 font-bold border-l cursor-pointer flex items-center gap-1.5 ${isLight ? 'border-gray-300' : 'border-gray-800'} ${
             activeView === 'calendar'
               ? (isLight ? 'bg-cyan-200 text-cyan-900' : 'bg-cyan-950 text-cyan-300')
               : (isLight ? 'hover:bg-gray-200 text-gray-600' : 'hover:bg-gray-800 text-gray-400')
           }`}
         >
-          {showIcons && <span>📅</span>}
+          {showIcons && <Calendar className="w-3 h-3 text-sky-400" />}
           <span>{showIcons ? 'Calendar' : '[Calendar]'}</span>
         </button>
         <button
           onClick={() => onChangeView('references')}
-          className={`px-2 py-0.5 font-bold border-l cursor-pointer flex items-center gap-1 ${isLight ? 'border-gray-300' : 'border-gray-800'} ${
+          className={`px-2 py-0.5 font-bold border-l cursor-pointer flex items-center gap-1.5 ${isLight ? 'border-gray-300' : 'border-gray-800'} ${
             activeView === 'references'
               ? (isLight ? 'bg-cyan-200 text-cyan-900' : 'bg-cyan-950 text-cyan-300')
               : (isLight ? 'hover:bg-gray-200 text-cyan-700 font-semibold' : 'hover:bg-gray-800 text-cyan-400 font-semibold')
           }`}
         >
-          {showIcons && <span>🗂️</span>}
+          {showIcons && <BookOpen className="w-3 h-3 text-amber-400" />}
           <span>{showIcons ? 'Refs' : '[References]'}</span>
         </button>
       </div>
@@ -89,38 +99,40 @@ export const CommandInput: React.FC<CommandInputProps> = ({
       {/* Templates Button */}
       <button
         onClick={onOpenTemplates}
-        className={`px-2 py-0.5 text-xs font-mono font-bold border transition-colors rounded cursor-pointer flex items-center gap-1 ${
+        className={`px-2 py-0.5 text-xs font-mono font-bold border transition-colors rounded cursor-pointer flex items-center gap-1.5 ${
           isLight
             ? 'border-gray-300 bg-gray-200 hover:bg-gray-300 text-cyan-800'
             : 'border-gray-800 bg-gray-900 hover:bg-gray-800 text-cyan-300'
         }`}
         title="Open Task Templates"
       >
-        {showIcons && <span>📐</span>}
+        {showIcons && <LayoutTemplate className="w-3 h-3 text-purple-400" />}
         <span>{showIcons ? 'Templates' : '[Templates]'}</span>
       </button>
 
       {/* Settings Button */}
       <button
         onClick={() => onOpenSettings('theme')}
-        className={`px-2 py-0.5 text-xs font-mono font-bold border transition-colors rounded cursor-pointer flex items-center gap-1 ${
+        className={`px-2 py-0.5 text-xs font-mono font-bold border transition-colors rounded cursor-pointer flex items-center gap-1.5 ${
           isLight
             ? 'border-gray-300 bg-gray-200 hover:bg-gray-300 text-purple-800'
             : 'border-gray-800 bg-gray-900 hover:bg-gray-800 text-purple-300'
         }`}
         title="Open Settings & Preferences (Theme, Templates, Syntax)"
       >
-        {showIcons && <span>⚙️</span>}
+        {showIcons && <Settings className="w-3 h-3 text-purple-400" />}
         <span>{showIcons ? 'Settings' : '[⚙️ Settings]'}</span>
       </button>
 
-      <span className={`font-bold select-none ${isLight ? 'text-green-600' : 'text-green-500'}`}>&gt;</span>
+      <span className={`font-bold select-none flex items-center gap-1 ${isLight ? 'text-green-600' : 'text-green-500'}`}>
+        {showIcons ? <Terminal className="w-3.5 h-3.5 text-green-500" /> : '&gt;'}
+      </span>
       <input
         type="text"
         value={commandQuery}
         onChange={(e) => setCommandQuery(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Filter... or :add Task or :ref John | +91 98765 or :refs or :settings"
+        placeholder={showIcons ? "Filter... or :add Task or :ref John | +91 98765 or :settings" : "Filter... or :add Task or :ref John | +91 98765 or :refs or :settings"}
         className={`flex-1 min-w-[160px] bg-transparent outline-none text-xs sm:text-sm ${
           isLight ? 'text-green-700 placeholder-gray-400' : 'text-green-400 placeholder-gray-700'
         }`}

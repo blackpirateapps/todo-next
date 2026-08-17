@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Sparkles, Terminal, Palette } from 'lucide-react';
 import { Template, AppTheme, AVAILABLE_THEMES } from '@/types/todo';
 import { resolveTemplateTokens } from '@/utils/templateEngine';
 import { FormattedText } from './FormattedText';
@@ -269,25 +270,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* Display & Icon Preferences */}
             <div className={`p-3 border space-y-3 ${isLight ? 'bg-gray-50 border-gray-300' : 'bg-gray-900/40 border-gray-800'}`}>
               <div className={`font-bold uppercase border-b pb-1 flex justify-between items-center ${isLight ? 'text-gray-700 border-gray-300' : 'text-gray-300 border-gray-800'}`}>
-                <span>Display &amp; Icon Preferences</span>
+                <span className="flex items-center gap-1.5">
+                  <Palette className="w-3.5 h-3.5 text-cyan-500" />
+                  <span>Display &amp; Icon Preferences</span>
+                </span>
                 <span className="text-[10px] opacity-60 font-mono">[ UI Style ]</span>
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <div className="font-bold text-xs flex items-center gap-1.5">
-                    <span className="text-sm">{showIcons ? '🎨' : '⌨️'}</span>
-                    <span>Enable Colorful Icons</span>
+                    {showIcons ? (
+                      <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                    ) : (
+                      <Terminal className="w-3.5 h-3.5 text-gray-400" />
+                    )}
+                    <span>Enable Professional Icons</span>
                   </div>
                   <p className="text-[11px] opacity-75 mt-0.5 leading-relaxed">
-                    Display vibrant, theme-harmonious icons for workspaces, priorities, tags, recurrence, and actions instead of pure ASCII text tokens.
+                    Display clean vector icons for workspaces, priorities, tags, recurrence, and actions instead of plain ASCII text brackets.
                   </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => onToggleIcons && onToggleIcons(!showIcons)}
-                  className={`px-3 py-1.5 text-xs font-bold border transition-colors cursor-pointer flex-shrink-0 ${
+                  className={`px-3 py-1.5 text-xs font-bold border transition-colors cursor-pointer flex-shrink-0 flex items-center gap-1.5 ${
                     showIcons
                       ? isLight
                         ? 'bg-cyan-700 border-cyan-800 text-white'
@@ -297,7 +305,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       : 'bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-700'
                   }`}
                 >
-                  {showIcons ? '[ ON: Rich Icons 🎨 ]' : '[ OFF: Plain Text ⌨️ ]'}
+                  {showIcons ? (
+                    <>
+                      <Sparkles className="w-3 h-3 text-cyan-400" />
+                      <span>[ ON: Icons ]</span>
+                    </>
+                  ) : (
+                    <>
+                      <Terminal className="w-3 h-3 text-gray-400" />
+                      <span>[ OFF: Terminal ]</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

@@ -34,15 +34,44 @@ class TaskListItem extends StatelessWidget {
     final hasRec = task.recurrence != null && task.recurrence!.isNotEmpty;
     final isStrict = hasRec && (task.recurrence!.contains('strict:') || task.recurrence!.contains('+'));
 
-    final priIcon = task.priority == 'A'
-        ? '🔴 A'
-        : task.priority == 'B'
-        ? '🟡 B'
-        : task.priority == 'C'
-        ? '🔵 C'
-        : task.priority != null && task.priority!.isNotEmpty
-        ? '🚩 ${task.priority}'
-        : '-';
+    Widget renderPriority() {
+      if (!showIcons) {
+        return Text(
+          task.priority ?? '-',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.jetBrainsMono(fontSize: 12, color: Colors.grey[500]),
+        );
+      }
+
+      if (task.priority == null || task.priority!.isEmpty) {
+        return Text(
+          '-',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.jetBrainsMono(fontSize: 12, color: Colors.grey[500]),
+        );
+      }
+
+      Color priColor = Colors.cyan;
+      if (task.priority == 'A') priColor = Colors.red[500]!;
+      if (task.priority == 'B') priColor = Colors.amber[500]!;
+      if (task.priority == 'C') priColor = Colors.blue[500]!;
+
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.flag, size: 12, color: priColor),
+          const SizedBox(width: 2),
+          Text(
+            task.priority!,
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: priColor,
+            ),
+          ),
+        ],
+      );
+    }
 
     return InkWell(
       onTap: () => onSelectTask(task),
@@ -59,30 +88,30 @@ class TaskListItem extends StatelessWidget {
               width: 40,
               child: InkWell(
                 onTap: () => onToggleTask(task.id),
-                child: Text(
-                  showIcons
-                      ? (task.completed ? '✅' : '⬜')
-                      : (task.completed ? '[x]' : '[ ]'),
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.jetBrainsMono(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: isLight ? Colors.grey[700] : Colors.grey[400],
-                  ),
-                ),
+                child: showIcons
+                    ? Center(
+                        child: Icon(
+                          task.completed ? Icons.check_box : Icons.check_box_outline_blank,
+                          size: 16,
+                          color: task.completed
+                              ? Colors.green[500]
+                              : (isLight ? Colors.grey[600] : Colors.grey[400]),
+                        ),
+                      )
+                    : Text(
+                        task.completed ? '[x]' : '[ ]',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: isLight ? Colors.grey[700] : Colors.grey[400],
+                        ),
+                      ),
               ),
             ),
             SizedBox(
               width: showIcons ? 42 : 32,
-              child: Text(
-                showIcons ? priIcon : (task.priority ?? '-'),
-                textAlign: TextAlign.center,
-                style: GoogleFonts.jetBrainsMono(
-                  fontSize: showIcons ? 10 : 12,
-                  fontWeight: showIcons ? FontWeight.bold : FontWeight.normal,
-                  color: Colors.grey[500],
-                ),
-              ),
+              child: renderPriority(),
             ),
             Expanded(
               child: Wrap(
@@ -104,15 +133,28 @@ class TaskListItem extends StatelessWidget {
                               : (isLight ? Colors.cyan[300]! : Colors.cyan[800]!),
                         ),
                       ),
-                      child: Text(
-                        '${isStrict ? '⚡' : '🔄'} ${task.recurrence!.startsWith('rec:') ? task.recurrence : 'rec:${task.recurrence}'}',
-                        style: GoogleFonts.jetBrainsMono(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: isStrict
-                              ? (isLight ? Colors.purple[900] : Colors.purple[300])
-                              : (isLight ? Colors.cyan[900] : Colors.cyan[300]),
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isStrict ? Icons.flash_on : Icons.sync,
+                            size: 11,
+                            color: isStrict
+                                ? (isLight ? Colors.purple[900] : Colors.purple[300])
+                                : (isLight ? Colors.cyan[900] : Colors.cyan[300]),
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            task.recurrence!.startsWith('rec:') ? task.recurrence! : 'rec:${task.recurrence}',
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: isStrict
+                                  ? (isLight ? Colors.purple[900] : Colors.purple[300])
+                                  : (isLight ? Colors.cyan[900] : Colors.cyan[300]),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   if (task.subtasks.isNotEmpty)
@@ -129,11 +171,19 @@ class TaskListItem extends StatelessWidget {
               width: 44,
               child: InkWell(
                 onTap: () => onDeleteTask(task),
-                child: Text(
-                  showIcons ? '🗑️' : '[del]',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[600]),
-                ),
+                child: showIcons
+                    ? Center(
+                        child: Icon(
+                          Icons.delete_outline,
+                          size: 15,
+                          color: isLight ? Colors.grey[500] : Colors.grey[500],
+                        ),
+                      )
+                    : Text(
+                        '[del]',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[600]),
+                      ),
               ),
             ),
           ],

@@ -70,15 +70,30 @@ class ReferenceItemWidget extends StatelessWidget {
                       : (isLight ? Colors.cyan[400]! : Colors.cyan[800]!),
                 ),
               ),
-              child: Text(
-                showIcons ? (reference.archived ? '📦' : '🗂️') : 'REF',
-                style: AppTheme.monoStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                  color: reference.archived
-                      ? (isLight ? Colors.amber[900] : Colors.amber[300])
-                      : (isLight ? Colors.cyan[900] : Colors.cyan[300]),
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (showIcons) ...[
+                    Icon(
+                      reference.archived ? Icons.archive_outlined : Icons.bookmark_outline,
+                      size: 10,
+                      color: reference.archived
+                          ? (isLight ? Colors.amber[900] : Colors.amber[300])
+                          : (isLight ? Colors.cyan[900] : Colors.cyan[300]),
+                    ),
+                    const SizedBox(width: 2),
+                  ],
+                  Text(
+                    'REF',
+                    style: AppTheme.monoStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: reference.archived
+                          ? (isLight ? Colors.amber[900] : Colors.amber[300])
+                          : (isLight ? Colors.cyan[900] : Colors.cyan[300]),
+                    ),
+                  ),
+                ],
               ),
             ),
 
@@ -104,13 +119,22 @@ class ReferenceItemWidget extends StatelessWidget {
                       if (reference.archived)
                         Padding(
                           padding: const EdgeInsets.only(left: 4),
-                          child: Text(
-                            showIcons ? '📦 [archived]' : '[archived]',
-                            style: AppTheme.monoStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: isLight ? Colors.amber[800] : Colors.amber[400],
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (showIcons) ...[
+                                Icon(Icons.archive_outlined, size: 11, color: isLight ? Colors.amber[800] : Colors.amber[400]),
+                                const SizedBox(width: 2),
+                              ],
+                              Text(
+                                '[archived]',
+                                style: AppTheme.monoStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: isLight ? Colors.amber[800] : Colors.amber[400],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                     ],
@@ -134,6 +158,7 @@ class ReferenceItemWidget extends StatelessWidget {
                       runSpacing: 2,
                       children: reference.tags.map((t) {
                         final isProj = t.startsWith('+');
+                        final isCtx = t.startsWith('@');
                         return Container(
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                           decoration: BoxDecoration(
@@ -146,15 +171,30 @@ class ReferenceItemWidget extends StatelessWidget {
                                   : (isLight ? Colors.green[300]! : Colors.green[800]!),
                             ),
                           ),
-                          child: Text(
-                            showIcons ? (isProj ? '🎯 $t' : '📍 $t') : t,
-                            style: AppTheme.monoStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              color: isProj
-                                  ? (isLight ? Colors.cyan[900] : Colors.cyan[300])
-                                  : (isLight ? Colors.green[900] : Colors.green[300]),
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (showIcons) ...[
+                                Icon(
+                                  isProj ? Icons.gps_fixed : isCtx ? Icons.location_on_outlined : Icons.label_outline,
+                                  size: 9,
+                                  color: isProj
+                                      ? (isLight ? Colors.cyan[900] : Colors.cyan[300])
+                                      : (isLight ? Colors.green[900] : Colors.green[300]),
+                                ),
+                                const SizedBox(width: 3),
+                              ],
+                              Text(
+                                t,
+                                style: AppTheme.monoStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: isProj
+                                      ? (isLight ? Colors.cyan[900] : Colors.cyan[300])
+                                      : (isLight ? Colors.green[900] : Colors.green[300]),
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       }).toList(),

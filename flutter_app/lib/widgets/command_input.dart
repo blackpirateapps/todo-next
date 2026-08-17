@@ -47,9 +47,18 @@ class CommandInputWidget extends StatelessWidget {
                   : Colors.transparent,
               border: Border.all(color: border),
             ),
-            child: Text(
-              showIcons ? '📋 List' : '[List]',
-              style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (showIcons) ...[
+                  Icon(Icons.list_alt, size: 13, color: isLight ? Colors.black87 : Colors.white),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  showIcons ? 'List' : '[List]',
+                  style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
           ),
         ),
@@ -63,9 +72,18 @@ class CommandInputWidget extends StatelessWidget {
                   : Colors.transparent,
               border: Border.all(color: border),
             ),
-            child: Text(
-              showIcons ? '📅 Calendar' : '[Calendar]',
-              style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (showIcons) ...[
+                  Icon(Icons.calendar_month_outlined, size: 13, color: Colors.blue[400]),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  showIcons ? 'Calendar' : '[Calendar]',
+                  style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
           ),
         ),
@@ -79,9 +97,18 @@ class CommandInputWidget extends StatelessWidget {
                   : Colors.transparent,
               border: Border.all(color: border),
             ),
-            child: Text(
-              showIcons ? '🗂️ Refs' : '[Refs]',
-              style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.cyan),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (showIcons) ...[
+                  Icon(Icons.auto_stories_outlined, size: 13, color: Colors.cyan[400]),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  showIcons ? 'Refs' : '[Refs]',
+                  style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.cyan),
+                ),
+              ],
             ),
           ),
         ),
@@ -90,9 +117,18 @@ class CommandInputWidget extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(border: Border.all(color: border)),
-            child: Text(
-              showIcons ? '📐 Templates' : '[Templates]',
-              style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.cyan),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (showIcons) ...[
+                  Icon(Icons.dashboard_customize_outlined, size: 13, color: Colors.purple[300]),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  showIcons ? 'Templates' : '[Templates]',
+                  style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.cyan),
+                ),
+              ],
             ),
           ),
         ),
@@ -101,9 +137,18 @@ class CommandInputWidget extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(border: Border.all(color: border)),
-            child: Text(
-              showIcons ? '⚙️ Settings' : '[⚙️ Settings]',
-              style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.purple[300]),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (showIcons) ...[
+                  Icon(Icons.settings_outlined, size: 13, color: Colors.purple[300]),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  showIcons ? 'Settings' : '[⚙️ Settings]',
+                  style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.purple[300]),
+                ),
+              ],
             ),
           ),
         ),
@@ -112,7 +157,10 @@ class CommandInputWidget extends StatelessWidget {
 
     Widget searchField = Row(
       children: [
-        Text('>', style: AppTheme.monoStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green)),
+        if (showIcons)
+          Icon(Icons.terminal, size: 14, color: Colors.green[400])
+        else
+          Text('>', style: AppTheme.monoStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green)),
         const SizedBox(width: 6),
         Expanded(
           child: TextField(
@@ -120,7 +168,7 @@ class CommandInputWidget extends StatelessWidget {
             style: AppTheme.monoStyle(fontSize: 12),
             decoration: InputDecoration(
               hintText: showIcons
-                  ? '🔍 Filter... or :add Task... or :ref John | +91 98765'
+                  ? 'Filter... or :add Task... or :ref John | +91 98765'
                   : 'Filter... or :add Task... or :ref John | +91 98765 or :refs',
               hintStyle: AppTheme.monoStyle(fontSize: 11, color: Colors.grey[600]),
               border: InputBorder.none,

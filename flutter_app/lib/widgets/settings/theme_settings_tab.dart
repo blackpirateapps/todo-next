@@ -152,9 +152,14 @@ class ThemeSettingsTab extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Text(showIcons ? '🎨 ' : '⌨️ ', style: const TextStyle(fontSize: 14)),
+                            Icon(
+                              showIcons ? Icons.palette_outlined : Icons.terminal,
+                              size: 15,
+                              color: showIcons ? Colors.cyan : Colors.grey,
+                            ),
+                            const SizedBox(width: 6),
                             Text(
-                              'Enable Colorful Icons',
+                              'Enable Professional Icons',
                               style: AppTheme.monoStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -165,7 +170,7 @@ class ThemeSettingsTab extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Show vibrant, theme-adaptive icons across workspaces, priorities, tags, and action chips instead of pure text.',
+                          'Show clean vector icons across workspaces, priorities, tags, and action chips instead of pure text.',
                           style: AppTheme.monoStyle(fontSize: 10, color: Colors.grey),
                         ),
                       ],
@@ -184,15 +189,28 @@ class ThemeSettingsTab extends StatelessWidget {
                           color: showIcons ? Colors.cyan : (isLight ? Colors.grey[400]! : Colors.grey[700]!),
                         ),
                       ),
-                      child: Text(
-                        showIcons ? '[ ON 🎨 ]' : '[ OFF ⌨️ ]',
-                        style: AppTheme.monoStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: showIcons
-                              ? (isLight ? Colors.white : Colors.cyan[300])
-                              : (isLight ? Colors.grey[800] : Colors.grey[400]),
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            showIcons ? Icons.auto_awesome : Icons.terminal,
+                            size: 12,
+                            color: showIcons
+                                ? (isLight ? Colors.white : Colors.cyan[300])
+                                : (isLight ? Colors.grey[800] : Colors.grey[400]),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            showIcons ? '[ ON ]' : '[ OFF ]',
+                            style: AppTheme.monoStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: showIcons
+                                  ? (isLight ? Colors.white : Colors.cyan[300])
+                                  : (isLight ? Colors.grey[800] : Colors.grey[400]),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

@@ -1,5 +1,19 @@
 import React from 'react';
 import { Task, Reference } from '@/types/todo';
+import {
+  Layers,
+  CheckSquare,
+  Calendar,
+  BookOpen,
+  ListTodo,
+  Folder,
+  Archive,
+  Target,
+  MapPin,
+  Tag,
+  Compass,
+  LucideIcon
+} from 'lucide-react';
 
 interface SidebarProps {
   tasks: Task[];
@@ -20,7 +34,8 @@ interface SectionProps {
   activeFilter: string;
   isLight: boolean;
   onSelectFilter: (filter: string) => void;
-  iconPrefix?: string;
+  Icon?: LucideIcon;
+  iconColor?: string;
   showIcons?: boolean;
 }
 
@@ -30,7 +45,8 @@ const SidebarSection: React.FC<SectionProps> = ({
   activeFilter,
   isLight,
   onSelectFilter,
-  iconPrefix,
+  Icon,
+  iconColor = 'text-cyan-400',
   showIcons = false
 }) => {
   if (items.size === 0) return null;
@@ -41,7 +57,7 @@ const SidebarSection: React.FC<SectionProps> = ({
         isLight ? 'text-gray-500 border-gray-300' : 'text-gray-500 border-gray-800'
       }`}>
         <span>{title}</span>
-        {showIcons && iconPrefix && <span className="text-xs">{iconPrefix}</span>}
+        {showIcons && Icon && <Icon className={`w-3 h-3 ${iconColor}`} />}
       </div>
       <ul className="space-y-0.5">
         {Array.from(items).sort().map(item => {
@@ -54,9 +70,10 @@ const SidebarSection: React.FC<SectionProps> = ({
             <li key={item}>
               <button
                 onClick={() => onSelectFilter(item)}
-                className={`w-full text-left truncate px-2 py-1 text-xs focus:outline-none transition-colors rounded cursor-pointer ${activeClass}`}
+                className={`w-full text-left truncate px-2 py-1 text-xs focus:outline-none transition-colors rounded cursor-pointer flex items-center gap-1.5 ${activeClass}`}
               >
-                {showIcons && iconPrefix ? `${iconPrefix} ${item}` : item}
+                {showIcons && Icon && <Icon className={`w-3 h-3 flex-shrink-0 ${iconColor}`} />}
+                <span className="truncate">{item}</span>
               </button>
             </li>
           );
@@ -117,7 +134,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile Drawer Header */}
       <div className="flex justify-between items-center mb-3 border-b pb-2 md:hidden">
         <span className={`font-bold uppercase tracking-wider text-xs flex items-center gap-1.5 ${isLight ? 'text-gray-700' : 'text-gray-300'}`}>
-          {showIcons && <span>🧭</span>}
+          {showIcons && <Compass className="w-3.5 h-3.5 text-cyan-400" />}
           <span>Navigation &amp; Filters</span>
         </span>
         {onCloseMobile && (
@@ -136,7 +153,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           isLight ? 'text-gray-500 border-gray-300' : 'text-gray-500 border-gray-800'
         }`}>
           <span>Workspaces</span>
-          {showIcons && <span className="text-xs">💼</span>}
+          {showIcons && <Layers className="w-3 h-3 text-gray-400" />}
         </div>
         <div className="space-y-0.5">
           <button
@@ -148,7 +165,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             }`}
           >
             <span className="flex items-center gap-1.5">
-              <span>{showIcons ? '📝' : '✓'}</span>
+              {showIcons ? <CheckSquare className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> : <span>✓</span>}
               <span>Tasks</span>
             </span>
             <span className="text-[10px] opacity-75">{openTasksCount}</span>
@@ -163,7 +180,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             }`}
           >
             <span className="flex items-center gap-1.5">
-              <span>📅</span>
+              {showIcons ? <Calendar className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" /> : <span>📅</span>}
               <span>Calendar</span>
             </span>
           </button>
@@ -177,7 +194,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             }`}
           >
             <span className="flex items-center gap-1.5">
-              <span>{showIcons ? '🗂️' : '▸'}</span>
+              {showIcons ? <BookOpen className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" /> : <span>▸</span>}
               <span>References</span>
             </span>
             <span className="text-[10px] opacity-75">{activeRefsCount}</span>
@@ -192,7 +209,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             isLight ? 'text-gray-500 border-gray-300' : 'text-gray-500 border-gray-800'
           }`}>
             <span>Reference Views</span>
-            {showIcons && <span className="text-xs">📁</span>}
+            {showIcons && <Folder className="w-3 h-3 text-cyan-400" />}
           </div>
           <div className="space-y-0.5">
             <button
@@ -203,7 +220,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   : (isLight ? 'text-gray-600 hover:bg-gray-200' : 'text-gray-400 hover:bg-gray-800')
               }`}
             >
-              {showIcons && <span>📂</span>}
+              {showIcons && <Folder className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />}
               <span>[ALL ACTIVE]</span>
             </button>
             <button
@@ -214,7 +231,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   : (isLight ? 'text-gray-600 hover:bg-gray-200' : 'text-gray-400 hover:bg-gray-800')
               }`}
             >
-              {showIcons && <span>📦</span>}
+              {showIcons && <Archive className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />}
               <span>[ARCHIVED]</span>
             </button>
           </div>
@@ -228,7 +245,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               : (isLight ? 'text-gray-600 hover:bg-gray-200' : 'text-gray-400 hover:bg-gray-800')
           }`}
         >
-          {showIcons && <span>📋</span>}
+          {showIcons && <ListTodo className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />}
           <span>[ALL TASKS]</span>
         </button>
       )}
@@ -242,7 +259,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             activeFilter={activeFilter}
             isLight={isLight}
             onSelectFilter={handleSelectFilter}
-            iconPrefix="🏷️"
+            Icon={Tag}
+            iconColor="text-purple-400"
             showIcons={showIcons}
           />
         ) : (
@@ -253,7 +271,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               activeFilter={activeFilter}
               isLight={isLight}
               onSelectFilter={handleSelectFilter}
-              iconPrefix="🎯"
+              Icon={Target}
+              iconColor="text-cyan-400"
               showIcons={showIcons}
             />
             <SidebarSection
@@ -262,7 +281,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               activeFilter={activeFilter}
               isLight={isLight}
               onSelectFilter={handleSelectFilter}
-              iconPrefix="📍"
+              Icon={MapPin}
+              iconColor="text-emerald-400"
               showIcons={showIcons}
             />
           </>
@@ -288,7 +308,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={onCloseMobile}
           />
           <div className={`relative w-64 max-w-[80vw] h-full z-50 p-4 border-r overflow-y-auto ${
-            isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-950 border-gray-800 text-white'
+            isLight ? 'border-gray-300 bg-gray-100 text-gray-900' : 'border-gray-800 bg-black text-gray-100'
           }`}>
             {sidebarContent}
           </div>

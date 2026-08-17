@@ -1,5 +1,16 @@
 import React from 'react';
 import { AppTheme, AVAILABLE_THEMES } from '@/types/todo';
+import {
+  CheckCircle2,
+  RotateCw,
+  AlertTriangle,
+  CloudOff,
+  Terminal,
+  BarChart2,
+  Search,
+  User,
+  LogOut
+} from 'lucide-react';
 
 export type SyncStatus = 'synced' | 'syncing' | 'unsaved' | 'offline';
 
@@ -40,15 +51,15 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     switch (syncStatus) {
       case 'synced':
         return (
-          <span className={`font-mono text-xs flex items-center gap-1 ${isLightMode ? 'text-green-700' : 'text-green-400'}`}>
-            <span>{showIcons ? '🟢' : '[✓]'}</span>
+          <span className={`font-mono text-xs flex items-center gap-1 ${isLightMode ? 'text-emerald-700' : 'text-emerald-400'}`}>
+            {showIcons ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <span>[✓]</span>}
             <span>{showIcons ? 'Synced' : '[Synced ✓]'}</span>
           </span>
         );
       case 'syncing':
         return (
-          <span className={`font-mono text-xs animate-pulse flex items-center gap-1 ${isLightMode ? 'text-amber-700 font-bold' : 'text-yellow-400 font-bold'}`}>
-            <span>{showIcons ? '🔄' : '[~]'}</span>
+          <span className={`font-mono text-xs flex items-center gap-1 ${isLightMode ? 'text-amber-700 font-bold' : 'text-amber-400 font-bold'}`}>
+            {showIcons ? <RotateCw className="w-3.5 h-3.5 text-amber-400 animate-spin" /> : <span>[~]</span>}
             <span>{showIcons ? 'Syncing...' : '[Syncing...]'}</span>
           </span>
         );
@@ -59,14 +70,14 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             className={`font-mono text-xs font-bold hover:underline cursor-pointer flex items-center gap-1 ${isLightMode ? 'text-amber-800' : 'text-amber-300'}`}
             title="Unsaved changes pending database sync"
           >
-            <span>{showIcons ? '⏳' : '[!]'}</span>
+            {showIcons ? <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> : <span>[!]</span>}
             <span>{showIcons ? `Unsaved (${pendingCount})` : `[Unsaved (${pendingCount})]`}</span>
           </button>
         );
       case 'offline':
         return (
           <span className={`font-mono text-xs font-bold flex items-center gap-1 ${isLightMode ? 'text-orange-700' : 'text-orange-400'}`}>
-            <span>{showIcons ? '🔴' : '[x]'}</span>
+            {showIcons ? <CloudOff className="w-3.5 h-3.5 text-orange-400" /> : <span>[x]</span>}
             <span>{showIcons ? `Offline (${pendingCount})` : `[Offline - ${pendingCount} pending]`}</span>
           </span>
         );
@@ -76,22 +87,24 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   return (
     <div className={`flex-shrink-0 border-t px-2 py-1 flex flex-wrap justify-between items-center select-none text-[11px] sm:text-xs gap-2 ${isLightMode ? 'bg-gray-200 border-gray-300 text-gray-600' : 'bg-gray-900 border-gray-800 text-gray-500'}`}>
       <div className="flex gap-2 sm:gap-4 items-center">
-        <span className={`font-bold uppercase ${isLightMode ? 'text-blue-600' : 'text-blue-400'}`}>
-          {showIcons ? '⚡ NORMAL' : 'NORMAL'}
+        <span className={`font-bold uppercase flex items-center gap-1 ${isLightMode ? 'text-blue-600' : 'text-blue-400'}`}>
+          {showIcons ? <Terminal className="w-3 h-3 text-blue-400" /> : null}
+          <span>NORMAL</span>
         </span>
         <span className="flex items-center gap-1">
-          {showIcons && <span>📊</span>}
+          {showIcons && <BarChart2 className="w-3 h-3 text-gray-400" />}
           <span>{filteredCount}/{totalCount} items</span>
         </span>
         {activeFilter && (
           <span className="truncate max-w-[100px] sm:max-w-none flex items-center gap-1">
-            {showIcons && <span>🔍</span>}
+            {showIcons && <Search className="w-3 h-3 text-cyan-400" />}
             <span>[Filter: {activeFilter}]</span>
           </span>
         )}
         {userEmail && (
-          <span className="text-emerald-500 font-bold hidden md:inline truncate max-w-[160px]">
-            {showIcons ? `👤 ${userEmail}` : `[${userEmail}]`}
+          <span className="text-emerald-500 font-bold hidden md:inline-flex items-center gap-1 truncate max-w-[160px]">
+            {showIcons && <User className="w-3 h-3 text-emerald-400" />}
+            <span>[{userEmail}]</span>
           </span>
         )}
       </div>
@@ -121,10 +134,11 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         {authRequired && onLogout && (
           <button
             onClick={onLogout}
-            className={`border px-1.5 py-0.5 font-bold hover:underline cursor-pointer ${isLightMode ? 'border-gray-400 text-gray-700' : 'border-gray-700 text-gray-300'}`}
+            className={`border px-1.5 py-0.5 font-bold hover:underline cursor-pointer flex items-center gap-1 ${isLightMode ? 'border-gray-400 text-gray-700' : 'border-gray-700 text-gray-300'}`}
             title="Log out of current session"
           >
-            {showIcons ? '🚪 Logout' : '[Logout]'}
+            {showIcons && <LogOut className="w-3 h-3 text-red-400" />}
+            <span>{showIcons ? 'Logout' : '[Logout]'}</span>
           </button>
         )}
       </div>

@@ -116,8 +116,12 @@ class _ReferenceListWidgetState extends State<ReferenceListWidget> {
               children: [
                 Row(
                   children: [
+                    if (widget.showIcons) ...[
+                      Icon(Icons.auto_stories_outlined, size: 14, color: widget.isLight ? Colors.cyan[800] : Colors.cyan[400]),
+                      const SizedBox(width: 6),
+                    ],
                     Text(
-                      widget.showIcons ? '🗂️ [ REFERENCES ]' : '[ REFERENCES ]',
+                      '[ REFERENCES ]',
                       style: AppTheme.monoStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -132,9 +136,9 @@ class _ReferenceListWidgetState extends State<ReferenceListWidget> {
                       ),
                       child: Row(
                         children: [
-                          _buildTabButton('all', widget.showIcons ? '📂 All' : 'All'),
-                          _buildTabButton('recent', widget.showIcons ? '⚡ Recent' : 'Recent'),
-                          _buildTabButton('archived', widget.showIcons ? '📦 Archived' : 'Archived'),
+                          _buildTabButton('all', 'All', widget.showIcons ? Icons.folder_outlined : null),
+                          _buildTabButton('recent', 'Recent', widget.showIcons ? Icons.schedule : null),
+                          _buildTabButton('archived', 'Archived', widget.showIcons ? Icons.archive_outlined : null),
                         ],
                       ),
                     ),
@@ -150,10 +154,10 @@ class _ReferenceListWidgetState extends State<ReferenceListWidget> {
                         isDense: true,
                         dropdownColor: widget.isLight ? Colors.white : Colors.grey[900],
                         style: AppTheme.monoStyle(fontSize: 10, color: widget.isLight ? Colors.black : Colors.white),
-                        items: [
-                          DropdownMenuItem(value: ReferenceSortOrder.updated, child: Text(widget.showIcons ? '🕒 Updated' : 'Updated')),
-                          DropdownMenuItem(value: ReferenceSortOrder.created, child: Text(widget.showIcons ? '📅 Created' : 'Created')),
-                          DropdownMenuItem(value: ReferenceSortOrder.alphabetical, child: Text(widget.showIcons ? '🔤 A-Z' : 'A-Z')),
+                        items: const [
+                          DropdownMenuItem(value: ReferenceSortOrder.updated, child: Text('Updated')),
+                          DropdownMenuItem(value: ReferenceSortOrder.created, child: Text('Created')),
+                          DropdownMenuItem(value: ReferenceSortOrder.alphabetical, child: Text('A-Z')),
                         ],
                         onChanged: (val) {
                           if (val != null) setState(() => _sortOrder = val);
@@ -171,9 +175,18 @@ class _ReferenceListWidgetState extends State<ReferenceListWidget> {
                         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
                       ),
                       onPressed: widget.onOpenNewReference,
-                      child: Text(
-                        widget.showIcons ? '➕ NEW' : '+ NEW',
-                        style: AppTheme.monoStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (widget.showIcons) ...[
+                            const Icon(Icons.add, size: 12, color: Colors.white),
+                            const SizedBox(width: 2),
+                          ],
+                          Text(
+                            '+ NEW',
+                            style: AppTheme.monoStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -194,9 +207,17 @@ class _ReferenceListWidgetState extends State<ReferenceListWidget> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    Text(
-                      widget.showIcons ? '🏷️ Tags: ' : 'Tags: ',
-                      style: AppTheme.monoStyle(fontSize: 10, color: Colors.grey[500]),
+                    Row(
+                      children: [
+                        if (widget.showIcons) ...[
+                          Icon(Icons.label_outline, size: 11, color: Colors.grey[500]),
+                          const SizedBox(width: 3),
+                        ],
+                        Text(
+                          'Tags: ',
+                          style: AppTheme.monoStyle(fontSize: 10, color: Colors.grey[500]),
+                        ),
+                      ],
                     ),
                     InkWell(
                       onTap: () => setState(() => _selectedTag = ''),
@@ -235,12 +256,25 @@ class _ReferenceListWidgetState extends State<ReferenceListWidget> {
                                   : (widget.isLight ? Colors.green[300]! : Colors.green[800]!),
                             ),
                           ),
-                          child: Text(
-                            widget.showIcons ? (isProj ? '🎯 $tag' : '📍 $tag') : tag,
-                            style: AppTheme.monoStyle(
-                              fontSize: 10,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (widget.showIcons) ...[
+                                Icon(
+                                  isProj ? Icons.gps_fixed : Icons.label_outline,
+                                  size: 10,
+                                  color: isProj ? Colors.cyan[400] : Colors.purple[300],
+                                ),
+                                const SizedBox(width: 3),
+                              ],
+                              Text(
+                                tag,
+                                style: AppTheme.monoStyle(
+                                  fontSize: 10,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       );
@@ -276,7 +310,7 @@ class _ReferenceListWidgetState extends State<ReferenceListWidget> {
     );
   }
 
-  Widget _buildTabButton(String key, String label) {
+  Widget _buildTabButton(String key, String label, [IconData? icon]) {
     final isActive = _tabFilter == key;
     return InkWell(
       onTap: () => setState(() => _tabFilter = key),
@@ -285,15 +319,30 @@ class _ReferenceListWidgetState extends State<ReferenceListWidget> {
         color: isActive
             ? (widget.isLight ? Colors.grey[300] : Colors.grey[800])
             : Colors.transparent,
-        child: Text(
-          label,
-          style: AppTheme.monoStyle(
-            fontSize: 10,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            color: isActive
-                ? (widget.isLight ? Colors.black : Colors.white)
-                : (widget.isLight ? Colors.grey[700] : Colors.grey[400]),
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 11,
+                color: isActive
+                    ? (widget.isLight ? Colors.black : Colors.white)
+                    : (widget.isLight ? Colors.grey[700] : Colors.grey[400]),
+              ),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: AppTheme.monoStyle(
+                fontSize: 10,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                color: isActive
+                    ? (widget.isLight ? Colors.black : Colors.white)
+                    : (widget.isLight ? Colors.grey[700] : Colors.grey[400]),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -302,9 +351,18 @@ class _ReferenceListWidgetState extends State<ReferenceListWidget> {
   Widget _buildEmptyState() {
     if (_tabFilter == 'archived') {
       return Center(
-        child: Text(
-          widget.showIcons ? '📦 No archived references.' : 'No archived references.',
-          style: AppTheme.monoStyle(fontSize: 12, color: Colors.grey[500]),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (widget.showIcons) ...[
+              Icon(Icons.archive_outlined, size: 14, color: Colors.grey[500]),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              'No archived references.',
+              style: AppTheme.monoStyle(fontSize: 12, color: Colors.grey[500]),
+            ),
+          ],
         ),
       );
     }
@@ -336,13 +394,22 @@ class _ReferenceListWidgetState extends State<ReferenceListWidget> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              widget.showIcons ? '🗂️ [ REFERENCE ]' : '[ REFERENCE ]',
-              style: AppTheme.monoStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: widget.isLight ? Colors.cyan[800] : Colors.cyan[400],
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (widget.showIcons) ...[
+                  Icon(Icons.auto_stories_outlined, size: 16, color: widget.isLight ? Colors.cyan[800] : Colors.cyan[400]),
+                  const SizedBox(width: 6),
+                ],
+                Text(
+                  '[ REFERENCE ]',
+                  style: AppTheme.monoStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: widget.isLight ? Colors.cyan[800] : Colors.cyan[400],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 6),
             Text(
@@ -363,9 +430,18 @@ class _ReferenceListWidgetState extends State<ReferenceListWidget> {
                 shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
               ),
               onPressed: widget.onOpenNewReference,
-              child: Text(
-                widget.showIcons ? '➕ NEW REFERENCE' : '+ NEW REFERENCE',
-                style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.showIcons) ...[
+                    const Icon(Icons.add, size: 14, color: Colors.white),
+                    const SizedBox(width: 4),
+                  ],
+                  Text(
+                    '+ NEW REFERENCE',
+                    style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
             ),
           ],

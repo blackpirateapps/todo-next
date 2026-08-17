@@ -25,33 +25,47 @@ class TaskListHeader extends StatelessWidget {
         children: [
           SizedBox(
             width: 40,
-            child: Text(
-              showIcons ? '✅' : 'St',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[500]),
-            ),
+            child: showIcons
+                ? Icon(Icons.check_box_outlined, size: 14, color: Colors.grey[500])
+                : Text(
+                    'St',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[500]),
+                  ),
           ),
           SizedBox(
             width: 32,
-            child: Text(
-              showIcons ? '⚡' : 'Pr',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[500]),
-            ),
+            child: showIcons
+                ? Icon(Icons.flag_outlined, size: 14, color: Colors.grey[500])
+                : Text(
+                    'Pr',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[500]),
+                  ),
           ),
           Expanded(
-            child: Text(
-              showIcons ? '📝 Task' : 'Task',
-              style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[500]),
+            child: Row(
+              children: [
+                if (showIcons) ...[
+                  Icon(Icons.description_outlined, size: 13, color: Colors.grey[500]),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  'Task',
+                  style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[500]),
+                ),
+              ],
             ),
           ),
           SizedBox(
             width: 44,
-            child: Text(
-              showIcons ? '🗑️' : 'Del',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[500]),
-            ),
+            child: showIcons
+                ? Icon(Icons.delete_outline, size: 14, color: Colors.grey[500])
+                : Text(
+                    'Del',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[500]),
+                  ),
           ),
         ],
       ),

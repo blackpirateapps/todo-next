@@ -3,6 +3,22 @@ import { Task } from '@/types/todo';
 import { FormattedText } from './FormattedText';
 import { SubtaskProgressBar } from './SubtaskProgressBar';
 import { ConfirmModal } from './ConfirmModal';
+import {
+  CheckSquare2,
+  Square,
+  Flag,
+  Trash2,
+  ArrowUpDown,
+  Clock,
+  Calendar,
+  Type,
+  Zap,
+  Repeat,
+  CircleDot,
+  CheckCircle2,
+  ListTodo,
+  FileText
+} from 'lucide-react';
 
 export type SortField = 'creationDate' | 'dueDate' | 'title' | 'priority';
 export type SortOrder = 'asc' | 'desc';
@@ -119,17 +135,18 @@ export const TaskList: React.FC<TaskListProps> = ({
       }`}>
         {/* Sort Controls */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className={isLight ? 'text-gray-500 font-bold' : 'text-gray-500 font-bold'}>
-            {showIcons ? '🔃 Sort:' : 'Sort:'}
+          <span className={`font-bold flex items-center gap-1 ${isLight ? 'text-gray-500' : 'text-gray-500'}`}>
+            {showIcons && <ArrowUpDown className="w-3 h-3 text-cyan-400" />}
+            <span>Sort:</span>
           </span>
           <div className="flex border">
             {(['creationDate', 'dueDate', 'title', 'priority'] as SortField[]).map((f) => {
               const active = sortField === f;
-              const labels: Record<SortField, string> = {
-                creationDate: showIcons ? '🕒 Created' : 'Created',
-                dueDate: showIcons ? '📅 Due' : 'Due',
-                title: showIcons ? '🔤 Title' : 'Title',
-                priority: showIcons ? '⚡ Priority' : 'Priority',
+              const labels: Record<SortField, { text: string; icon: React.ReactNode }> = {
+                creationDate: { text: 'Created', icon: <Clock className="w-3 h-3 text-cyan-400" /> },
+                dueDate: { text: 'Due', icon: <Calendar className="w-3 h-3 text-sky-400" /> },
+                title: { text: 'Title', icon: <Type className="w-3 h-3 text-purple-400" /> },
+                priority: { text: 'Priority', icon: <Zap className="w-3 h-3 text-amber-400" /> },
               };
               return (
                 <button
@@ -142,13 +159,15 @@ export const TaskList: React.FC<TaskListProps> = ({
                       setSortOrder('asc');
                     }
                   }}
-                  className={`px-2 py-0.5 border-r last:border-r-0 cursor-pointer ${
+                  className={`px-2 py-0.5 border-r last:border-r-0 cursor-pointer flex items-center gap-1 ${
                     active
                       ? (isLight ? 'bg-gray-300 text-gray-900 font-bold' : 'bg-gray-800 text-white font-bold')
                       : (isLight ? 'text-gray-600 hover:bg-gray-200' : 'text-gray-400 hover:bg-gray-800')
                   }`}
                 >
-                  {labels[f]} {active ? (sortOrder === 'asc' ? '▲' : '▼') : ''}
+                  {showIcons && labels[f].icon}
+                  <span>{labels[f].text}</span>
+                  {active ? (sortOrder === 'asc' ? '▲' : '▼') : ''}
                 </button>
               );
             })}
@@ -160,24 +179,25 @@ export const TaskList: React.FC<TaskListProps> = ({
           {/* Status Filter */}
           <div className="flex items-center gap-1">
             <span className={isLight ? 'text-gray-500' : 'text-gray-500'}>
-              {showIcons ? '🔍 Status:' : 'Status:'}
+              Status:
             </span>
             <div className="flex border">
               {[
-                { key: 'open', label: showIcons ? '⭕ Open' : 'Open' },
-                { key: 'completed', label: showIcons ? '✅ Done' : 'Done' },
-                { key: 'all', label: showIcons ? '📋 All' : 'All' }
-              ].map(({ key, label }) => (
+                { key: 'open', label: 'Open', icon: <CircleDot className="w-3 h-3 text-amber-400" /> },
+                { key: 'completed', label: 'Done', icon: <CheckCircle2 className="w-3 h-3 text-emerald-400" /> },
+                { key: 'all', label: 'All', icon: <ListTodo className="w-3 h-3 text-cyan-400" /> }
+              ].map(({ key, label, icon }) => (
                 <button
                   key={key}
                   onClick={() => setStatusFilter(key as StatusFilter)}
-                  className={`px-2 py-0.5 border-r last:border-r-0 cursor-pointer ${
+                  className={`px-2 py-0.5 border-r last:border-r-0 cursor-pointer flex items-center gap-1 ${
                     statusFilter === key
                       ? (isLight ? 'bg-gray-300 text-gray-900 font-bold' : 'bg-gray-800 text-white font-bold')
                       : (isLight ? 'text-gray-600 hover:bg-gray-200' : 'text-gray-400 hover:bg-gray-800')
                   }`}
                 >
-                  {label}
+                  {showIcons && icon}
+                  <span>{label}</span>
                 </button>
               ))}
             </div>
@@ -186,24 +206,32 @@ export const TaskList: React.FC<TaskListProps> = ({
           {/* Priority Filter */}
           <div className="flex items-center gap-1">
             <span className={isLight ? 'text-gray-500' : 'text-gray-500'}>
-              {showIcons ? '🚩 Pri:' : 'Pri:'}
+              Pri:
             </span>
             <div className="flex border">
               {(['all', 'A', 'B', 'C', 'none'] as PriorityFilter[]).map((p) => {
-                const priDisplay = showIcons
-                  ? (p === 'A' ? '🔴 A' : p === 'B' ? '🟡 B' : p === 'C' ? '🔵 C' : p === 'none' ? '⚪ -' : 'All')
-                  : (p === 'all' ? 'All' : p === 'none' ? '-' : p);
+                const getPriNode = () => {
+                  if (!showIcons) {
+                    return p === 'all' ? 'All' : p === 'none' ? '-' : p;
+                  }
+                  if (p === 'A') return <><Flag className="w-3 h-3 text-red-500 fill-red-500" /><span>A</span></>;
+                  if (p === 'B') return <><Flag className="w-3 h-3 text-amber-500 fill-amber-500" /><span>B</span></>;
+                  if (p === 'C') return <><Flag className="w-3 h-3 text-blue-500 fill-blue-500" /><span>C</span></>;
+                  if (p === 'none') return <span>-</span>;
+                  return <span>All</span>;
+                };
+
                 return (
                   <button
                     key={p}
                     onClick={() => setPriorityFilter(p)}
-                    className={`px-2 py-0.5 border-r last:border-r-0 cursor-pointer ${
+                    className={`px-2 py-0.5 border-r last:border-r-0 cursor-pointer flex items-center gap-1 ${
                       priorityFilter === p
                         ? (isLight ? 'bg-gray-300 text-gray-900 font-bold' : 'bg-gray-800 text-white font-bold')
                         : (isLight ? 'text-gray-600 hover:bg-gray-200' : 'text-gray-400 hover:bg-gray-800')
                     }`}
                   >
-                    {priDisplay}
+                    {getPriNode()}
                   </button>
                 );
               })}
@@ -214,7 +242,7 @@ export const TaskList: React.FC<TaskListProps> = ({
           {periodOptions.length > 0 && (
             <div className="flex items-center gap-1">
               <span className={isLight ? 'text-gray-500' : 'text-gray-500'}>
-                {showIcons ? '📅 Date:' : 'Date:'}
+                Date:
               </span>
               <select
                 value={periodFilter}
@@ -238,10 +266,21 @@ export const TaskList: React.FC<TaskListProps> = ({
         <table className="w-full text-left border-collapse cursor-default">
           <thead className={`sticky top-0 z-10 border-b text-xs ${isLight ? 'bg-gray-200 text-gray-600 border-gray-300' : 'bg-gray-900 text-gray-500 border-gray-800'}`}>
             <tr>
-              <th className="font-normal w-10 text-center py-1.5">{showIcons ? '✅' : 'St'}</th>
-              <th className="font-normal w-10 text-center py-1.5">{showIcons ? '🚩' : 'Pr'}</th>
-              <th className="font-normal py-1.5 px-2">{showIcons ? '📝 Task' : 'Task'}</th>
-              <th className="font-normal w-12 text-center py-1.5">{showIcons ? '🗑️' : 'Del'}</th>
+              <th className="font-normal w-10 text-center py-1.5">
+                {showIcons ? <CheckSquare2 className="w-3.5 h-3.5 mx-auto text-gray-400" /> : 'St'}
+              </th>
+              <th className="font-normal w-10 text-center py-1.5">
+                {showIcons ? <Flag className="w-3.5 h-3.5 mx-auto text-gray-400" /> : 'Pr'}
+              </th>
+              <th className="font-normal py-1.5 px-2">
+                <span className="flex items-center gap-1.5">
+                  {showIcons && <FileText className="w-3.5 h-3.5 text-gray-400" />}
+                  <span>Task</span>
+                </span>
+              </th>
+              <th className="font-normal w-12 text-center py-1.5">
+                {showIcons ? <Trash2 className="w-3.5 h-3.5 mx-auto text-gray-400" /> : 'Del'}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -256,13 +295,20 @@ export const TaskList: React.FC<TaskListProps> = ({
                 rowClass += `border-gray-900 hover:bg-gray-800/50 ${isSelected ? 'bg-gray-800' : ''}`;
               }
 
-              const priIcon = task.priority === 'A'
-                ? '🔴'
-                : task.priority === 'B'
-                ? '🟡'
-                : task.priority === 'C'
-                ? '🔵'
-                : task.priority ? '🚩' : '-';
+              const renderPriorityBadge = () => {
+                if (!task.priority) return '-';
+                if (!showIcons) return task.priority;
+                if (task.priority === 'A') {
+                  return <span className="flex items-center justify-center gap-0.5 text-red-400 font-bold"><Flag className="w-3 h-3 fill-red-500 text-red-500" />A</span>;
+                }
+                if (task.priority === 'B') {
+                  return <span className="flex items-center justify-center gap-0.5 text-amber-400 font-bold"><Flag className="w-3 h-3 fill-amber-500 text-amber-500" />B</span>;
+                }
+                if (task.priority === 'C') {
+                  return <span className="flex items-center justify-center gap-0.5 text-blue-400 font-bold"><Flag className="w-3 h-3 fill-blue-500 text-blue-500" />C</span>;
+                }
+                return <span className="flex items-center justify-center gap-0.5 text-indigo-400 font-bold"><Flag className="w-3 h-3 text-indigo-400" />{task.priority}</span>;
+              };
 
               return (
                 <tr
@@ -275,13 +321,19 @@ export const TaskList: React.FC<TaskListProps> = ({
                     onClick={(e) => { e.stopPropagation(); onToggleTask(task.id); }}
                   >
                     <button className={`focus:outline-none p-1 font-mono font-bold cursor-pointer ${isLight ? 'text-gray-500 hover:text-gray-900' : 'text-gray-400 hover:text-white'}`}>
-                      {showIcons
-                        ? (task.completed ? '✅' : '⬜')
-                        : (task.completed ? '[x]' : '[ ]')}
+                      {showIcons ? (
+                        task.completed ? (
+                          <CheckSquare2 className="w-4 h-4 text-emerald-500 mx-auto" />
+                        ) : (
+                          <Square className="w-4 h-4 text-gray-500 hover:text-gray-300 mx-auto" />
+                        )
+                      ) : (
+                        task.completed ? '[x]' : '[ ]'
+                      )}
                     </button>
                   </td>
                   <td className={`w-10 text-center py-2.5 border-r text-xs ${isLight ? 'border-gray-200 text-gray-500' : 'border-gray-800/50 text-gray-500'}`}>
-                    {showIcons ? (task.priority ? `${priIcon} ${task.priority}` : '-') : (task.priority || '-')}
+                    {renderPriorityBadge()}
                   </td>
                   <td className="py-2.5 px-2 text-xs sm:text-sm overflow-hidden break-words max-w-xs sm:max-w-md lg:max-w-xl">
                     <div className="flex flex-wrap items-center gap-2">
@@ -295,7 +347,15 @@ export const TaskList: React.FC<TaskListProps> = ({
                           }`}
                           title={`Recurring pattern: ${task.recurrence}`}
                         >
-                          <span>{task.recurrence.includes('strict:') || task.recurrence.includes('+') ? '⚡' : '🔄'}</span>
+                          {showIcons ? (
+                            task.recurrence.includes('strict:') || task.recurrence.includes('+') ? (
+                              <Zap className="w-3 h-3 text-purple-400" />
+                            ) : (
+                              <Repeat className="w-3 h-3 text-cyan-400" />
+                            )
+                          ) : (
+                            <span>{task.recurrence.includes('strict:') || task.recurrence.includes('+') ? '⚡' : '🔄'}</span>
+                          )}
                           <span>{task.recurrence.startsWith('rec:') ? task.recurrence : `rec:${task.recurrence}`}</span>
                         </span>
                       )}
@@ -312,7 +372,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                     }}
                   >
                     <button className={`focus:outline-none p-1 text-xs hover:text-red-500 cursor-pointer ${isLight ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {showIcons ? '🗑️' : '[del]'}
+                      {showIcons ? <Trash2 className="w-3.5 h-3.5 text-gray-500 hover:text-red-400 mx-auto" /> : '[del]'}
                     </button>
                   </td>
                 </tr>

@@ -154,12 +154,14 @@
     - `:syntax` -> Open Syntax Guide.
   - Default Sorting & Filtering:
     - Updated `TaskListWidget` defaults to **Creation Date Descending** (`SortOrder.desc`) and **Open** tasks (`StatusFilter.open`).
-- **Colorful / Rich Icons Settings Toggle (Web & Android Flutter)**:
-  - Added a dedicated settings toggle in both Web (`localStorage.getItem('todo_next_show_icons')`) and Android Flutter (`SharedPreferences` key `todo_next_show_icons` via `StorageService.loadShowIcons()` / `saveShowIcons(bool)`).
-  - Located under *DISPLAY & ICON PREFERENCES* in the Settings Modal (Tab 1) on both platforms:
+- **Professional Vector Icons System (Web & Android Flutter)**:
+  - Replaced raw emojis with clean, modern vector icons using `lucide-react` (Web) and Material Icons (Android/Flutter) with tailored color accents that harmonize across all 5 color themes:
+    - **Web App**: Powered by `lucide-react` (`CheckSquare2`, `Square`, `Flag` with priority fills, `Trash2`, `Layers`, `Calendar`, `BookOpen`, `ListTodo`, `Folder`, `Archive`, `Target`, `MapPin`, `Tag`, `RotateCw`, `Terminal`, `Settings`, `LayoutTemplate`, etc.).
+    - **Android App**: Powered by Material Vector Icons (`Icons.check_box`, `Icons.check_box_outline_blank`, `Icons.flag`, `Icons.delete_outline`, `Icons.layers_outlined`, `Icons.calendar_month_outlined`, `Icons.auto_stories_outlined`, `Icons.list_alt`, `Icons.folder_outlined`, `Icons.archive_outlined`, `Icons.gps_fixed`, `Icons.location_on_outlined`, `Icons.label_outline`, etc.).
+  - Dedicated settings toggle located under *DISPLAY & ICON PREFERENCES* in Settings Modal (Tab 1) on both platforms:
     - **OFF (Classic Terminal Mode)**: Strict retro ASCII / bracket syntax (`[ ]`, `[x]`, `[List]`, `[Calendar]`, `[Refs]`, `[del]`, `(A)`).
-    - **ON (Colorful Icons Mode)**: Rich high-contrast emoji badges and icons (`📝 Tasks`, `📅 Calendar`, `🗂️ References`, `✅ Done`, `⬜ Open`, `🔴 A`, `🟡 B`, `🔵 C`, `🗑️ Delete`, `🎯 +projects`, `📍 @contexts`, `🏷️ tags`, `🟢 Synced`, `🔄 Syncing`, `🔴 Offline`) that pop cleanly across all 5 color themes (`Pitch Black`, `Clean White`, `Catppuccin Mocha`, `Gruvbox Dark`, `Paper & Ink`).
-  - Seamlessly passed down to all UI components: `Sidebar`, `CommandInput`, `TaskList`, `ReferenceList`, `ReferenceDrawer`, `InspectorDrawer`, and `StatusBar`.
+    - **ON (Professional Icons Mode)**: Elegant, high-contrast vector icons with color accents and clean alignment.
+  - Persisted in `localStorage` (`todo_next_show_icons`) on Web and `SharedPreferences` (`todo_next_show_icons`) in Flutter.
 - **Flutter Codebase Modularization & Refactoring for Maintainability**:
   - Modularized large monolithic widget files (>25-30KB) into focused, single-responsibility sub-components under organized domain directories:
     - `flutter_app/lib/widgets/settings/`: `theme_settings_tab.dart`, `templates_settings_tab.dart`, `syntax_guide_tab.dart`, and `template_form_dialog.dart` (reduced `settings_modal.dart` from 29KB down to 6.0KB).

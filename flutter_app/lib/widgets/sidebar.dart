@@ -76,7 +76,7 @@ class SidebarWidget extends StatelessWidget {
                     ),
                   ),
                   if (showIcons)
-                    const Text('💼', style: TextStyle(fontSize: 12)),
+                    Icon(Icons.layers_outlined, size: 13, color: Colors.grey[500]),
                 ],
               ),
             ),
@@ -92,13 +92,21 @@ class SidebarWidget extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      showIcons ? '📝 Tasks' : '✓ Tasks',
-                      style: GoogleFonts.jetBrainsMono(
-                        fontSize: 12,
-                        fontWeight: activeView == 'list' ? FontWeight.bold : FontWeight.w500,
-                        color: isLight ? Colors.black : Colors.white,
-                      ),
+                    Row(
+                      children: [
+                        if (showIcons) ...[
+                          Icon(Icons.check_box_outlined, size: 14, color: Colors.green[400]),
+                          const SizedBox(width: 6),
+                        ],
+                        Text(
+                          'Tasks',
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 12,
+                            fontWeight: activeView == 'list' ? FontWeight.bold : FontWeight.w500,
+                            color: isLight ? Colors.black : Colors.white,
+                          ),
+                        ),
+                      ],
                     ),
                     Text(
                       '$openTasksCount',
@@ -120,15 +128,23 @@ class SidebarWidget extends StatelessWidget {
                 color: activeView == 'calendar'
                     ? (isLight ? Colors.cyan[100] : Colors.cyan[950])
                     : Colors.transparent,
-                child: Text(
-                  '📅 Calendar',
-                  style: GoogleFonts.jetBrainsMono(
-                    fontSize: 12,
-                    fontWeight: activeView == 'calendar' ? FontWeight.bold : FontWeight.w500,
-                    color: activeView == 'calendar'
-                        ? (isLight ? Colors.cyan[900] : Colors.cyan[300])
-                        : (isLight ? Colors.black : Colors.white),
-                  ),
+                child: Row(
+                  children: [
+                    if (showIcons) ...[
+                      Icon(Icons.calendar_month_outlined, size: 14, color: Colors.blue[400]),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      'Calendar',
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 12,
+                        fontWeight: activeView == 'calendar' ? FontWeight.bold : FontWeight.w500,
+                        color: activeView == 'calendar'
+                            ? (isLight ? Colors.cyan[900] : Colors.cyan[300])
+                            : (isLight ? Colors.black : Colors.white),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -144,15 +160,23 @@ class SidebarWidget extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      showIcons ? '🗂️ References' : '▸ References',
-                      style: GoogleFonts.jetBrainsMono(
-                        fontSize: 12,
-                        fontWeight: activeView == 'references' ? FontWeight.bold : FontWeight.w600,
-                        color: activeView == 'references'
-                            ? (isLight ? Colors.cyan[900] : Colors.cyan[300])
-                            : (isLight ? Colors.cyan[800] : Colors.cyan[400]),
-                      ),
+                    Row(
+                      children: [
+                        if (showIcons) ...[
+                          Icon(Icons.auto_stories_outlined, size: 14, color: Colors.amber[400]),
+                          const SizedBox(width: 6),
+                        ],
+                        Text(
+                          'References',
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 12,
+                            fontWeight: activeView == 'references' ? FontWeight.bold : FontWeight.w600,
+                            color: activeView == 'references'
+                                ? (isLight ? Colors.cyan[900] : Colors.cyan[300])
+                                : (isLight ? Colors.cyan[800] : Colors.cyan[400]),
+                          ),
+                        ),
+                      ],
                     ),
                     Text(
                       '$activeRefsCount',
@@ -175,15 +199,27 @@ class SidebarWidget extends StatelessWidget {
                 dense: true,
                 selected: activeFilter.isEmpty,
                 selectedTileColor: isLight ? Colors.grey[300] : Colors.grey[800],
-                title: Text(
-                  activeView == 'references'
-                      ? (showIcons ? '📂 [ALL ACTIVE]' : '[ALL ACTIVE REFS]')
-                      : (showIcons ? '📋 [ALL TASKS]' : '[ALL TASKS]'),
-                  style: GoogleFonts.jetBrainsMono(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: isLight ? Colors.black : Colors.white,
-                  ),
+                title: Row(
+                  children: [
+                    if (showIcons) ...[
+                      Icon(
+                        activeView == 'references' ? Icons.folder_outlined : Icons.list_alt,
+                        size: 14,
+                        color: isLight ? Colors.black87 : Colors.white,
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      activeView == 'references'
+                          ? '[ALL ACTIVE REFS]'
+                          : '[ALL TASKS]',
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: isLight ? Colors.black : Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
                 onTap: () => onFilterClick(''),
               ),
@@ -196,13 +232,21 @@ class SidebarWidget extends StatelessWidget {
                   dense: true,
                   selected: activeFilter == 'archived',
                   selectedTileColor: isLight ? Colors.amber[100] : Colors.amber[950],
-                  title: Text(
-                    showIcons ? '📦 [ARCHIVED]' : '[ARCHIVED REFS]',
-                    style: GoogleFonts.jetBrainsMono(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: isLight ? Colors.amber[900] : Colors.amber[300],
-                    ),
+                  title: Row(
+                    children: [
+                      if (showIcons) ...[
+                        Icon(Icons.archive_outlined, size: 14, color: Colors.amber[400]),
+                        const SizedBox(width: 6),
+                      ],
+                      Text(
+                        '[ARCHIVED REFS]',
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: isLight ? Colors.amber[900] : Colors.amber[300],
+                        ),
+                      ),
+                    ],
                   ),
                   onTap: () => onFilterClick('archived'),
                 ),
@@ -232,7 +276,7 @@ class SidebarWidget extends StatelessWidget {
                             ),
                           ),
                           if (showIcons)
-                            const Text('🏷️', style: TextStyle(fontSize: 11)),
+                            Icon(Icons.label_outline, size: 13, color: Colors.purple[300]),
                         ],
                       ),
                     ),
@@ -245,19 +289,33 @@ class SidebarWidget extends StatelessWidget {
                                     ? (isLight ? Colors.cyan[100] : Colors.cyan[950])
                                     : (isLight ? Colors.green[100] : Colors.green[950]))
                                 : Colors.transparent,
-                            child: Text(
-                              showIcons ? '🏷️ $tag' : tag,
-                              style: GoogleFonts.jetBrainsMono(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: activeFilter == tag
-                                    ? (tag.startsWith('+')
-                                        ? (isLight ? Colors.cyan[900] : Colors.cyan[300])
-                                        : (isLight ? Colors.green[900] : Colors.green[300]))
-                                    : (tag.startsWith('+')
+                            child: Row(
+                              children: [
+                                if (showIcons) ...[
+                                  Icon(
+                                    tag.startsWith('+') ? Icons.gps_fixed : tag.startsWith('@') ? Icons.location_on_outlined : Icons.label_outline,
+                                    size: 12,
+                                    color: tag.startsWith('+')
                                         ? (isLight ? Colors.cyan[800] : Colors.cyan[400])
-                                        : (isLight ? Colors.green[800] : Colors.green[400])),
-                              ),
+                                        : (isLight ? Colors.green[800] : Colors.green[400]),
+                                  ),
+                                  const SizedBox(width: 6),
+                                ],
+                                Text(
+                                  tag,
+                                  style: GoogleFonts.jetBrainsMono(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: activeFilter == tag
+                                        ? (tag.startsWith('+')
+                                            ? (isLight ? Colors.cyan[900] : Colors.cyan[300])
+                                            : (isLight ? Colors.green[900] : Colors.green[300]))
+                                        : (tag.startsWith('+')
+                                            ? (isLight ? Colors.cyan[800] : Colors.cyan[400])
+                                            : (isLight ? Colors.green[800] : Colors.green[400])),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         )),
@@ -285,7 +343,7 @@ class SidebarWidget extends StatelessWidget {
                             ),
                           ),
                           if (showIcons)
-                            const Text('🎯', style: TextStyle(fontSize: 11)),
+                            Icon(Icons.gps_fixed, size: 12, color: Colors.cyan[400]),
                         ],
                       ),
                     ),
@@ -296,15 +354,23 @@ class SidebarWidget extends StatelessWidget {
                             color: activeFilter == p
                                 ? (isLight ? Colors.cyan[100] : Colors.cyan[950])
                                 : Colors.transparent,
-                            child: Text(
-                              showIcons ? '🎯 $p' : p,
-                              style: GoogleFonts.jetBrainsMono(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: activeFilter == p
-                                    ? (isLight ? Colors.cyan[900] : Colors.cyan[300])
-                                    : (isLight ? Colors.cyan[800] : Colors.cyan[400]),
-                              ),
+                            child: Row(
+                              children: [
+                                if (showIcons) ...[
+                                  Icon(Icons.gps_fixed, size: 12, color: isLight ? Colors.cyan[800] : Colors.cyan[400]),
+                                  const SizedBox(width: 6),
+                                ],
+                                Text(
+                                  p,
+                                  style: GoogleFonts.jetBrainsMono(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: activeFilter == p
+                                        ? (isLight ? Colors.cyan[900] : Colors.cyan[300])
+                                        : (isLight ? Colors.cyan[800] : Colors.cyan[400]),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         )),
@@ -336,7 +402,7 @@ class SidebarWidget extends StatelessWidget {
                             ),
                           ),
                           if (showIcons)
-                            const Text('📍', style: TextStyle(fontSize: 11)),
+                            Icon(Icons.location_on_outlined, size: 12, color: Colors.green[400]),
                         ],
                       ),
                     ),
@@ -347,15 +413,23 @@ class SidebarWidget extends StatelessWidget {
                             color: activeFilter == c
                                 ? (isLight ? Colors.green[100] : Colors.green[950])
                                 : Colors.transparent,
-                            child: Text(
-                              showIcons ? '📍 $c' : c,
-                              style: GoogleFonts.jetBrainsMono(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: activeFilter == c
-                                    ? (isLight ? Colors.green[900] : Colors.green[300])
-                                    : (isLight ? Colors.green[800] : Colors.green[400]),
-                              ),
+                            child: Row(
+                              children: [
+                                if (showIcons) ...[
+                                  Icon(Icons.location_on_outlined, size: 12, color: isLight ? Colors.green[800] : Colors.green[400]),
+                                  const SizedBox(width: 6),
+                                ],
+                                Text(
+                                  c,
+                                  style: GoogleFonts.jetBrainsMono(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: activeFilter == c
+                                        ? (isLight ? Colors.green[900] : Colors.green[300])
+                                        : (isLight ? Colors.green[800] : Colors.green[400]),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         )),
