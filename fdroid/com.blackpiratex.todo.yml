@@ -34,7 +34,14 @@ Builds:
     output: build/app/outputs/flutter-apk/app-release.apk
     flutter: stable
 
+  - versionName: 1.1.0
+    versionCode: 2
+    commit: v1.1.0
+    subdir: flutter_app
+    output: build/app/outputs/flutter-apk/app-release.apk
+    flutter: stable
+
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 1.0.0
-CurrentVersionCode: 1
+CurrentVersion: 1.1.0
+CurrentVersionCode: 2

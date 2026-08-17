@@ -97,6 +97,20 @@
   - Custom Keystore Support: automatically decodes `KEYSTORE_BASE64` and generates `key.properties` dynamically when CircleCI environment variables (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`) are present.
   - Fixed YAML syntax error in `.circleci/config.yml` caused by unindented lines inside multiline command block for `key.properties` generation.
   - Automatically stores generated release APK artifacts (`todo-next-android-app/app-release.apk`) in CircleCI artifact storage.
+- **Android App Version Bump (`v1.1.0+2`) & F-Droid Update**:
+  - Bumped Android application version to **`v1.1.0`** (`versionCode: 2`, `versionName: "1.1.0"`) in `flutter_app/pubspec.yaml`.
+  - Added Fastlane metadata changelog `fastlane/metadata/android/en-US/changelogs/2.txt`.
+  - Updated F-Droid build definition `fdroid/com.blackpiratex.todo.yml` with `v1.1.0` build instructions and `CurrentVersion: 1.1.0` / `CurrentVersionCode: 2`.
+- **Manual GitHub Actions Release Workflow (`.github/workflows/release.yml`)**:
+  - Dedicated workflow triggered manually via `workflow_dispatch` to compile, package, and publish official production releases.
+  - **Configurable Inputs**: Git tag name (e.g. `v1.1.0`), release title, changelog/notes, draft toggle, and pre-release toggle.
+  - **Full Validation & Test Matrix**: Runs Web bundle verification (`npm ci && npm run build`), Flutter static analysis (`flutter analyze --no-fatal-infos`), and Flutter unit/widget tests (`flutter test`).
+  - **Signing & Multi-Architecture Packages**:
+    - Generates Universal Fat APK (`todo-next-vX.Y.Z-universal.apk`).
+    - Generates Split-per-ABI APKs (`arm64-v8a`, `armeabi-v7a`, `x86_64`).
+    - Generates Android App Bundle (`todo-next-vX.Y.Z.aab`).
+    - Computes SHA-256 checksums (`sha256sums.txt`).
+  - **Automated GitHub Release Publishing**: Automatically creates GitHub release tag and attaches all compiled APKs, AAB bundles, and checksum files using `softprops/action-gh-release@v2`.
 - **GitHub Actions Android APK Build & Test Workflow (`.github/workflows/build-flutter-apk.yml`)**:
   - Triggered on `push` and `pull_request` to `main` / `master`, plus manual dispatch (`workflow_dispatch`).
   - Sets up Java 17 (`actions/setup-java@v4`) and stable Flutter SDK with dependency caching (`subosito/flutter-action@v2`).
@@ -175,7 +189,8 @@
 ```
 ├── .github/
 │   └── workflows/
-│       └── build-flutter-apk.yml     # GitHub Actions CI workflow building Android APK
+│       ├── build-flutter-apk.yml     # GitHub Actions CI workflow building Android APK
+│       └── release.yml               # Manual release workflow publishing APKs/AAB to GitHub Releases
 ├── app/
 │   ├── api/
 │   │   ├── auth/

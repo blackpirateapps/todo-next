@@ -1,0 +1,1 @@
+Version 1.1.0: Flagship Reference System for storing contacts, credentials, links, and snippets with auto-detecting Smart Actions (call, browse, email, map); inline sidebar/drawer editing; and interactive terminal onboarding experience.
