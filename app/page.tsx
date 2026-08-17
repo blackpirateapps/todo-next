@@ -94,6 +94,9 @@ export default function UtilitarianTodoPage() {
       const savedFontSize = localStorage.getItem('todo_next_font_size') as FontSize | null;
       if (savedFontSize && AVAILABLE_FONT_SIZES.some(f => f.id === savedFontSize)) {
         setFontSize(savedFontSize);
+        document.documentElement.setAttribute('data-font-size', savedFontSize);
+      } else {
+        document.documentElement.setAttribute('data-font-size', 'default');
       }
 
       const savedQueue = localStorage.getItem('todo_next_pending_queue');
@@ -131,6 +134,7 @@ export default function UtilitarianTodoPage() {
     setFontSize(newSize);
     try {
       localStorage.setItem('todo_next_font_size', newSize);
+      document.documentElement.setAttribute('data-font-size', newSize);
     } catch {}
   };
 
@@ -1148,7 +1152,7 @@ export default function UtilitarianTodoPage() {
       data-theme={theme}
       data-font-size={fontSize}
       style={{ backgroundColor: 'var(--app-bg)', color: 'var(--app-text)' }}
-      className={`flex flex-col h-screen text-xs font-mono overflow-hidden antialiased ${rootThemeClass}`}
+      className={`flex flex-col h-screen font-mono overflow-hidden antialiased ${rootThemeClass}`}
     >
       <CommandInput
         commandQuery={commandQuery}

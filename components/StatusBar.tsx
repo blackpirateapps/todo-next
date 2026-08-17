@@ -85,38 +85,38 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   };
 
   return (
-    <div className={`flex-shrink-0 border-t px-2 py-1 flex flex-wrap justify-between items-center select-none text-[11px] sm:text-xs gap-2 ${isLightMode ? 'bg-gray-200 border-gray-300 text-gray-600' : 'bg-gray-900 border-gray-800 text-gray-500'}`}>
-      <div className="flex gap-2 sm:gap-4 items-center">
-        <span className={`font-bold uppercase flex items-center gap-1 ${isLightMode ? 'text-blue-600' : 'text-blue-400'}`}>
-          {showIcons ? <Terminal className="w-3 h-3 text-blue-400" /> : null}
+    <div className={`flex-shrink-0 border-t px-3 py-1.5 flex flex-wrap justify-between items-center select-none text-xs sm:text-sm gap-2.5 ${isLightMode ? 'bg-gray-200 border-gray-300 text-gray-600' : 'bg-gray-900 border-gray-800 text-gray-400'}`}>
+      <div className="flex gap-2.5 sm:gap-4 items-center">
+        <span className={`font-bold uppercase flex items-center gap-1.5 ${isLightMode ? 'text-blue-600' : 'text-blue-400'}`}>
+          {showIcons ? <Terminal className="w-3.5 h-3.5 text-blue-400" /> : null}
           <span>NORMAL</span>
         </span>
-        <span className="flex items-center gap-1">
-          {showIcons && <BarChart2 className="w-3 h-3 text-gray-400" />}
+        <span className="flex items-center gap-1.5">
+          {showIcons && <BarChart2 className="w-3.5 h-3.5 text-gray-400" />}
           <span>{filteredCount}/{totalCount} items</span>
         </span>
         {activeFilter && (
-          <span className="truncate max-w-[100px] sm:max-w-none flex items-center gap-1">
-            {showIcons && <Search className="w-3 h-3 text-cyan-400" />}
+          <span className="truncate max-w-[120px] sm:max-w-none flex items-center gap-1.5 text-cyan-400 font-semibold">
+            {showIcons && <Search className="w-3.5 h-3.5 text-cyan-400" />}
             <span>[Filter: {activeFilter}]</span>
           </span>
         )}
         {userEmail && (
-          <span className="text-emerald-500 font-bold hidden md:inline-flex items-center gap-1 truncate max-w-[160px]">
-            {showIcons && <User className="w-3 h-3 text-emerald-400" />}
+          <span className="text-emerald-500 font-bold hidden md:inline-flex items-center gap-1.5 truncate max-w-[180px]">
+            {showIcons && <User className="w-3.5 h-3.5 text-emerald-400" />}
             <span>[{userEmail}]</span>
           </span>
         )}
       </div>
 
-      <div className="hidden lg:flex gap-4">
+      <div className="hidden lg:flex gap-4 opacity-80 text-xs">
         <span>[↑/↓] Navigate</span>
         <span>[Enter] Select</span>
         <span>[Space] Toggle</span>
         <span>[:] Command</span>
       </div>
 
-      <div className="flex gap-2 sm:gap-4 items-center ml-auto">
+      <div className="flex gap-2.5 sm:gap-4 items-center ml-auto">
         {/* Unsaved / Sync Status Indicator */}
         <div className="flex items-center">
           {getSyncIndicator()}

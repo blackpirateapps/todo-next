@@ -558,10 +558,10 @@ export const ReferenceDetails: React.FC<ReferenceDetailsProps> = ({
           </div>
         </div>
 
-        {/* Smart Detected Actions */}
+            {/* Smart Detected Actions */}
         {detectedSmartActions.length > 0 && (
           <div>
-            <div className="text-[10px] uppercase font-bold tracking-wider mb-1.5 opacity-60">
+            <div className="text-xs uppercase font-bold tracking-wider mb-1.5 opacity-60">
               Smart Actions Detected
             </div>
             <div className="space-y-1.5">
@@ -587,7 +587,7 @@ export const ReferenceDetails: React.FC<ReferenceDetailsProps> = ({
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     <button
                       onClick={() => handleCopyValue(action.value, action.type)}
-                      className={`px-2 py-0.5 text-[10px] font-bold border rounded cursor-pointer ${
+                      className={`px-2 py-0.5 text-xs font-bold border rounded cursor-pointer ${
                         isLight
                           ? 'border-gray-300 bg-white hover:bg-gray-100 text-gray-700'
                           : 'border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-200'
@@ -599,7 +599,7 @@ export const ReferenceDetails: React.FC<ReferenceDetailsProps> = ({
                       href={action.actionUrl}
                       target={action.type === 'url' || action.type === 'address' ? '_blank' : undefined}
                       rel="noopener noreferrer"
-                      className={`px-2 py-0.5 text-[10px] font-bold border rounded transition-colors cursor-pointer ${
+                      className={`px-2 py-0.5 text-xs font-bold border rounded transition-colors cursor-pointer ${
                         isLight
                           ? 'bg-cyan-700 text-white hover:bg-cyan-800 border-cyan-800'
                           : 'bg-cyan-600 text-black hover:bg-cyan-500 border-cyan-500'
@@ -620,7 +620,7 @@ export const ReferenceDetails: React.FC<ReferenceDetailsProps> = ({
         {/* Tags */}
         {currentRef.tags && currentRef.tags.length > 0 && (
           <div>
-            <div className="text-[10px] uppercase font-bold tracking-wider mb-1 opacity-60">
+            <div className="text-xs uppercase font-bold tracking-wider mb-1 opacity-60">
               Tags
             </div>
             <div className="flex flex-wrap gap-1">
@@ -646,7 +646,7 @@ export const ReferenceDetails: React.FC<ReferenceDetailsProps> = ({
 
         {/* Timestamps Metadata */}
         <div
-          className={`pt-2 border-t text-[11px] space-y-1 ${
+          className={`pt-2 border-t text-xs space-y-1 ${
             isLight ? 'border-gray-200 text-gray-500' : 'border-gray-800 text-gray-500'
           }`}
         >

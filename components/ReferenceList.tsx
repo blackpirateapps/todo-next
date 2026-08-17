@@ -390,13 +390,13 @@ export const ReferenceList: React.FC<ReferenceListProps> = ({
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-start gap-2 flex-1 min-w-0">
                     {/* [REF] Badge */}
-                    <span className={`px-1.5 py-0.2 text-[10px] font-bold border rounded flex-shrink-0 mt-0.5 flex items-center gap-1 ${
+                    <span className={`px-1.5 py-0.5 text-xs font-bold border rounded flex-shrink-0 mt-0.5 flex items-center gap-1 ${
                       ref.archived
                         ? (isLight ? 'bg-amber-100 border-amber-300 text-amber-800' : 'bg-amber-950 border-amber-800 text-amber-300')
                         : (isLight ? 'bg-cyan-100 border-cyan-300 text-cyan-800' : 'bg-cyan-950 border-cyan-800 text-cyan-300')
                     }`}>
                       {showIcons ? (
-                        ref.archived ? <Archive className="w-3 h-3 text-amber-400" /> : <Bookmark className="w-3 h-3 text-cyan-400" />
+                        ref.archived ? <Archive className="w-3.5 h-3.5 text-amber-400" /> : <Bookmark className="w-3.5 h-3.5 text-cyan-400" />
                       ) : null}
                       <span>REF</span>
                     </span>
@@ -404,21 +404,21 @@ export const ReferenceList: React.FC<ReferenceListProps> = ({
                     {/* Title & Preview */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className={`font-bold text-xs truncate ${
+                        <span className={`font-bold text-sm truncate ${
                           isLight ? 'text-gray-900' : 'text-gray-100'
                         }`}>
                           {ref.title}
                         </span>
                         {ref.archived && (
-                          <span className={`text-[10px] font-bold flex items-center gap-1 ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>
-                            {showIcons && <Archive className="w-3 h-3 text-amber-400" />}
+                          <span className={`text-xs font-bold flex items-center gap-1 ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>
+                            {showIcons && <Archive className="w-3.5 h-3.5 text-amber-400" />}
                             <span>[archived]</span>
                           </span>
                         )}
                       </div>
 
                       {previewLines.length > 0 && (
-                        <div className={`mt-1 font-mono text-[11px] leading-relaxed truncate ${
+                        <div className={`mt-1 font-mono text-xs leading-relaxed truncate ${
                           isLight ? 'text-gray-600' : 'text-gray-400'
                         }`}>
                           {previewLines.join(' · ')}
@@ -427,20 +427,20 @@ export const ReferenceList: React.FC<ReferenceListProps> = ({
 
                       {/* Tags */}
                       {ref.tags && ref.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1.5">
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
                           {ref.tags.map(t => {
                             const isProj = t.startsWith('+');
                             const isCtx = t.startsWith('@');
                             return (
                               <span
                                 key={t}
-                                className={`px-1.5 py-0.2 rounded text-[10px] font-semibold border flex items-center gap-1 ${
+                                className={`px-2 py-0.5 rounded text-xs font-semibold border flex items-center gap-1 ${
                                   isProj
                                     ? (isLight ? 'bg-cyan-50 border-cyan-200 text-cyan-800' : 'bg-cyan-950/60 border-cyan-800/80 text-cyan-300')
                                     : (isLight ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-emerald-950/60 border-emerald-800/80 text-emerald-300')
                                 }`}
                               >
-                                {showIcons && (isProj ? <Target className="w-2.5 h-2.5 text-cyan-400" /> : isCtx ? <MapPin className="w-2.5 h-2.5 text-emerald-400" /> : <Tag className="w-2.5 h-2.5 text-purple-400" />)}
+                                {showIcons && (isProj ? <Target className="w-3 h-3 text-cyan-400" /> : isCtx ? <MapPin className="w-3 h-3 text-emerald-400" /> : <Tag className="w-3 h-3 text-purple-400" />)}
                                 <span>{t}</span>
                               </span>
                             );

@@ -402,7 +402,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
           {onSaveAsTemplate && (
             <button
               onClick={() => onSaveAsTemplate(task)}
-              className={`px-2 py-1 text-[11px] font-bold border transition-colors ${
+              className={`px-2 py-1 text-xs font-bold border transition-colors ${
                 isLight
                   ? 'border-cyan-400 bg-cyan-100 text-cyan-900 hover:bg-cyan-200'
                   : 'border-cyan-700 bg-cyan-950 text-cyan-300 hover:bg-cyan-900'
@@ -451,7 +451,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
                     handleSaveName();
                   }
                 }}
-                className={`w-full p-2 border text-xs font-mono rounded-none focus:outline-none ${
+                className={`w-full p-2 border text-sm font-mono rounded-none focus:outline-none ${
                   isLight ? 'bg-white text-gray-900 border-gray-400' : 'bg-black text-gray-200 border-gray-700'
                 }`}
                 rows={2}
@@ -476,7 +476,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
           ) : (
             <div
               onClick={handleStartEditName}
-              className={`leading-relaxed whitespace-pre-wrap font-mono text-xs cursor-pointer hover:bg-gray-100/10 p-1.5 border rounded transition-colors ${
+              className={`leading-relaxed whitespace-pre-wrap font-mono text-sm cursor-pointer hover:bg-gray-100/10 p-1.5 border rounded transition-colors ${
                 isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-black border-gray-800 text-gray-200'
               }`}
             >
@@ -486,7 +486,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
         </div>
 
         {/* Task Metadata & Editable Dates */}
-        <div className={`grid grid-cols-2 gap-2 border p-2 text-xs ${isLight ? 'border-gray-300 bg-white text-gray-700' : 'border-gray-800 bg-black text-gray-400'}`}>
+        <div className={`grid grid-cols-2 gap-2 border p-2 text-xs sm:text-sm ${isLight ? 'border-gray-300 bg-white text-gray-700' : 'border-gray-800 bg-black text-gray-400'}`}>
           <div><span className={isLight ? 'text-gray-400' : 'text-gray-600'}>ID: </span>{task.id}</div>
           <div><span className={isLight ? 'text-gray-400' : 'text-gray-600'}>Pri: </span>{task.priority || 'None'}</div>
           
@@ -516,7 +516,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
             {!isEditingCreationDate && (
               <button
                 onClick={() => setIsEditingCreationDate(true)}
-                className={`text-[10px] ${isLight ? 'text-blue-600' : 'text-blue-400'}`}
+                className={`text-xs ${isLight ? 'text-blue-600' : 'text-blue-400'}`}
               >
                 [edit]
               </button>
@@ -537,8 +537,8 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
                     className={`px-1 border font-mono text-xs ${isLight ? 'bg-white border-gray-400 text-black' : 'bg-gray-900 border-gray-700 text-white'}`}
                     autoFocus
                   />
-                  <button onClick={handleSaveDueDate} className="text-[10px] text-green-500 font-bold">[save]</button>
-                  <button onClick={handleClearDueDate} className="text-[10px] text-red-400">[clear]</button>
+                  <button onClick={handleSaveDueDate} className="text-xs text-green-500 font-bold">[save]</button>
+                  <button onClick={handleClearDueDate} className="text-xs text-red-400">[clear]</button>
                 </div>
               ) : (
                 <span
@@ -556,7 +556,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
             {!isEditingDueDate && (
               <button
                 onClick={() => setIsEditingDueDate(true)}
-                className={`text-[10px] ${isLight ? 'text-purple-600' : 'text-purple-400'}`}
+                className={`text-xs ${isLight ? 'text-purple-600' : 'text-purple-400'}`}
               >
                 [edit]
               </button>
@@ -580,7 +580,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
             {task.recurrence && (
               <button
                 onClick={handleClearRecurrence}
-                className="text-[10px] text-red-400 hover:underline"
+                className="text-xs text-red-400 hover:underline"
               >
                 [Remove]
               </button>
@@ -601,7 +601,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
                 {!task.completed && (
                   <button
                     onClick={handleSkipRecurrence}
-                    className={`px-2 py-0.5 text-[11px] font-bold border transition-colors ${
+                    className={`px-2 py-0.5 text-xs font-bold border transition-colors ${
                       isLight ? 'border-amber-400 bg-amber-100 text-amber-900 hover:bg-amber-200' : 'border-amber-700 bg-amber-950 text-amber-300 hover:bg-amber-900'
                     }`}
                     title="Advance due date to next cycle without completing task"
@@ -612,18 +612,18 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
               </div>
             </div>
           ) : (
-            <div className={`italic text-[11px] ${isLight ? 'text-gray-400' : 'text-gray-600'}`}>
+            <div className={`italic text-xs ${isLight ? 'text-gray-400' : 'text-gray-600'}`}>
               No recurrence schedule configured.
             </div>
           )}
 
           {/* Quick Presets */}
           <div className="pt-1">
-            <div className={`text-[10px] uppercase font-bold mb-1 ${isLight ? 'text-gray-500' : 'text-gray-500'}`}>Set Preset Rule:</div>
+            <div className={`text-xs uppercase font-bold mb-1 ${isLight ? 'text-gray-500' : 'text-gray-500'}`}>Set Preset Rule:</div>
             <div className="flex flex-wrap gap-1">
               <button
                 onClick={() => handleSetRecurrence('1d')}
-                className={`px-1.5 py-0.5 text-[11px] border font-bold ${
+                className={`px-2 py-1 text-xs border font-bold ${
                   task.recurrence?.includes('1d')
                     ? (isLight ? 'bg-cyan-200 border-cyan-400 text-black' : 'bg-cyan-950 border-cyan-600 text-white')
                     : (isLight ? 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200' : 'bg-gray-900 border-gray-800 text-gray-300 hover:bg-gray-800')
@@ -633,7 +633,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
               </button>
               <button
                 onClick={() => handleSetRecurrence('weekday')}
-                className={`px-1.5 py-0.5 text-[11px] border font-bold ${
+                className={`px-2 py-1 text-xs border font-bold ${
                   task.recurrence?.includes('weekday')
                     ? (isLight ? 'bg-cyan-200 border-cyan-400 text-black' : 'bg-cyan-950 border-cyan-600 text-white')
                     : (isLight ? 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200' : 'bg-gray-900 border-gray-800 text-gray-300 hover:bg-gray-800')
@@ -643,7 +643,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
               </button>
               <button
                 onClick={() => handleSetRecurrence('1w')}
-                className={`px-1.5 py-0.5 text-[11px] border font-bold ${
+                className={`px-2 py-1 text-xs border font-bold ${
                   task.recurrence?.includes('1w')
                     ? (isLight ? 'bg-cyan-200 border-cyan-400 text-black' : 'bg-cyan-950 border-cyan-600 text-white')
                     : (isLight ? 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200' : 'bg-gray-900 border-gray-800 text-gray-300 hover:bg-gray-800')
@@ -653,7 +653,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
               </button>
               <button
                 onClick={() => handleSetRecurrence('1m')}
-                className={`px-1.5 py-0.5 text-[11px] border font-bold ${
+                className={`px-2 py-1 text-xs border font-bold ${
                   task.recurrence?.includes('1m')
                     ? (isLight ? 'bg-cyan-200 border-cyan-400 text-black' : 'bg-cyan-950 border-cyan-600 text-white')
                     : (isLight ? 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200' : 'bg-gray-900 border-gray-800 text-gray-300 hover:bg-gray-800')
@@ -666,7 +666,7 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
 
           {/* Mode Toggle & Custom Input */}
           <div className="flex items-center justify-between pt-1 border-t border-dashed border-gray-500/30">
-            <label className="flex items-center gap-1 cursor-pointer select-none text-[11px]">
+            <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs">
               <input
                 type="checkbox"
                 checked={task.recurrence ? task.recurrence.includes('strict:') || task.recurrence.includes('+') : isStrictRec}
