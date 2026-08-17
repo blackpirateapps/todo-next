@@ -12,6 +12,7 @@ import { ReferenceModal } from '@/components/ReferenceModal';
 import { CommandInput } from '@/components/CommandInput';
 import { StatusBar, SyncStatus } from '@/components/StatusBar';
 import { LoginScreen } from '@/components/LoginScreen';
+import { OnboardingPage } from '@/components/OnboardingPage';
 import { TemplateModal } from '@/components/TemplateModal';
 import { SettingsModal } from '@/components/SettingsModal';
 import { updateRawDates, parseRawToStructured, buildRawFromStructured } from '@/utils/todoParser';
@@ -44,6 +45,8 @@ export default function UtilitarianTodoPage() {
   const [references, setReferences] = useState<Reference[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authView, setAuthView] = useState<'onboarding' | 'auth'>('onboarding');
+  const [authInitialMode, setAuthInitialMode] = useState<'LOGIN' | 'SIGNUP'>('LOGIN');
 
   const [activeView, setActiveView] = useState<'list' | 'calendar' | 'references'>('list');
   const [commandQuery, setCommandQuery] = useState('');
@@ -1083,10 +1086,26 @@ export default function UtilitarianTodoPage() {
   }
 
   if (!currentUser) {
+    if (authView === 'onboarding') {
+      return (
+        <OnboardingPage
+          onGetStarted={(mode) => {
+            setAuthInitialMode(mode);
+            setAuthView('auth');
+          }}
+          theme={theme}
+          onThemeChange={changeTheme}
+          isLight={isLightMode}
+        />
+      );
+    }
+
     return (
       <LoginScreen
         onLoginSuccess={fetchUserData}
         isLight={isLightMode}
+        initialMode={authInitialMode}
+        onBackToOnboarding={() => setAuthView('onboarding')}
       />
     );
   }

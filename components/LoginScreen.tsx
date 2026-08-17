@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { auth } from '@/lib/firebase';
 import {
   signInWithEmailAndPassword,
@@ -9,14 +9,25 @@ import {
 interface LoginScreenProps {
   onLoginSuccess: () => void;
   isLight: boolean;
+  initialMode?: 'LOGIN' | 'SIGNUP';
+  onBackToOnboarding?: () => void;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, isLight }) => {
-  const [mode, setMode] = useState<'LOGIN' | 'SIGNUP'>('LOGIN');
+export const LoginScreen: React.FC<LoginScreenProps> = ({
+  onLoginSuccess,
+  isLight,
+  initialMode = 'LOGIN',
+  onBackToOnboarding,
+}) => {
+  const [mode, setMode] = useState<'LOGIN' | 'SIGNUP'>(initialMode);
   const [emailOrUser, setEmailOrUser] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (initialMode) setMode(initialMode);
+  }, [initialMode]);
 
   const resolveEmail = (input: string): string => {
     const trimmed = input.trim();
@@ -76,13 +87,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, isLigh
   return (
     <div className={`flex flex-col items-center justify-center min-h-screen font-mono p-4 ${bgClass}`}>
       <div className={`w-full max-w-md border p-6 shadow-xl relative ${boxClass}`}>
+        {/* Back to Onboarding link */}
+        {onBackToOnboarding && (
+          <button
+            type="button"
+            onClick={onBackToOnboarding}
+            className="mb-4 text-xs font-bold text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
+          >
+            <span>←</span>
+            <span>[ Back to Overview / Features ]</span>
+          </button>
+        )}
+
         {/* Terminal Header */}
         <div className="text-center mb-6">
           <div className="text-xs uppercase tracking-widest text-emerald-500 font-bold mb-1">
             [ TODO-NEXT SAAS SYSTEM ]
           </div>
           <p className="text-xs opacity-75">
-            Sign in or create account to access your todo.txt workspace
+            {mode === 'LOGIN'
+              ? 'Sign in to access your todo.txt workspace'
+              : 'Create your free account to get started'}
           </p>
         </div>
 
@@ -91,7 +116,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, isLigh
           <button
             type="button"
             onClick={() => { setMode('LOGIN'); setError(''); }}
-            className={`flex-1 py-2 text-center transition-colors ${
+            className={`flex-1 py-2 text-center transition-colors cursor-pointer ${
               mode === 'LOGIN'
                 ? 'border-b-2 border-emerald-500 text-emerald-500 font-bold'
                 : 'opacity-50 hover:opacity-100'
@@ -102,7 +127,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, isLigh
           <button
             type="button"
             onClick={() => { setMode('SIGNUP'); setError(''); }}
-            className={`flex-1 py-2 text-center transition-colors ${
+            className={`flex-1 py-2 text-center transition-colors cursor-pointer ${
               mode === 'SIGNUP'
                 ? 'border-b-2 border-emerald-500 text-emerald-500 font-bold'
                 : 'opacity-50 hover:opacity-100'
@@ -158,7 +183,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, isLigh
           <button
             type="submit"
             disabled={submitting}
-            className={`w-full py-2.5 text-xs font-bold uppercase border transition-colors ${
+            className={`w-full py-2.5 text-xs font-bold uppercase border transition-colors cursor-pointer ${
               isLight
                 ? 'border-gray-400 bg-gray-200 hover:bg-gray-300 text-gray-900'
                 : 'border-emerald-500 bg-emerald-950 hover:bg-emerald-900 text-emerald-400'

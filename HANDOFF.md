@@ -3,6 +3,13 @@
 ## 📌 Project Overview
 `todo-next` (Title: **Todo Next**) is a lightweight, terminal-styled task manager heavily influenced by the **`todo.txt` format** and **Unix philosophy**. It provides a fast, minimalist interface with keyboard navigation, syntax highlighting for projects (`+project`), contexts (`@context`), priorities (`(A)`, `(B)`), due dates (`due:YYYY-MM-DD`), dual theme support (Dark/Light mode), and full **List & Calendar views**.
 
+- **Interactive Onboarding & Landing Experience (`components/OnboardingPage.tsx`)**:
+  - Replaced immediate raw login screen with a rich terminal-styled **Onboarding & Landing Page** for unauthenticated users.
+  - **Hero & Value Proposition**: Introduces Todo Next's Unix philosophy, standard `todo.txt` parsing, instant local-first speed, and native Android sync.
+  - **Live Interactive Syntax Playground**: Real-time interactive AST parser and smart action sandbox directly on the frontpage with interactive preset snippets (`Priority Task`, `Recurring Sprint`, `Strict Daily Habit`, `Smart Reference`).
+  - **Feature Matrix & Deep Dives**: Showcases Actionable Tasks, Recurrence Engine, Smart Reference system, Dynamic Task Templates, and Dual Workspaces.
+  - **Interactive Multi-Theme Previews**: Live theme switcher right on the landing page allowing visitors to preview all 5 terminal themes.
+  - **Seamless Authentication Flow**: Calls to action (`[ 🚀 Launch Free Workspace ]`, `[ Sign In ]`, `[ Get Started ]`) seamlessly transition into the `LoginScreen` with pre-selected `LOGIN` or `SIGNUP` modes, with a `[ ← Back to Overview ]` return option.
 - **Flagship Reference System (Web & Native Android)**:
   - **Philosophy & Distinction**: Separates actionable todo.txt items from static non-actionable reference material (phone numbers, addresses, emails, meeting links, server configs, Wi-Fi credentials, cheat sheets).
   - **Data Model & Turso Database Schema**:
@@ -200,6 +207,7 @@
 │   ├── ConfirmModal.tsx
 │   ├── FormattedText.tsx
 │   ├── LoginScreen.tsx               # Firebase Auth login/signup & bpx migration wizard
+│   ├── OnboardingPage.tsx            # Terminal-styled interactive Landing & Onboarding page
 │   ├── ReferenceDetails.tsx          # Reference Inspector Drawer with Smart Actions
 │   ├── ReferenceList.tsx             # Reference Workspace List (search, tabs, tag filters)
 │   ├── ReferenceModal.tsx            # Reference Editor Modal with tag extraction
