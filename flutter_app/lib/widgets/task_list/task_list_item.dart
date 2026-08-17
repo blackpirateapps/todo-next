@@ -11,6 +11,7 @@ class TaskListItem extends StatelessWidget {
   final Function(String) onToggleTask;
   final Function(Task) onDeleteTask;
   final bool isLight;
+  final bool showIcons;
 
   const TaskListItem({
     super.key,
@@ -20,6 +21,7 @@ class TaskListItem extends StatelessWidget {
     required this.onToggleTask,
     required this.onDeleteTask,
     required this.isLight,
+    this.showIcons = false,
   });
 
   @override
@@ -31,6 +33,16 @@ class TaskListItem extends StatelessWidget {
 
     final hasRec = task.recurrence != null && task.recurrence!.isNotEmpty;
     final isStrict = hasRec && (task.recurrence!.contains('strict:') || task.recurrence!.contains('+'));
+
+    final priIcon = task.priority == 'A'
+        ? '🔴 A'
+        : task.priority == 'B'
+        ? '🟡 B'
+        : task.priority == 'C'
+        ? '🔵 C'
+        : task.priority != null && task.priority!.isNotEmpty
+        ? '🚩 ${task.priority}'
+        : '-';
 
     return InkWell(
       onTap: () => onSelectTask(task),
@@ -48,7 +60,9 @@ class TaskListItem extends StatelessWidget {
               child: InkWell(
                 onTap: () => onToggleTask(task.id),
                 child: Text(
-                  task.completed ? '[x]' : '[ ]',
+                  showIcons
+                      ? (task.completed ? '✅' : '⬜')
+                      : (task.completed ? '[x]' : '[ ]'),
                   textAlign: TextAlign.center,
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 13,
@@ -59,11 +73,15 @@ class TaskListItem extends StatelessWidget {
               ),
             ),
             SizedBox(
-              width: 32,
+              width: showIcons ? 42 : 32,
               child: Text(
-                task.priority ?? '-',
+                showIcons ? priIcon : (task.priority ?? '-'),
                 textAlign: TextAlign.center,
-                style: GoogleFonts.jetBrainsMono(fontSize: 12, color: Colors.grey[500]),
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: showIcons ? 10 : 12,
+                  fontWeight: showIcons ? FontWeight.bold : FontWeight.normal,
+                  color: Colors.grey[500],
+                ),
               ),
             ),
             Expanded(
@@ -112,7 +130,7 @@ class TaskListItem extends StatelessWidget {
               child: InkWell(
                 onTap: () => onDeleteTask(task),
                 child: Text(
-                  '[del]',
+                  showIcons ? '🗑️' : '[del]',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[600]),
                 ),

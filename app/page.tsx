@@ -54,12 +54,14 @@ export default function UtilitarianTodoPage() {
   const [activeFilter, setActiveFilter] = useState('');
   const [theme, setTheme] = useState<AppTheme>('dark');
   const isLightMode = isLightTheme(theme);
+  const [showIcons, setShowIcons] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Template & Settings Modal State
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<'theme' | 'templates' | 'syntax'>('theme');
+  const [isSyntaxGuideOpen, setIsSyntaxGuideOpen] = useState(false);
 
   // Reference Sidebar State (Inline view/create/edit)
   const [isCreatingReference, setIsCreatingReference] = useState(false);
@@ -70,7 +72,7 @@ export default function UtilitarianTodoPage() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('synced');
   const [pendingQueue, setPendingQueue] = useState<PendingMutation[]>([]);
 
-  // Load theme, pending queue & cached data from localStorage on mount
+  // Load theme, icon preference, pending queue & cached data from localStorage on mount
   useEffect(() => {
     try {
       const savedTheme = localStorage.getItem('todo_next_theme') as AppTheme | null;
@@ -81,6 +83,11 @@ export default function UtilitarianTodoPage() {
         if (legacyIsLight === 'true') {
           setTheme('light');
         }
+      }
+
+      const savedShowIcons = localStorage.getItem('todo_next_show_icons');
+      if (savedShowIcons !== null) {
+        setShowIcons(savedShowIcons === 'true');
       }
 
       const savedQueue = localStorage.getItem('todo_next_pending_queue');
@@ -118,6 +125,16 @@ export default function UtilitarianTodoPage() {
     const currentIndex = AVAILABLE_THEMES.findIndex(t => t.id === theme);
     const nextIndex = (currentIndex + 1) % AVAILABLE_THEMES.length;
     changeTheme(AVAILABLE_THEMES[nextIndex].id);
+  };
+
+  const toggleShowIcons = (value?: boolean) => {
+    setShowIcons(prev => {
+      const nextVal = value !== undefined ? value : !prev;
+      try {
+        localStorage.setItem('todo_next_show_icons', String(nextVal));
+      } catch {}
+      return nextVal;
+    });
   };
 
   // Persist pending queue to localStorage
@@ -1133,6 +1150,7 @@ export default function UtilitarianTodoPage() {
           if (tab) setSettingsInitialTab(tab);
           setIsSettingsModalOpen(true);
         }}
+        showIcons={showIcons}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -1146,6 +1164,7 @@ export default function UtilitarianTodoPage() {
           onChangeView={setActiveView}
           isOpenMobile={isMobileSidebarOpen}
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
+          showIcons={showIcons}
         />
 
         {/* Middle Workspace Area */}
@@ -1157,6 +1176,7 @@ export default function UtilitarianTodoPage() {
             onToggleTask={handleToggleTask}
             onDeleteTask={handleDeleteTask}
             isLight={isLightMode}
+            showIcons={showIcons}
           />
         )}
 
@@ -1185,6 +1205,7 @@ export default function UtilitarianTodoPage() {
             isLight={isLightMode}
             activeFilter={activeFilter}
             searchQuery={commandQuery}
+            showIcons={showIcons}
           />
         )}
 
@@ -1240,6 +1261,7 @@ export default function UtilitarianTodoPage() {
         syncStatus={syncStatus}
         pendingCount={pendingQueue.length}
         onForceSync={flushSyncQueue}
+        showIcons={showIcons}
       />
 
       {/* Template Modal */}
@@ -1272,6 +1294,8 @@ export default function UtilitarianTodoPage() {
         onForceSync={flushSyncQueue}
         onLogout={handleLogout}
         initialTab={settingsInitialTab}
+        showIcons={showIcons}
+        onToggleIcons={toggleShowIcons}
       />
     </div>
   );

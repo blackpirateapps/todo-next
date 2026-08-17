@@ -25,6 +25,8 @@ class SettingsModalWidget extends StatefulWidget {
   final VoidCallback? onLogout;
   final VoidCallback? onLogin;
   final int initialTabIndex;
+  final bool showIcons;
+  final Function(bool value)? onToggleIcons;
 
   const SettingsModalWidget({
     super.key,
@@ -42,6 +44,8 @@ class SettingsModalWidget extends StatefulWidget {
     this.onLogout,
     this.onLogin,
     this.initialTabIndex = 0,
+    this.showIcons = false,
+    this.onToggleIcons,
   });
 
   @override
@@ -66,9 +70,9 @@ class _SettingsModalWidgetState extends State<SettingsModalWidget> {
     final dialogHeight = MediaQuery.of(context).size.height * 0.85;
 
     final tabs = [
-      {'title': '[ Themes ]', 'icon': Icons.palette_outlined},
-      {'title': '[ Templates ]', 'icon': Icons.auto_awesome_mosaic_outlined},
-      {'title': '[ Syntax Guide ]', 'icon': Icons.help_outline},
+      {'title': widget.showIcons ? '🎨 [ Themes ]' : '[ Themes ]', 'icon': Icons.palette_outlined},
+      {'title': widget.showIcons ? '📐 [ Templates ]' : '[ Templates ]', 'icon': Icons.auto_awesome_mosaic_outlined},
+      {'title': widget.showIcons ? '📖 [ Syntax Guide ]' : '[ Syntax Guide ]', 'icon': Icons.help_outline},
     ];
 
     return Dialog(
@@ -143,6 +147,8 @@ class _SettingsModalWidgetState extends State<SettingsModalWidget> {
                       onForceSync: widget.onForceSync,
                       onLogout: widget.onLogout,
                       onLogin: widget.onLogin,
+                      showIcons: widget.showIcons,
+                      onToggleIcons: widget.onToggleIcons,
                     )
                   : _activeTabIndex == 1
                       ? TemplatesSettingsTab(

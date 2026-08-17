@@ -12,6 +12,7 @@ interface ReferenceListProps {
   isLight: boolean;
   activeFilter?: string;
   searchQuery?: string;
+  showIcons?: boolean;
 }
 
 export const ReferenceList: React.FC<ReferenceListProps> = ({
@@ -22,7 +23,8 @@ export const ReferenceList: React.FC<ReferenceListProps> = ({
   onOpenNewReferenceModal,
   isLight,
   activeFilter = '',
-  searchQuery = ''
+  searchQuery = '',
+  showIcons = false
 }) => {
   const [tabFilter, setTabFilter] = useState<'all' | 'recent' | 'archived'>('all');
   const [selectedTag, setSelectedTag] = useState<string>('');
@@ -153,10 +155,11 @@ export const ReferenceList: React.FC<ReferenceListProps> = ({
         isLight ? 'bg-gray-100 border-gray-300' : 'bg-gray-950 border-gray-800'
       }`}>
         <div className="flex items-center gap-2">
-          <span className={`font-bold uppercase tracking-wider text-xs sm:text-sm ${
+          <span className={`font-bold uppercase tracking-wider text-xs sm:text-sm flex items-center gap-1.5 ${
             isLight ? 'text-cyan-800' : 'text-cyan-400'
           }`}>
-            [ REFERENCE WORKSPACE ]
+            {showIcons && <span>🗂️</span>}
+            <span>[ REFERENCE WORKSPACE ]</span>
           </span>
           <span className={`text-xs px-1.5 py-0.2 border rounded ${
             isLight ? 'bg-gray-200 border-gray-300 text-gray-700' : 'bg-gray-900 border-gray-800 text-gray-400'
@@ -168,14 +171,15 @@ export const ReferenceList: React.FC<ReferenceListProps> = ({
         {/* Action Button: + New Reference */}
         <button
           onClick={onOpenNewReferenceModal}
-          className={`px-3 py-1 text-xs font-bold border rounded transition-colors ${
+          className={`px-3 py-1 text-xs font-bold border rounded transition-colors cursor-pointer flex items-center gap-1 ${
             isLight
               ? 'bg-cyan-700 hover:bg-cyan-800 text-white border-cyan-800'
               : 'bg-cyan-600 hover:bg-cyan-500 text-black border-cyan-500'
           }`}
           title="Create a new reference (or type :ref in command bar)"
         >
-          + NEW REFERENCE
+          {showIcons && <span>➕</span>}
+          <span>{showIcons ? 'New Reference' : '+ NEW REFERENCE'}</span>
         </button>
       </div>
 
@@ -187,33 +191,33 @@ export const ReferenceList: React.FC<ReferenceListProps> = ({
         <div className="flex border text-xs">
           <button
             onClick={() => setTabFilter('all')}
-            className={`px-2.5 py-0.5 font-bold ${
+            className={`px-2.5 py-0.5 font-bold cursor-pointer ${
               tabFilter === 'all'
                 ? (isLight ? 'bg-gray-300 text-gray-900' : 'bg-gray-800 text-white')
                 : (isLight ? 'hover:bg-gray-200 text-gray-600' : 'hover:bg-gray-800 text-gray-400')
             }`}
           >
-            All
+            {showIcons ? '📂 All' : 'All'}
           </button>
           <button
             onClick={() => setTabFilter('recent')}
-            className={`px-2.5 py-0.5 font-bold border-l ${isLight ? 'border-gray-200' : 'border-gray-800'} ${
+            className={`px-2.5 py-0.5 font-bold border-l cursor-pointer ${isLight ? 'border-gray-200' : 'border-gray-800'} ${
               tabFilter === 'recent'
                 ? (isLight ? 'bg-cyan-200 text-cyan-900' : 'bg-cyan-950 text-cyan-300')
                 : (isLight ? 'hover:bg-gray-200 text-gray-600' : 'hover:bg-gray-800 text-gray-400')
             }`}
           >
-            Recent
+            {showIcons ? '⚡ Recent' : 'Recent'}
           </button>
           <button
             onClick={() => setTabFilter('archived')}
-            className={`px-2.5 py-0.5 font-bold border-l ${isLight ? 'border-gray-200' : 'border-gray-800'} ${
+            className={`px-2.5 py-0.5 font-bold border-l cursor-pointer ${isLight ? 'border-gray-200' : 'border-gray-800'} ${
               tabFilter === 'archived'
                 ? (isLight ? 'bg-amber-200 text-amber-900' : 'bg-amber-950 text-amber-300')
                 : (isLight ? 'hover:bg-gray-200 text-gray-600' : 'hover:bg-gray-800 text-gray-400')
             }`}
           >
-            Archived
+            {showIcons ? '📦 Archived' : 'Archived'}
           </button>
         </div>
 

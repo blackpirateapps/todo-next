@@ -11,6 +11,7 @@ class SidebarWidget extends StatelessWidget {
   final Function(String) onFilterClick;
   final Function(String)? onChangeView;
   final bool isLight;
+  final bool showIcons;
 
   const SidebarWidget({
     super.key,
@@ -21,6 +22,7 @@ class SidebarWidget extends StatelessWidget {
     required this.onFilterClick,
     this.onChangeView,
     required this.isLight,
+    this.showIcons = false,
   });
 
   @override
@@ -61,14 +63,21 @@ class SidebarWidget extends StatelessWidget {
             // WORKSPACES SECTION
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                'WORKSPACES',
-                style: GoogleFonts.jetBrainsMono(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[500],
-                  letterSpacing: 1.1,
-                ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'WORKSPACES',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[500],
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                  if (showIcons)
+                    const Text('💼', style: TextStyle(fontSize: 12)),
+                ],
               ),
             ),
 
@@ -84,7 +93,7 @@ class SidebarWidget extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '✓ Tasks',
+                      showIcons ? '📝 Tasks' : '✓ Tasks',
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 12,
                         fontWeight: activeView == 'list' ? FontWeight.bold : FontWeight.w500,
@@ -136,7 +145,7 @@ class SidebarWidget extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '▸ References',
+                      showIcons ? '🗂️ References' : '▸ References',
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 12,
                         fontWeight: activeView == 'references' ? FontWeight.bold : FontWeight.w600,
@@ -167,7 +176,9 @@ class SidebarWidget extends StatelessWidget {
                 selected: activeFilter.isEmpty,
                 selectedTileColor: isLight ? Colors.grey[300] : Colors.grey[800],
                 title: Text(
-                  activeView == 'references' ? '[ALL ACTIVE REFS]' : '[ALL TASKS]',
+                  activeView == 'references'
+                      ? (showIcons ? '📂 [ALL ACTIVE]' : '[ALL ACTIVE REFS]')
+                      : (showIcons ? '📋 [ALL TASKS]' : '[ALL TASKS]'),
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -186,7 +197,7 @@ class SidebarWidget extends StatelessWidget {
                   selected: activeFilter == 'archived',
                   selectedTileColor: isLight ? Colors.amber[100] : Colors.amber[950],
                   title: Text(
-                    '[ARCHIVED REFS]',
+                    showIcons ? '📦 [ARCHIVED]' : '[ARCHIVED REFS]',
                     style: GoogleFonts.jetBrainsMono(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
@@ -208,14 +219,21 @@ class SidebarWidget extends StatelessWidget {
                   if (activeView == 'references') ...[
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      child: Text(
-                        'REFERENCE TAGS',
-                        style: GoogleFonts.jetBrainsMono(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[500],
-                          letterSpacing: 1.1,
-                        ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'REFERENCE TAGS',
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[500],
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                          if (showIcons)
+                            const Text('🏷️', style: TextStyle(fontSize: 11)),
+                        ],
                       ),
                     ),
                     ...refTagsList.map((tag) => InkWell(
@@ -228,7 +246,7 @@ class SidebarWidget extends StatelessWidget {
                                     : (isLight ? Colors.green[100] : Colors.green[950]))
                                 : Colors.transparent,
                             child: Text(
-                              tag,
+                              showIcons ? '🏷️ $tag' : tag,
                               style: GoogleFonts.jetBrainsMono(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -254,14 +272,21 @@ class SidebarWidget extends StatelessWidget {
                   ] else ...[
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      child: Text(
-                        'PROJECTS',
-                        style: GoogleFonts.jetBrainsMono(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[500],
-                          letterSpacing: 1.1,
-                        ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'PROJECTS',
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[500],
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                          if (showIcons)
+                            const Text('🎯', style: TextStyle(fontSize: 11)),
+                        ],
                       ),
                     ),
                     ...projectsList.map((p) => InkWell(
@@ -272,7 +297,7 @@ class SidebarWidget extends StatelessWidget {
                                 ? (isLight ? Colors.cyan[100] : Colors.cyan[950])
                                 : Colors.transparent,
                             child: Text(
-                              p,
+                              showIcons ? '🎯 $p' : p,
                               style: GoogleFonts.jetBrainsMono(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -298,14 +323,21 @@ class SidebarWidget extends StatelessWidget {
 
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      child: Text(
-                        'CONTEXTS',
-                        style: GoogleFonts.jetBrainsMono(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[500],
-                          letterSpacing: 1.1,
-                        ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'CONTEXTS',
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[500],
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                          if (showIcons)
+                            const Text('📍', style: TextStyle(fontSize: 11)),
+                        ],
                       ),
                     ),
                     ...contextsList.map((c) => InkWell(
@@ -316,7 +348,7 @@ class SidebarWidget extends StatelessWidget {
                                 ? (isLight ? Colors.green[100] : Colors.green[950])
                                 : Colors.transparent,
                             child: Text(
-                              c,
+                              showIcons ? '📍 $c' : c,
                               style: GoogleFonts.jetBrainsMono(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,

@@ -3,8 +3,13 @@ import 'package:google_fonts/google_fonts.dart';
 
 class TaskListHeader extends StatelessWidget {
   final bool isLight;
+  final bool showIcons;
 
-  const TaskListHeader({super.key, required this.isLight});
+  const TaskListHeader({
+    super.key,
+    required this.isLight,
+    this.showIcons = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +26,7 @@ class TaskListHeader extends StatelessWidget {
           SizedBox(
             width: 40,
             child: Text(
-              'St',
+              showIcons ? '✅' : 'St',
               textAlign: TextAlign.center,
               style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[500]),
             ),
@@ -29,21 +34,21 @@ class TaskListHeader extends StatelessWidget {
           SizedBox(
             width: 32,
             child: Text(
-              'Pr',
+              showIcons ? '⚡' : 'Pr',
               textAlign: TextAlign.center,
               style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[500]),
             ),
           ),
           Expanded(
             child: Text(
-              'Task',
+              showIcons ? '📝 Task' : 'Task',
               style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[500]),
             ),
           ),
           SizedBox(
             width: 44,
             child: Text(
-              'Del',
+              showIcons ? '🗑️' : 'Del',
               textAlign: TextAlign.center,
               style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.grey[500]),
             ),

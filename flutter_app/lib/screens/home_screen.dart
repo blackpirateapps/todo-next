@@ -57,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _activeView = 'list'; // 'list' | 'calendar' | 'references'
   String _syncStatus = 'synced'; // 'synced' | 'syncing' | 'offline'
   bool _isLoading = true;
+  bool _showIcons = false;
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -78,12 +79,14 @@ class _HomeScreenState extends State<HomeScreen> {
       final localTasks = await _storageService.loadTasks();
       final localTemplates = await _storageService.loadTemplates();
       final localReferences = await _storageService.loadReferences();
+      final savedShowIcons = await _storageService.loadShowIcons();
 
       if (mounted) {
         setState(() {
           _tasks = localTasks;
           _templates = localTemplates;
           _references = localReferences;
+          _showIcons = savedShowIcons;
           if (_tasks.isNotEmpty && _selectedTask == null) {
             _selectedTask = _tasks.first;
           }
@@ -164,9 +167,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<Task> _getFilteredTasks() {
-    List<Task> result = _tasks;
+    List<Task> result = List.from(_tasks);
     if (_activeFilter.isNotEmpty) {
-      result = result.where((t) => t.raw.contains(_activeFilter)).toList();
+      if (_activeFilter.startsWith('+') || _activeFilter.startsWith('@')) {
+        result = result.where((t) =>
+          t.projects.contains(_activeFilter) || t.contexts.contains(_activeFilter)
+        ).toList();
+      } else {
+        final q = _activeFilter.toLowerCase();
+        result = result.where((t) =>
+          t.raw.toLowerCase().contains(q) || t.description.toLowerCase().contains(q)
+        ).toList();
+      }
     }
     return result;
   }
@@ -758,6 +770,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _toggleShowIcons(bool value) {
+    setState(() => _showIcons = value);
+    _storageService.saveShowIcons(value);
+  }
+
   void _openSettingsModal([int initialTab = 0]) {
     showDialog(
       context: context,
@@ -773,6 +790,8 @@ class _HomeScreenState extends State<HomeScreen> {
         onForceSync: _syncRemoteData,
         userEmail: ApiService.userEmail,
         syncStatus: _syncStatus,
+        showIcons: _showIcons,
+        onToggleIcons: _toggleShowIcons,
         onLogout: () async {
           await ApiService.logout();
           setState(() {
@@ -798,40 +817,51 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: widget.isLight ? Colors.white : Colors.black,
-        body: const Center(child: Text('Loading Todo Next...')),
+        body: Center(
+          child: Text(
+            'LOADING DATABASE...',
+            style: AppTheme.monoStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: widget.isLight ? Colors.cyan[900] : Colors.cyan[400],
+            ),
+          ),
+        ),
       );
     }
 
-    final filteredTasks = _getFilteredTasks();
     final screenWidth = MediaQuery.of(context).size.width;
-    final isTablet = screenWidth >= 600;
+    final isTablet = screenWidth >= 768;
     final isReferenceView = _activeView == 'references';
+    final filteredTasks = _getFilteredTasks();
 
     return Scaffold(
       key: _scaffoldKey,
+      backgroundColor: widget.isLight ? Colors.white : Colors.black,
       drawer: !isTablet
           ? Drawer(
-              child: SafeArea(
-                child: SidebarWidget(
-                  tasks: _tasks,
-                  references: _references,
-                  activeFilter: _activeFilter,
-                  activeView: _activeView,
-                  isLight: widget.isLight,
-                  onChangeView: (view) {
-                    setState(() => _activeView = view);
-                    Navigator.of(context).pop();
-                  },
-                  onFilterClick: (filter) {
-                    setState(() => _activeFilter = filter);
-                    Navigator.of(context).pop();
-                  },
-                ),
+              child: SidebarWidget(
+                tasks: _tasks,
+                references: _references,
+                activeFilter: _activeFilter,
+                activeView: _activeView,
+                isLight: widget.isLight,
+                showIcons: _showIcons,
+                onChangeView: (view) {
+                  setState(() => _activeView = view);
+                  Navigator.of(context).pop();
+                },
+                onFilterClick: (filter) {
+                  setState(() => _activeFilter = filter);
+                  Navigator.of(context).pop();
+                },
               ),
             )
           : null,
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: Colors.cyan[700],
+        foregroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         elevation: 4,
         icon: const Icon(Icons.add, color: Colors.white, size: 20),
         label: Text(
@@ -856,6 +886,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onChangeView: (view) => setState(() => _activeView = view),
               activeView: _activeView,
               isLight: widget.isLight,
+              showIcons: _showIcons,
             ),
             Expanded(
               child: Row(
@@ -867,6 +898,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       activeFilter: _activeFilter,
                       activeView: _activeView,
                       isLight: widget.isLight,
+                      showIcons: _showIcons,
                       onChangeView: (view) => setState(() => _activeView = view),
                       onFilterClick: (filter) => setState(() => _activeFilter = filter),
                     ),
@@ -879,6 +911,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             selectedReferenceId: _selectedReference?.id,
                             isLight: widget.isLight,
                             activeFilter: _activeFilter,
+                            showIcons: _showIcons,
                             onSelectReference: (r) => _selectReferenceAndOpenInspector(r, isTablet),
                             onDeleteReference: _handleDeleteReference,
                             onOpenNewReference: () => _openNewReferenceDialog(),
@@ -888,6 +921,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 tasks: filteredTasks,
                                 selectedTaskId: _selectedTask?.id,
                                 isLight: widget.isLight,
+                                showIcons: _showIcons,
                                 onSelectTask: (t) => _selectTaskAndOpenInspector(t, isTablet),
                                 onToggleTask: _handleToggleTask,
                                 onDeleteTask: _handleDeleteTask,
@@ -912,6 +946,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ? ReferenceDrawerWidget(
                             reference: _selectedReference,
                             isLight: widget.isLight,
+                            showIcons: _showIcons,
                             onClose: () => setState(() => _selectedReference = null),
                             onEdit: _openEditReferenceDialog,
                             onArchive: _handleArchiveReference,
@@ -920,6 +955,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         : InspectorDrawerWidget(
                             task: _selectedTask,
                             isLight: widget.isLight,
+                            showIcons: _showIcons,
                             onClose: () => setState(() => _selectedTask = null),
                             onUpdateTask: _handleUpdateTask,
                             onSaveAsTemplate: _handleSaveAsTemplate,
@@ -937,6 +973,7 @@ class _HomeScreenState extends State<HomeScreen> {
               currentTheme: widget.currentTheme,
               onToggleTheme: widget.onToggleTheme,
               onForceSync: _syncRemoteData,
+              showIcons: _showIcons,
             ),
           ],
         ),
@@ -949,6 +986,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? ReferenceDrawerWidget(
                         reference: _selectedReference,
                         isLight: widget.isLight,
+                        showIcons: _showIcons,
                         onClose: () => Navigator.of(context).pop(),
                         onEdit: (ref) {
                           Navigator.of(context).pop();
@@ -965,6 +1003,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     : InspectorDrawerWidget(
                         task: _selectedTask,
                         isLight: widget.isLight,
+                        showIcons: _showIcons,
                         onClose: () => Navigator.of(context).pop(),
                         onUpdateTask: _handleUpdateTask,
                         onSaveAsTemplate: _handleSaveAsTemplate,

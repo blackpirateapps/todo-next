@@ -16,6 +16,7 @@ interface TaskListProps {
   onToggleTask: (id: string) => void;
   onDeleteTask: (id: string) => void;
   isLight: boolean;
+  showIcons?: boolean;
 }
 
 export const TaskList: React.FC<TaskListProps> = ({
@@ -24,7 +25,8 @@ export const TaskList: React.FC<TaskListProps> = ({
   onSelectTask,
   onToggleTask,
   onDeleteTask,
-  isLight
+  isLight,
+  showIcons = false
 }) => {
   // Sorting State
   const [sortField, setSortField] = useState<SortField>('creationDate');
@@ -117,75 +119,117 @@ export const TaskList: React.FC<TaskListProps> = ({
       }`}>
         {/* Sort Controls */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className={isLight ? 'text-gray-500 font-bold' : 'text-gray-500 font-bold'}>Sort:</span>
-          <select
-            value={sortField}
-            onChange={(e) => setSortField(e.target.value as SortField)}
-            className={`px-1.5 py-0.5 border text-xs font-mono rounded-none focus:outline-none ${
-              isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-black border-gray-800 text-white'
-            }`}
-          >
-            <option value="creationDate">Creation Date</option>
-            <option value="dueDate">Due Date</option>
-            <option value="title">Name / Title</option>
-            <option value="priority">Priority</option>
-          </select>
-
-          <button
-            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-            className={`px-2 py-0.5 border font-bold ${
-              isLight
-                ? 'border-gray-300 bg-gray-200 hover:bg-gray-300 text-gray-900'
-                : 'border-gray-800 bg-gray-900 hover:bg-gray-800 text-white'
-            }`}
-            title="Toggle Ascending / Descending"
-          >
-            {sortOrder === 'asc' ? '[ASC ↑]' : '[DESC ↓]'}
-          </button>
+          <span className={isLight ? 'text-gray-500 font-bold' : 'text-gray-500 font-bold'}>
+            {showIcons ? '🔃 Sort:' : 'Sort:'}
+          </span>
+          <div className="flex border">
+            {(['creationDate', 'dueDate', 'title', 'priority'] as SortField[]).map((f) => {
+              const active = sortField === f;
+              const labels: Record<SortField, string> = {
+                creationDate: showIcons ? '🕒 Created' : 'Created',
+                dueDate: showIcons ? '📅 Due' : 'Due',
+                title: showIcons ? '🔤 Title' : 'Title',
+                priority: showIcons ? '⚡ Priority' : 'Priority',
+              };
+              return (
+                <button
+                  key={f}
+                  onClick={() => {
+                    if (sortField === f) {
+                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortField(f);
+                      setSortOrder('asc');
+                    }
+                  }}
+                  className={`px-2 py-0.5 border-r last:border-r-0 cursor-pointer ${
+                    active
+                      ? (isLight ? 'bg-gray-300 text-gray-900 font-bold' : 'bg-gray-800 text-white font-bold')
+                      : (isLight ? 'text-gray-600 hover:bg-gray-200' : 'text-gray-400 hover:bg-gray-800')
+                  }`}
+                >
+                  {labels[f]} {active ? (sortOrder === 'asc' ? '▲' : '▼') : ''}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Filter Controls */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className={isLight ? 'text-gray-500 font-bold' : 'text-gray-500 font-bold'}>Filter:</span>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Status Filter */}
+          <div className="flex items-center gap-1">
+            <span className={isLight ? 'text-gray-500' : 'text-gray-500'}>
+              {showIcons ? '🔍 Status:' : 'Status:'}
+            </span>
+            <div className="flex border">
+              {[
+                { key: 'open', label: showIcons ? '⭕ Open' : 'Open' },
+                { key: 'completed', label: showIcons ? '✅ Done' : 'Done' },
+                { key: 'all', label: showIcons ? '📋 All' : 'All' }
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setStatusFilter(key as StatusFilter)}
+                  className={`px-2 py-0.5 border-r last:border-r-0 cursor-pointer ${
+                    statusFilter === key
+                      ? (isLight ? 'bg-gray-300 text-gray-900 font-bold' : 'bg-gray-800 text-white font-bold')
+                      : (isLight ? 'text-gray-600 hover:bg-gray-200' : 'text-gray-400 hover:bg-gray-800')
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            className={`px-1.5 py-0.5 border text-xs font-mono rounded-none focus:outline-none ${
-              isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-black border-gray-800 text-white'
-            }`}
-          >
-            <option value="all">Status: All</option>
-            <option value="open">Open</option>
-            <option value="completed">Completed</option>
-          </select>
+          {/* Priority Filter */}
+          <div className="flex items-center gap-1">
+            <span className={isLight ? 'text-gray-500' : 'text-gray-500'}>
+              {showIcons ? '🚩 Pri:' : 'Pri:'}
+            </span>
+            <div className="flex border">
+              {(['all', 'A', 'B', 'C', 'none'] as PriorityFilter[]).map((p) => {
+                const priDisplay = showIcons
+                  ? (p === 'A' ? '🔴 A' : p === 'B' ? '🟡 B' : p === 'C' ? '🔵 C' : p === 'none' ? '⚪ -' : 'All')
+                  : (p === 'all' ? 'All' : p === 'none' ? '-' : p);
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setPriorityFilter(p)}
+                    className={`px-2 py-0.5 border-r last:border-r-0 cursor-pointer ${
+                      priorityFilter === p
+                        ? (isLight ? 'bg-gray-300 text-gray-900 font-bold' : 'bg-gray-800 text-white font-bold')
+                        : (isLight ? 'text-gray-600 hover:bg-gray-200' : 'text-gray-400 hover:bg-gray-800')
+                    }`}
+                  >
+                    {priDisplay}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-          <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value as PriorityFilter)}
-            className={`px-1.5 py-0.5 border text-xs font-mono rounded-none focus:outline-none ${
-              isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-black border-gray-800 text-white'
-            }`}
-          >
-            <option value="all">Pri: All</option>
-            <option value="A">(A)</option>
-            <option value="B">(B)</option>
-            <option value="C">(C)</option>
-            <option value="none">None</option>
-          </select>
-
-          <select
-            value={periodFilter}
-            onChange={(e) => setPeriodFilter(e.target.value)}
-            className={`px-1.5 py-0.5 border text-xs font-mono rounded-none focus:outline-none ${
-              isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-black border-gray-800 text-white'
-            }`}
-          >
-            <option value="all">Period: All</option>
-            {periodOptions.map(p => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
+          {/* Period Filter */}
+          {periodOptions.length > 0 && (
+            <div className="flex items-center gap-1">
+              <span className={isLight ? 'text-gray-500' : 'text-gray-500'}>
+                {showIcons ? '📅 Date:' : 'Date:'}
+              </span>
+              <select
+                value={periodFilter}
+                onChange={(e) => setPeriodFilter(e.target.value)}
+                className={`border px-1 py-0.5 rounded text-xs bg-transparent outline-none cursor-pointer ${
+                  isLight ? 'border-gray-300 text-gray-700 bg-white' : 'border-gray-800 text-gray-300 bg-black'
+                }`}
+              >
+                <option value="all">All Dates</option>
+                {periodOptions.map(p => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
@@ -194,10 +238,10 @@ export const TaskList: React.FC<TaskListProps> = ({
         <table className="w-full text-left border-collapse cursor-default">
           <thead className={`sticky top-0 z-10 border-b text-xs ${isLight ? 'bg-gray-200 text-gray-600 border-gray-300' : 'bg-gray-900 text-gray-500 border-gray-800'}`}>
             <tr>
-              <th className="font-normal w-10 text-center py-1.5">St</th>
-              <th className="font-normal w-8 text-center py-1.5">Pr</th>
-              <th className="font-normal py-1.5 px-2">Task</th>
-              <th className="font-normal w-12 text-center py-1.5">Del</th>
+              <th className="font-normal w-10 text-center py-1.5">{showIcons ? '✅' : 'St'}</th>
+              <th className="font-normal w-10 text-center py-1.5">{showIcons ? '🚩' : 'Pr'}</th>
+              <th className="font-normal py-1.5 px-2">{showIcons ? '📝 Task' : 'Task'}</th>
+              <th className="font-normal w-12 text-center py-1.5">{showIcons ? '🗑️' : 'Del'}</th>
             </tr>
           </thead>
           <tbody>
@@ -212,6 +256,14 @@ export const TaskList: React.FC<TaskListProps> = ({
                 rowClass += `border-gray-900 hover:bg-gray-800/50 ${isSelected ? 'bg-gray-800' : ''}`;
               }
 
+              const priIcon = task.priority === 'A'
+                ? '🔴'
+                : task.priority === 'B'
+                ? '🟡'
+                : task.priority === 'C'
+                ? '🔵'
+                : task.priority ? '🚩' : '-';
+
               return (
                 <tr
                   key={task.id}
@@ -222,26 +274,29 @@ export const TaskList: React.FC<TaskListProps> = ({
                     className={`w-10 text-center py-2.5 border-r ${isLight ? 'border-gray-200' : 'border-gray-800/50'}`}
                     onClick={(e) => { e.stopPropagation(); onToggleTask(task.id); }}
                   >
-                    <button className={`focus:outline-none p-1 font-mono font-bold ${isLight ? 'text-gray-500 hover:text-gray-900' : 'text-gray-400 hover:text-white'}`}>
-                      {task.completed ? '[x]' : '[ ]'}
+                    <button className={`focus:outline-none p-1 font-mono font-bold cursor-pointer ${isLight ? 'text-gray-500 hover:text-gray-900' : 'text-gray-400 hover:text-white'}`}>
+                      {showIcons
+                        ? (task.completed ? '✅' : '⬜')
+                        : (task.completed ? '[x]' : '[ ]')}
                     </button>
                   </td>
-                  <td className={`w-8 text-center py-2.5 border-r text-xs ${isLight ? 'border-gray-200 text-gray-500' : 'border-gray-800/50 text-gray-500'}`}>
-                    {task.priority || '-'}
+                  <td className={`w-10 text-center py-2.5 border-r text-xs ${isLight ? 'border-gray-200 text-gray-500' : 'border-gray-800/50 text-gray-500'}`}>
+                    {showIcons ? (task.priority ? `${priIcon} ${task.priority}` : '-') : (task.priority || '-')}
                   </td>
                   <td className="py-2.5 px-2 text-xs sm:text-sm overflow-hidden break-words max-w-xs sm:max-w-md lg:max-w-xl">
                     <div className="flex flex-wrap items-center gap-2">
                       <FormattedText text={task.raw} isCompleted={task.completed} isLight={isLight} />
                       {task.recurrence && (
                         <span
-                          className={`px-1.5 py-0.5 text-[10px] font-mono font-bold border ${
+                          className={`px-1.5 py-0.5 text-[10px] font-mono font-bold border flex items-center gap-1 ${
                             task.recurrence.includes('strict:') || task.recurrence.includes('+')
                               ? (isLight ? 'bg-purple-100 border-purple-300 text-purple-800' : 'bg-purple-950 border-purple-800 text-purple-300')
                               : (isLight ? 'bg-cyan-100 border-cyan-300 text-cyan-800' : 'bg-cyan-950 border-cyan-800 text-cyan-300')
                           }`}
                           title={`Recurring pattern: ${task.recurrence}`}
                         >
-                          {task.recurrence.includes('strict:') || task.recurrence.includes('+') ? '⚡' : '🔄'} {task.recurrence.startsWith('rec:') ? task.recurrence : `rec:${task.recurrence}`}
+                          <span>{task.recurrence.includes('strict:') || task.recurrence.includes('+') ? '⚡' : '🔄'}</span>
+                          <span>{task.recurrence.startsWith('rec:') ? task.recurrence : `rec:${task.recurrence}`}</span>
                         </span>
                       )}
                       {hasSubtasks && (
@@ -256,8 +311,8 @@ export const TaskList: React.FC<TaskListProps> = ({
                       setDeletingTask(task);
                     }}
                   >
-                    <button className={`focus:outline-none p-1 text-xs hover:text-red-500 ${isLight ? 'text-gray-400' : 'text-gray-600'}`}>
-                      [del]
+                    <button className={`focus:outline-none p-1 text-xs hover:text-red-500 cursor-pointer ${isLight ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {showIcons ? '🗑️' : '[del]'}
                     </button>
                   </td>
                 </tr>

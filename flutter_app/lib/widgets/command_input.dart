@@ -10,6 +10,7 @@ class CommandInputWidget extends StatelessWidget {
   final Function(String view) onChangeView;
   final String activeView;
   final bool isLight;
+  final bool showIcons;
 
   const CommandInputWidget({
     super.key,
@@ -21,6 +22,7 @@ class CommandInputWidget extends StatelessWidget {
     required this.onChangeView,
     required this.activeView,
     required this.isLight,
+    this.showIcons = false,
   });
 
   @override
@@ -45,7 +47,10 @@ class CommandInputWidget extends StatelessWidget {
                   : Colors.transparent,
               border: Border.all(color: border),
             ),
-            child: Text('[List]', style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+            child: Text(
+              showIcons ? '📋 List' : '[List]',
+              style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
         InkWell(
@@ -58,7 +63,10 @@ class CommandInputWidget extends StatelessWidget {
                   : Colors.transparent,
               border: Border.all(color: border),
             ),
-            child: Text('[Calendar]', style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+            child: Text(
+              showIcons ? '📅 Calendar' : '[Calendar]',
+              style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
         InkWell(
@@ -71,7 +79,10 @@ class CommandInputWidget extends StatelessWidget {
                   : Colors.transparent,
               border: Border.all(color: border),
             ),
-            child: Text('[Refs]', style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.cyan)),
+            child: Text(
+              showIcons ? '🗂️ Refs' : '[Refs]',
+              style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.cyan),
+            ),
           ),
         ),
         InkWell(
@@ -79,7 +90,10 @@ class CommandInputWidget extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(border: Border.all(color: border)),
-            child: Text('[Templates]', style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.cyan)),
+            child: Text(
+              showIcons ? '📐 Templates' : '[Templates]',
+              style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.cyan),
+            ),
           ),
         ),
         InkWell(
@@ -87,7 +101,10 @@ class CommandInputWidget extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(border: Border.all(color: border)),
-            child: Text('[⚙️ Settings]', style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.purple[300])),
+            child: Text(
+              showIcons ? '⚙️ Settings' : '[⚙️ Settings]',
+              style: AppTheme.monoStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.purple[300]),
+            ),
           ),
         ),
       ],
@@ -102,7 +119,9 @@ class CommandInputWidget extends StatelessWidget {
             controller: controller,
             style: AppTheme.monoStyle(fontSize: 12),
             decoration: InputDecoration(
-              hintText: 'Filter... or :add Task... or :ref John | +91 98765 or :refs',
+              hintText: showIcons
+                  ? '🔍 Filter... or :add Task... or :ref John | +91 98765'
+                  : 'Filter... or :add Task... or :ref John | +91 98765 or :refs',
               hintStyle: AppTheme.monoStyle(fontSize: 11, color: Colors.grey[600]),
               border: InputBorder.none,
               isDense: true,

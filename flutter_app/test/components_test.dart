@@ -97,9 +97,7 @@ void main() {
       expect(find.byType(TaskListItem), findsOneWidget);
 
       // Select Status: All
-      await tester.tap(find.text('Open'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Status: All').last);
+      await tester.tap(find.text('All').first);
       await tester.pumpAndSettle();
 
       expect(find.byType(TaskListItem), findsNWidgets(2));

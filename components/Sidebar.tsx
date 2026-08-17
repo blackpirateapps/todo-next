@@ -11,6 +11,7 @@ interface SidebarProps {
   onChangeView?: (view: 'list' | 'calendar' | 'references') => void;
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
+  showIcons?: boolean;
 }
 
 interface SectionProps {
@@ -19,6 +20,8 @@ interface SectionProps {
   activeFilter: string;
   isLight: boolean;
   onSelectFilter: (filter: string) => void;
+  iconPrefix?: string;
+  showIcons?: boolean;
 }
 
 const SidebarSection: React.FC<SectionProps> = ({
@@ -26,16 +29,19 @@ const SidebarSection: React.FC<SectionProps> = ({
   items,
   activeFilter,
   isLight,
-  onSelectFilter
+  onSelectFilter,
+  iconPrefix,
+  showIcons = false
 }) => {
   if (items.size === 0) return null;
 
   return (
     <div className="mb-4">
-      <div className={`font-bold uppercase tracking-wider mb-1 border-b pb-1 text-[11px] ${
+      <div className={`font-bold uppercase tracking-wider mb-1 border-b pb-1 text-[11px] flex items-center justify-between ${
         isLight ? 'text-gray-500 border-gray-300' : 'text-gray-500 border-gray-800'
       }`}>
-        {title}
+        <span>{title}</span>
+        {showIcons && iconPrefix && <span className="text-xs">{iconPrefix}</span>}
       </div>
       <ul className="space-y-0.5">
         {Array.from(items).sort().map(item => {
@@ -48,9 +54,9 @@ const SidebarSection: React.FC<SectionProps> = ({
             <li key={item}>
               <button
                 onClick={() => onSelectFilter(item)}
-                className={`w-full text-left truncate px-2 py-1 text-xs focus:outline-none transition-colors rounded ${activeClass}`}
+                className={`w-full text-left truncate px-2 py-1 text-xs focus:outline-none transition-colors rounded cursor-pointer ${activeClass}`}
               >
-                {item}
+                {showIcons && iconPrefix ? `${iconPrefix} ${item}` : item}
               </button>
             </li>
           );
@@ -69,7 +75,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeView = 'list',
   onChangeView,
   isOpenMobile = false,
-  onCloseMobile
+  onCloseMobile,
+  showIcons = false
 }) => {
   const projects = new Set<string>();
   const contexts = new Set<string>();
@@ -109,13 +116,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <div className="flex flex-col h-full font-mono">
       {/* Mobile Drawer Header */}
       <div className="flex justify-between items-center mb-3 border-b pb-2 md:hidden">
-        <span className={`font-bold uppercase tracking-wider text-xs ${isLight ? 'text-gray-700' : 'text-gray-300'}`}>
-          Navigation & Filters
+        <span className={`font-bold uppercase tracking-wider text-xs flex items-center gap-1.5 ${isLight ? 'text-gray-700' : 'text-gray-300'}`}>
+          {showIcons && <span>🧭</span>}
+          <span>Navigation &amp; Filters</span>
         </span>
         {onCloseMobile && (
           <button
             onClick={onCloseMobile}
-            className={`px-2 py-0.5 text-xs font-bold border ${isLight ? 'border-gray-300 text-gray-700' : 'border-gray-700 text-gray-300'}`}
+            className={`px-2 py-0.5 text-xs font-bold border cursor-pointer ${isLight ? 'border-gray-300 text-gray-700' : 'border-gray-700 text-gray-300'}`}
           >
             [Close]
           </button>
@@ -124,44 +132,54 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Workspaces Section */}
       <div className="mb-4">
-        <div className={`font-bold uppercase tracking-wider mb-1.5 border-b pb-1 text-[11px] ${
+        <div className={`font-bold uppercase tracking-wider mb-1.5 border-b pb-1 text-[11px] flex items-center justify-between ${
           isLight ? 'text-gray-500 border-gray-300' : 'text-gray-500 border-gray-800'
         }`}>
-          Workspaces
+          <span>Workspaces</span>
+          {showIcons && <span className="text-xs">💼</span>}
         </div>
         <div className="space-y-0.5">
           <button
             onClick={() => handleSwitchView('list')}
-            className={`w-full flex items-center justify-between text-left px-2 py-1 text-xs rounded transition-colors ${
+            className={`w-full flex items-center justify-between text-left px-2 py-1 text-xs rounded transition-colors cursor-pointer ${
               activeView === 'list'
                 ? (isLight ? 'bg-gray-300 text-gray-900 font-bold' : 'bg-gray-800 text-white font-bold')
                 : (isLight ? 'text-gray-600 hover:bg-gray-200' : 'text-gray-400 hover:bg-gray-800')
             }`}
           >
-            <span>✓ Tasks</span>
+            <span className="flex items-center gap-1.5">
+              <span>{showIcons ? '📝' : '✓'}</span>
+              <span>Tasks</span>
+            </span>
             <span className="text-[10px] opacity-75">{openTasksCount}</span>
           </button>
 
           <button
             onClick={() => handleSwitchView('calendar')}
-            className={`w-full flex items-center justify-between text-left px-2 py-1 text-xs rounded transition-colors ${
+            className={`w-full flex items-center justify-between text-left px-2 py-1 text-xs rounded transition-colors cursor-pointer ${
               activeView === 'calendar'
                 ? (isLight ? 'bg-cyan-200 text-cyan-900 font-bold' : 'bg-cyan-950 text-cyan-300 font-bold')
                 : (isLight ? 'text-gray-600 hover:bg-gray-200' : 'text-gray-400 hover:bg-gray-800')
             }`}
           >
-            <span>📅 Calendar</span>
+            <span className="flex items-center gap-1.5">
+              <span>📅</span>
+              <span>Calendar</span>
+            </span>
           </button>
 
           <button
             onClick={() => handleSwitchView('references')}
-            className={`w-full flex items-center justify-between text-left px-2 py-1 text-xs rounded transition-colors ${
+            className={`w-full flex items-center justify-between text-left px-2 py-1 text-xs rounded transition-colors cursor-pointer ${
               activeView === 'references'
                 ? (isLight ? 'bg-cyan-200 text-cyan-900 font-bold' : 'bg-cyan-950 text-cyan-300 font-bold')
                 : (isLight ? 'text-cyan-700 hover:bg-gray-200 font-semibold' : 'text-cyan-400 hover:bg-gray-800 font-semibold')
             }`}
           >
-            <span>▸ References</span>
+            <span className="flex items-center gap-1.5">
+              <span>{showIcons ? '🗂️' : '▸'}</span>
+              <span>References</span>
+            </span>
             <span className="text-[10px] opacity-75">{activeRefsCount}</span>
           </button>
         </div>
@@ -170,44 +188,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Main View Filter */}
       {activeView === 'references' ? (
         <div className="mb-4">
-          <div className={`font-bold uppercase tracking-wider mb-1.5 border-b pb-1 text-[11px] ${
+          <div className={`font-bold uppercase tracking-wider mb-1.5 border-b pb-1 text-[11px] flex items-center justify-between ${
             isLight ? 'text-gray-500 border-gray-300' : 'text-gray-500 border-gray-800'
           }`}>
-            Reference Views
+            <span>Reference Views</span>
+            {showIcons && <span className="text-xs">📁</span>}
           </div>
           <div className="space-y-0.5">
             <button
               onClick={() => handleSelectFilter('')}
-              className={`w-full text-left px-2 py-1 text-xs rounded font-bold transition-colors ${
+              className={`w-full text-left px-2 py-1 text-xs rounded font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
                 activeFilter === ''
                   ? (isLight ? 'bg-gray-300 text-gray-900' : 'bg-gray-800 text-white')
                   : (isLight ? 'text-gray-600 hover:bg-gray-200' : 'text-gray-400 hover:bg-gray-800')
               }`}
             >
-              [ALL ACTIVE]
+              {showIcons && <span>📂</span>}
+              <span>[ALL ACTIVE]</span>
             </button>
             <button
               onClick={() => handleSelectFilter('archived')}
-              className={`w-full text-left px-2 py-1 text-xs rounded font-bold transition-colors ${
+              className={`w-full text-left px-2 py-1 text-xs rounded font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
                 activeFilter === 'archived'
                   ? (isLight ? 'bg-amber-200 text-amber-900' : 'bg-amber-950 text-amber-300')
                   : (isLight ? 'text-gray-600 hover:bg-gray-200' : 'text-gray-400 hover:bg-gray-800')
               }`}
             >
-              [ARCHIVED]
+              {showIcons && <span>📦</span>}
+              <span>[ARCHIVED]</span>
             </button>
           </div>
         </div>
       ) : (
         <button
           onClick={() => handleSelectFilter('')}
-          className={`w-full text-left mb-4 px-2 py-1.5 font-bold text-xs rounded transition-colors ${
+          className={`w-full text-left mb-4 px-2 py-1.5 font-bold text-xs rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
             activeFilter === ''
               ? (isLight ? 'bg-gray-300 text-gray-900' : 'bg-gray-800 text-white')
               : (isLight ? 'text-gray-600 hover:bg-gray-200' : 'text-gray-400 hover:bg-gray-800')
           }`}
         >
-          [ALL TASKS]
+          {showIcons && <span>📋</span>}
+          <span>[ALL TASKS]</span>
         </button>
       )}
 
@@ -220,6 +242,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             activeFilter={activeFilter}
             isLight={isLight}
             onSelectFilter={handleSelectFilter}
+            iconPrefix="🏷️"
+            showIcons={showIcons}
           />
         ) : (
           <>
@@ -229,6 +253,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               activeFilter={activeFilter}
               isLight={isLight}
               onSelectFilter={handleSelectFilter}
+              iconPrefix="🎯"
+              showIcons={showIcons}
             />
             <SidebarSection
               title="Contexts (@)"
@@ -236,6 +262,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               activeFilter={activeFilter}
               isLight={isLight}
               onSelectFilter={handleSelectFilter}
+              iconPrefix="📍"
+              showIcons={showIcons}
             />
           </>
         )}

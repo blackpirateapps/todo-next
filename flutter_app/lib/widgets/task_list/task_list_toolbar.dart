@@ -19,6 +19,7 @@ class TaskListToolbar extends StatelessWidget {
   final Function(PriorityFilter) onPriorityFilterChanged;
   final Function(String) onPeriodFilterChanged;
   final bool isLight;
+  final bool showIcons;
 
   const TaskListToolbar({
     super.key,
@@ -34,6 +35,7 @@ class TaskListToolbar extends StatelessWidget {
     required this.onPriorityFilterChanged,
     required this.onPeriodFilterChanged,
     required this.isLight,
+    this.showIcons = false,
   });
 
   @override
@@ -52,7 +54,7 @@ class TaskListToolbar extends StatelessWidget {
         child: Row(
           children: [
             Text(
-              'Sort: ',
+              showIcons ? '🔃 Sort: ' : 'Sort: ',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -71,11 +73,11 @@ class TaskListToolbar extends StatelessWidget {
               onChanged: (val) {
                 if (val != null) onSortFieldChanged(val);
               },
-              items: const [
-                DropdownMenuItem(value: SortField.creationDate, child: Text('Creation Date')),
-                DropdownMenuItem(value: SortField.dueDate, child: Text('Due Date')),
-                DropdownMenuItem(value: SortField.title, child: Text('Title')),
-                DropdownMenuItem(value: SortField.priority, child: Text('Priority')),
+              items: [
+                DropdownMenuItem(value: SortField.creationDate, child: Text(showIcons ? '🕒 Created' : 'Creation Date')),
+                DropdownMenuItem(value: SortField.dueDate, child: Text(showIcons ? '📅 Due Date' : 'Due Date')),
+                DropdownMenuItem(value: SortField.title, child: Text(showIcons ? '🔤 Title' : 'Title')),
+                DropdownMenuItem(value: SortField.priority, child: Text(showIcons ? '⚡ Priority' : 'Priority')),
               ],
             ),
             const SizedBox(width: 4),
@@ -92,71 +94,110 @@ class TaskListToolbar extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Text(
-              'Filter: ',
+              showIcons ? '🔍 Status: ' : 'Filter: ',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
                 color: Colors.grey[500],
               ),
             ),
-            DropdownButton<StatusFilter>(
-              value: statusFilter,
-              isDense: true,
-              dropdownColor: headerBg,
-              underline: const SizedBox.shrink(),
-              style: GoogleFonts.jetBrainsMono(
-                fontSize: 11,
-                color: isLight ? Colors.black : Colors.white,
-              ),
-              onChanged: (val) {
-                if (val != null) onStatusFilterChanged(val);
-              },
-              items: const [
-                DropdownMenuItem(value: StatusFilter.all, child: Text('Status: All')),
-                DropdownMenuItem(value: StatusFilter.open, child: Text('Open')),
-                DropdownMenuItem(value: StatusFilter.completed, child: Text('Completed')),
+            Row(
+              children: [
+                _filterBtn('Open', StatusFilter.open, statusFilter == StatusFilter.open, () => onStatusFilterChanged(StatusFilter.open), border, showIcons ? '⭕ ' : null),
+                _filterBtn('Done', StatusFilter.completed, statusFilter == StatusFilter.completed, () => onStatusFilterChanged(StatusFilter.completed), border, showIcons ? '✅ ' : null),
+                _filterBtn('All', StatusFilter.all, statusFilter == StatusFilter.all, () => onStatusFilterChanged(StatusFilter.all), border, showIcons ? '📋 ' : null),
               ],
             ),
-            const SizedBox(width: 4),
-            DropdownButton<PriorityFilter>(
-              value: priorityFilter,
-              isDense: true,
-              dropdownColor: headerBg,
-              underline: const SizedBox.shrink(),
+            const SizedBox(width: 12),
+            Text(
+              showIcons ? '🚩 Pri: ' : 'Pri: ',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 11,
-                color: isLight ? Colors.black : Colors.white,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[500],
               ),
-              onChanged: (val) {
-                if (val != null) onPriorityFilterChanged(val);
-              },
-              items: const [
-                DropdownMenuItem(value: PriorityFilter.all, child: Text('Pri: All')),
-                DropdownMenuItem(value: PriorityFilter.A, child: Text('(A)')),
-                DropdownMenuItem(value: PriorityFilter.B, child: Text('(B)')),
-                DropdownMenuItem(value: PriorityFilter.C, child: Text('(C)')),
-                DropdownMenuItem(value: PriorityFilter.none, child: Text('None')),
+            ),
+            Row(
+              children: [
+                _priBtn('All', PriorityFilter.all, border, null),
+                _priBtn('A', PriorityFilter.A, border, showIcons ? '🔴 ' : null),
+                _priBtn('B', PriorityFilter.B, border, showIcons ? '🟡 ' : null),
+                _priBtn('C', PriorityFilter.C, border, showIcons ? '🔵 ' : null),
+                _priBtn('-', PriorityFilter.none, border, null),
               ],
             ),
-            const SizedBox(width: 4),
-            DropdownButton<String>(
-              value: periodFilter,
-              isDense: true,
-              dropdownColor: headerBg,
-              underline: const SizedBox.shrink(),
-              style: GoogleFonts.jetBrainsMono(
-                fontSize: 11,
-                color: isLight ? Colors.black : Colors.white,
+            if (periodOptions.isNotEmpty) ...[
+              const SizedBox(width: 12),
+              Text(
+                showIcons ? '📅 Date: ' : 'Date: ',
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[500],
+                ),
               ),
-              onChanged: (val) {
-                if (val != null) onPeriodFilterChanged(val);
-              },
-              items: [
-                const DropdownMenuItem(value: 'all', child: Text('Period: All')),
-                ...periodOptions.map((p) => DropdownMenuItem(value: p, child: Text(p))),
-              ],
-            ),
+              DropdownButton<String>(
+                value: periodFilter,
+                isDense: true,
+                dropdownColor: headerBg,
+                underline: const SizedBox.shrink(),
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 11,
+                  color: isLight ? Colors.black : Colors.white,
+                ),
+                onChanged: (val) {
+                  if (val != null) onPeriodFilterChanged(val);
+                },
+                items: [
+                  const DropdownMenuItem(value: 'all', child: Text('All Dates')),
+                  ...periodOptions.map((p) => DropdownMenuItem(value: p, child: Text(p))),
+                ],
+              ),
+            ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _filterBtn(String label, StatusFilter filter, bool active, VoidCallback onTap, Color border, [String? iconPrefix]) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: active ? (isLight ? Colors.grey[300] : Colors.grey[800]) : Colors.transparent,
+          border: Border.all(color: border),
+        ),
+        child: Text(
+          iconPrefix != null ? '$iconPrefix$label' : label,
+          style: GoogleFonts.jetBrainsMono(
+            fontSize: 10,
+            fontWeight: active ? FontWeight.bold : FontWeight.normal,
+            color: active ? (isLight ? Colors.black : Colors.white) : Colors.grey[500],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _priBtn(String label, PriorityFilter pri, Color border, [String? iconPrefix]) {
+    final active = priorityFilter == pri;
+    return InkWell(
+      onTap: () => onPriorityFilterChanged(pri),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: active ? (isLight ? Colors.grey[300] : Colors.grey[800]) : Colors.transparent,
+          border: Border.all(color: border),
+        ),
+        child: Text(
+          iconPrefix != null ? '$iconPrefix$label' : label,
+          style: GoogleFonts.jetBrainsMono(
+            fontSize: 10,
+            fontWeight: active ? FontWeight.bold : FontWeight.normal,
+            color: active ? (isLight ? Colors.black : Colors.white) : Colors.grey[500],
+          ),
         ),
       ),
     );

@@ -10,6 +10,7 @@ class ReferenceItemWidget extends StatelessWidget {
   final bool isLight;
   final VoidCallback onSelect;
   final VoidCallback onDelete;
+  final bool showIcons;
 
   const ReferenceItemWidget({
     super.key,
@@ -18,6 +19,7 @@ class ReferenceItemWidget extends StatelessWidget {
     required this.isLight,
     required this.onSelect,
     required this.onDelete,
+    this.showIcons = false,
   });
 
   @override
@@ -64,12 +66,12 @@ class ReferenceItemWidget extends StatelessWidget {
                     : (isLight ? Colors.cyan[100] : const Color(0xFF083344).withValues(alpha: 0.5)),
                 border: Border.all(
                   color: reference.archived
-                      ? (isLight ? Colors.amber[400]! : Colors.amber[800]!)
+                       ? (isLight ? Colors.amber[400]! : Colors.amber[800]!)
                       : (isLight ? Colors.cyan[400]! : Colors.cyan[800]!),
                 ),
               ),
               child: Text(
-                'REF',
+                showIcons ? (reference.archived ? '📦' : '🗂️') : 'REF',
                 style: AppTheme.monoStyle(
                   fontSize: 9,
                   fontWeight: FontWeight.bold,
@@ -103,7 +105,7 @@ class ReferenceItemWidget extends StatelessWidget {
                         Padding(
                           padding: const EdgeInsets.only(left: 4),
                           child: Text(
-                            '[archived]',
+                            showIcons ? '📦 [archived]' : '[archived]',
                             style: AppTheme.monoStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
@@ -145,7 +147,7 @@ class ReferenceItemWidget extends StatelessWidget {
                             ),
                           ),
                           child: Text(
-                            t,
+                            showIcons ? (isProj ? '🎯 $t' : '📍 $t') : t,
                             style: AppTheme.monoStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.bold,

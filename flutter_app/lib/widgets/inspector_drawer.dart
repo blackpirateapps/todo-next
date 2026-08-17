@@ -26,6 +26,7 @@ class InspectorDrawerWidget extends StatelessWidget {
   final Function(Task task) onSaveAsTemplate;
   final Function(String taskId) onSkipRecurrence;
   final bool isLight;
+  final bool showIcons;
 
   const InspectorDrawerWidget({
     super.key,
@@ -35,6 +36,7 @@ class InspectorDrawerWidget extends StatelessWidget {
     required this.onSaveAsTemplate,
     required this.onSkipRecurrence,
     required this.isLight,
+    this.showIcons = false,
   });
 
   @override

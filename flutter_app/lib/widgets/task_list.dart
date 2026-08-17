@@ -16,6 +16,7 @@ class TaskListWidget extends StatefulWidget {
   final Function(String) onToggleTask;
   final Function(Task) onDeleteTask;
   final bool isLight;
+  final bool showIcons;
 
   const TaskListWidget({
     super.key,
@@ -25,6 +26,7 @@ class TaskListWidget extends StatefulWidget {
     required this.onToggleTask,
     required this.onDeleteTask,
     required this.isLight,
+    this.showIcons = false,
   });
 
   @override
@@ -108,37 +110,46 @@ class _TaskListWidgetState extends State<TaskListWidget> {
             priorityFilter: _priorityFilter,
             periodFilter: _periodFilter,
             periodOptions: periodOptions,
-            onSortFieldChanged: (field) => setState(() => _sortField = field),
-            onToggleSortOrder: () => setState(
-              () => _sortOrder = _sortOrder == SortOrder.asc ? SortOrder.desc : SortOrder.asc,
-            ),
-            onStatusFilterChanged: (status) => setState(() => _statusFilter = status),
-            onPriorityFilterChanged: (pri) => setState(() => _priorityFilter = pri),
-            onPeriodFilterChanged: (period) => setState(() => _periodFilter = period),
+            onSortFieldChanged: (f) => setState(() => _sortField = f),
+            onToggleSortOrder: () => setState(() => _sortOrder = _sortOrder == SortOrder.asc ? SortOrder.desc : SortOrder.asc),
+            onStatusFilterChanged: (s) => setState(() => _statusFilter = s),
+            onPriorityFilterChanged: (p) => setState(() => _priorityFilter = p),
+            onPeriodFilterChanged: (p) => setState(() => _periodFilter = p),
             isLight: widget.isLight,
+            showIcons: widget.showIcons,
           ),
-          TaskListHeader(isLight: widget.isLight),
+          TaskListHeader(
+            isLight: widget.isLight,
+            showIcons: widget.showIcons,
+          ),
           Expanded(
             child: processed.isEmpty
                 ? Center(
-                    child: Text(
-                      'No tasks matched query or filters.',
-                      style: GoogleFonts.jetBrainsMono(fontSize: 12, color: Colors.grey[600]),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        widget.showIcons
+                            ? '✨ No tasks matching current filter or search.'
+                            : 'No tasks matching current filter or search.',
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
                     ),
                   )
                 : ListView.builder(
                     itemCount: processed.length,
                     itemBuilder: (context, index) {
                       final task = processed[index];
-                      final isSelected = widget.selectedTaskId == task.id;
-
                       return TaskListItem(
                         task: task,
-                        isSelected: isSelected,
+                        isSelected: widget.selectedTaskId == task.id,
                         onSelectTask: widget.onSelectTask,
                         onToggleTask: widget.onToggleTask,
                         onDeleteTask: widget.onDeleteTask,
                         isLight: widget.isLight,
+                        showIcons: widget.showIcons,
                       );
                     },
                   ),

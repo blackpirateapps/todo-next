@@ -247,5 +247,17 @@ class StorageService {
     final jsonStr = jsonEncode(references.map((r) => r.toJson()).toList());
     await prefs.setString(_referencesKey, jsonStr);
   }
+
+  static const String _showIconsKey = 'todo_next_show_icons';
+
+  Future<bool> loadShowIcons() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_showIconsKey) ?? false;
+  }
+
+  Future<void> saveShowIcons(bool showIcons) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_showIconsKey, showIcons);
+  }
 }
 

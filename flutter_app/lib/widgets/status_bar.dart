@@ -10,6 +10,7 @@ class StatusBarWidget extends StatelessWidget {
   final AppThemeId currentTheme;
   final VoidCallback onToggleTheme;
   final VoidCallback onForceSync;
+  final bool showIcons;
 
   const StatusBarWidget({
     super.key,
@@ -21,6 +22,7 @@ class StatusBarWidget extends StatelessWidget {
     this.currentTheme = AppThemeId.dark,
     required this.onToggleTheme,
     required this.onForceSync,
+    this.showIcons = false,
   });
 
   @override
@@ -29,13 +31,13 @@ class StatusBarWidget extends StatelessWidget {
     final border = isLight ? const Color(0xFFE4E4E7) : const Color(0xFF27272A);
     final themeDef = AppTheme.getDefinition(currentTheme);
 
-    String syncText = '[Synced ✓]';
+    String syncText = showIcons ? '🟢 Synced' : '[Synced ✓]';
     Color syncBg = Colors.green[900]!;
     if (syncStatus == 'syncing') {
-      syncText = '[Syncing...]';
+      syncText = showIcons ? '🔄 Syncing' : '[Syncing...]';
       syncBg = Colors.amber[900]!;
     } else if (syncStatus == 'offline') {
-      syncText = '[Offline]';
+      syncText = showIcons ? '🔴 Offline' : '[Offline]';
       syncBg = Colors.grey[800]!;
     }
 
@@ -50,13 +52,22 @@ class StatusBarWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
             color: Colors.blue[900],
-            child: Text('NORMAL', style: AppTheme.monoStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+            child: Text(
+              showIcons ? '⚡ NORMAL' : 'NORMAL',
+              style: AppTheme.monoStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
           ),
           const SizedBox(width: 8),
-          Text('$filteredCount/$totalCount items', style: AppTheme.monoStyle(fontSize: 10, color: Colors.grey[400])),
+          Text(
+            showIcons ? '📊 $filteredCount/$totalCount' : '$filteredCount/$totalCount items',
+            style: AppTheme.monoStyle(fontSize: 10, color: Colors.grey[400]),
+          ),
           if (activeFilter.isNotEmpty) ...[
             const SizedBox(width: 8),
-            Text('[$activeFilter]', style: AppTheme.monoStyle(fontSize: 10, color: Colors.cyan, fontWeight: FontWeight.bold)),
+            Text(
+              showIcons ? '🔍 [$activeFilter]' : '[$activeFilter]',
+              style: AppTheme.monoStyle(fontSize: 10, color: Colors.cyan, fontWeight: FontWeight.bold),
+            ),
           ],
 
           const Spacer(),
@@ -73,11 +84,21 @@ class StatusBarWidget extends StatelessWidget {
 
           InkWell(
             onTap: onToggleTheme,
-            child: Text('[${themeDef.badgeEmoji} ${themeDef.name}]', style: AppTheme.monoStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isLight ? Colors.black87 : Colors.white)),
+            child: Text(
+              '[${themeDef.badgeEmoji} ${themeDef.name}]',
+              style: AppTheme.monoStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: isLight ? Colors.black87 : Colors.white,
+              ),
+            ),
           ),
           const SizedBox(width: 8),
 
-          Text('todo.txt utf-8', style: AppTheme.monoStyle(fontSize: 10, color: Colors.grey[500])),
+          Text(
+            showIcons ? '📄 todo.txt' : 'todo.txt utf-8',
+            style: AppTheme.monoStyle(fontSize: 10, color: Colors.grey[500]),
+          ),
         ],
       ),
     );

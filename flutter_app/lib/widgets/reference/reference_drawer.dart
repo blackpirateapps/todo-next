@@ -18,6 +18,7 @@ class ReferenceDrawerWidget extends StatefulWidget {
   final VoidCallback? onCancelCreate;
   final Function(String id, bool archive) onArchive;
   final Function(Reference ref) onDelete;
+  final bool showIcons;
 
   const ReferenceDrawerWidget({
     super.key,
@@ -33,6 +34,7 @@ class ReferenceDrawerWidget extends StatefulWidget {
     this.onCancelCreate,
     required this.onArchive,
     required this.onDelete,
+    this.showIcons = false,
   });
 
   @override

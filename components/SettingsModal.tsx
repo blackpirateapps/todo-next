@@ -21,6 +21,8 @@ interface SettingsModalProps {
   onForceSync?: () => void;
   onLogout?: () => void;
   initialTab?: 'theme' | 'templates' | 'syntax';
+  showIcons?: boolean;
+  onToggleIcons?: (value: boolean) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -39,7 +41,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   syncStatus,
   onForceSync,
   onLogout,
-  initialTab = 'theme'
+  initialTab = 'theme',
+  showIcons = false,
+  onToggleIcons
 }) => {
   const [activeTab, setActiveTab] = useState<'theme' | 'templates' | 'syntax'>(initialTab);
   const [templateSearch, setTemplateSearch] = useState('');
@@ -259,6 +263,42 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* Display & Icon Preferences */}
+            <div className={`p-3 border space-y-3 ${isLight ? 'bg-gray-50 border-gray-300' : 'bg-gray-900/40 border-gray-800'}`}>
+              <div className={`font-bold uppercase border-b pb-1 flex justify-between items-center ${isLight ? 'text-gray-700 border-gray-300' : 'text-gray-300 border-gray-800'}`}>
+                <span>Display &amp; Icon Preferences</span>
+                <span className="text-[10px] opacity-60 font-mono">[ UI Style ]</span>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="font-bold text-xs flex items-center gap-1.5">
+                    <span className="text-sm">{showIcons ? '🎨' : '⌨️'}</span>
+                    <span>Enable Colorful Icons</span>
+                  </div>
+                  <p className="text-[11px] opacity-75 mt-0.5 leading-relaxed">
+                    Display vibrant, theme-harmonious icons for workspaces, priorities, tags, recurrence, and actions instead of pure ASCII text tokens.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => onToggleIcons && onToggleIcons(!showIcons)}
+                  className={`px-3 py-1.5 text-xs font-bold border transition-colors cursor-pointer flex-shrink-0 ${
+                    showIcons
+                      ? isLight
+                        ? 'bg-cyan-700 border-cyan-800 text-white'
+                        : 'bg-cyan-950 border-cyan-500 text-cyan-300'
+                      : isLight
+                      ? 'bg-gray-200 border-gray-400 text-gray-700 hover:bg-gray-300'
+                      : 'bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  {showIcons ? '[ ON: Rich Icons 🎨 ]' : '[ OFF: Plain Text ⌨️ ]'}
+                </button>
               </div>
             </div>
 
